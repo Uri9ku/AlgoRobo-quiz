@@ -4,7 +4,7 @@
     android:orientation="vertical" android:background="@color/bg_page">
 
     <!-- 顶部栏 -->
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+    <LinearLayout android:id="@+id/settingsTopBar" android:layout_width="match_parent" android:layout_height="wrap_content"
         android:orientation="horizontal" android:gravity="center_vertical"
         android:background="@color/primary" android:padding="12dp">
         <TextView android:id="@+id/btnBackSettings" android:layout_width="wrap_content"
@@ -51,9 +51,9 @@
 
             <!-- Toast 显示时长 -->
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="8dp" android:orientation="vertical"
+                android:orientation="vertical"
                 android:padding="16dp" android:background="@drawable/bg_card">
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                <LinearLayout android:id="@+id/cardToastHeader" android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:orientation="horizontal" android:gravity="center_vertical">
                     <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
                         android:layout_weight="1" android:orientation="vertical">
@@ -66,26 +66,31 @@
                     <TextView android:id="@+id/tvToastValue" android:layout_width="wrap_content"
                         android:layout_height="wrap_content" android:text="2.0 秒"
                         android:textSize="14sp" android:textColor="@color/primary"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text=" ˯" android:textSize="14sp" android:textColor="@color/text_sub"/>
                 </LinearLayout>
-                <android.widget.SeekBar android:id="@+id/sbToast" android:layout_width="match_parent"
-                    android:layout_height="wrap_content" android:layout_marginTop="12dp"
-                    android:max="40"/>
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp" android:orientation="horizontal">
-                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                        android:layout_weight="1" android:text="1 秒" android:textSize="11sp"
-                        android:textColor="@color/text_sub"/>
-                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                        android:layout_weight="1" android:gravity="end" android:text="5 秒"
-                        android:textSize="11sp" android:textColor="@color/text_sub"/>
+                <LinearLayout android:id="@+id/cardToastBody" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+                    <android.widget.SeekBar android:id="@+id/sbToast" android:layout_width="match_parent"
+                        android:layout_height="wrap_content" android:layout_marginTop="12dp"
+                        android:max="40"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp" android:orientation="horizontal">
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:text="1 秒" android:textSize="11sp"
+                            android:textColor="@color/text_sub"/>
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:gravity="end" android:text="5 秒"
+                            android:textSize="11sp" android:textColor="@color/text_sub"/>
+                    </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
 
             <!-- 题目切换动画时长 -->
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="8dp" android:orientation="vertical"
+                android:orientation="vertical"
                 android:padding="16dp" android:background="@drawable/bg_card">
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                <LinearLayout android:id="@+id/cardAnimHeader" android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:orientation="horizontal" android:gravity="center_vertical">
                     <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
                         android:layout_weight="1" android:orientation="vertical">
@@ -98,40 +103,41 @@
                     <TextView android:id="@+id/tvAnimValue" android:layout_width="wrap_content"
                         android:layout_height="wrap_content" android:text="250 毫秒"
                         android:textSize="14sp" android:textColor="@color/primary"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text=" ˯" android:textSize="14sp" android:textColor="@color/text_sub"/>
                 </LinearLayout>
-                <android.widget.SeekBar android:id="@+id/sbAnim" android:layout_width="match_parent"
-                    android:layout_height="wrap_content" android:layout_marginTop="12dp"
-                    android:max="50"/>
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp" android:orientation="horizontal">
-                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                        android:layout_weight="1" android:text="100 毫秒" android:textSize="11sp"
-                        android:textColor="@color/text_sub"/>
-                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                        android:layout_weight="1" android:gravity="end" android:text="600 毫秒"
-                        android:textSize="11sp" android:textColor="@color/text_sub"/>
+                <LinearLayout android:id="@+id/cardAnimBody" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+                    <android.widget.SeekBar android:id="@+id/sbAnim" android:layout_width="match_parent"
+                        android:layout_height="wrap_content" android:layout_marginTop="12dp"
+                        android:max="50"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp" android:orientation="horizontal">
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:text="100 毫秒" android:textSize="11sp"
+                            android:textColor="@color/text_sub"/>
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:gravity="end" android:text="600 毫秒"
+                            android:textSize="11sp" android:textColor="@color/text_sub"/>
+                    </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- 分组：更多 -->
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginTop="20dp" android:text="更多" android:textSize="13sp"
-                android:textColor="@color/text_sub" android:layout_marginBottom="8dp"/>
-
-            <!-- 自动翻页（自定义项，待完善） -->
+            <!-- 主题色 -->
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:orientation="horizontal" android:gravity="center_vertical"
-                android:padding="16dp" android:background="@drawable/bg_card">
-                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
-                    android:layout_weight="1" android:orientation="vertical">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="自动下一题" android:textSize="16sp" android:textColor="@color/text_main"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                       android:layout_marginTop="4dp" android:text="做对题目自动切换下一题，做错不自动切换"
-                        android:textSize="12sp" android:textColor="@color/text_sub"/>
-                </LinearLayout>
-                <androidx.appcompat.widget.SwitchCompat android:id="@+id/swAutoNext"
-                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                android:orientation="vertical" android:padding="16dp" android:background="@drawable/bg_card">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="主题色" android:textSize="16sp" android:textColor="@color/text_main"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp" android:text="选择应用主色调"
+                    android:textSize="12sp" android:textColor="@color/text_sub"/>
+                <HorizontalScrollView android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginTop="12dp"
+                    android:scrollbars="none">
+                    <LinearLayout android:id="@+id/themeColorPalette"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:orientation="horizontal"/>
+                </HorizontalScrollView>
             </LinearLayout>
 
             <!-- 分组：错题本 -->
@@ -142,7 +148,7 @@
             <!-- 做对次数阈值 -->
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:orientation="vertical" android:padding="16dp" android:background="@drawable/bg_card">
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                <LinearLayout android:id="@+id/cardThresholdHeader" android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:orientation="horizontal" android:gravity="center_vertical">
                     <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
                         android:layout_weight="1" android:orientation="vertical">
@@ -155,24 +161,29 @@
                     <TextView android:id="@+id/tvWrongThresholdValue" android:layout_width="wrap_content"
                         android:layout_height="wrap_content" android:text="2 次"
                         android:textSize="14sp" android:textColor="@color/primary"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text=" ˯" android:textSize="14sp" android:textColor="@color/text_sub"/>
                 </LinearLayout>
-                <android.widget.SeekBar android:id="@+id/sbWrongThreshold" android:layout_width="match_parent"
-                    android:layout_height="wrap_content" android:layout_marginTop="12dp"
-                    android:max="9"/>
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp" android:orientation="horizontal">
-                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                        android:layout_weight="1" android:text="1 次" android:textSize="11sp"
-                        android:textColor="@color/text_sub"/>
-                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                        android:layout_weight="1" android:gravity="end" android:text="10 次"
-                        android:textSize="11sp" android:textColor="@color/text_sub"/>
+                <LinearLayout android:id="@+id/cardThresholdBody" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+                    <android.widget.SeekBar android:id="@+id/sbWrongThreshold" android:layout_width="match_parent"
+                        android:layout_height="wrap_content" android:layout_marginTop="12dp"
+                        android:max="9"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp" android:orientation="horizontal">
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:text="1 次" android:textSize="11sp"
+                            android:textColor="@color/text_sub"/>
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:gravity="end" android:text="10 次"
+                            android:textSize="11sp" android:textColor="@color/text_sub"/>
+                    </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
 
             <!-- 自动加入错题本 -->
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:layout_marginTop="8dp" android:orientation="horizontal"
+                android:orientation="horizontal"
                 android:gravity="center_vertical" android:padding="16dp" android:background="@drawable/bg_card">
                 <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
                     android:layout_weight="1" android:orientation="vertical">
@@ -232,7 +243,7 @@
 
             <!-- AI 模型配置（单一入口组件） -->
             <LinearLayout android:id="@+id/btnAiModelConfig" android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:layout_marginTop="16dp"
+                android:layout_height="wrap_content"
                 android:orientation="horizontal" android:gravity="center_vertical"
                 android:padding="16dp" android:background="@drawable/bg_card"
                 android:foreground="?attr/selectableItemBackground">
@@ -249,37 +260,6 @@
                     android:textSize="14sp" android:textColor="@color/primary"/>
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                     android:text=" ›" android:textSize="18sp" android:textColor="@color/text_sub"/>
-            </LinearLayout>
-
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginTop="16dp" android:text="测试与识别" android:textSize="13sp"
-                android:textColor="@color/text_sub" android:layout_marginBottom="8dp"/>
-
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:orientation="vertical" android:padding="16dp" android:background="@drawable/bg_card">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:text="识别知识点" android:textSize="16sp" android:textColor="@color/text_main"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp" android:text="先检查本地缓存，缺失时再调用 AI 识别"
-                    android:textSize="12sp" android:textColor="@color/text_sub"/>
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp" android:orientation="horizontal">
-                    <TextView android:id="@+id/btnAiTest" android:layout_width="0dp"
-                        android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center"
-                        android:paddingVertical="10dp" android:text="测试连接" android:textSize="14sp"
-                        android:textColor="@android:color/white" android:background="@drawable/bg_btn_primary"/>
-                    <TextView android:id="@+id/btnRecognizeKnowledge" android:layout_width="0dp"
-                        android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center"
-                        android:layout_marginStart="12dp" android:paddingVertical="10dp" android:text="识别知识点"
-                        android:textSize="14sp" android:textColor="@android:color/white"
-                        android:background="@drawable/bg_btn_primary"/>
-                </LinearLayout>
-                <TextView android:id="@+id/tvAiProgress" android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" android:layout_marginTop="12dp"
-                    android:text="" android:textSize="12sp" android:textColor="@color/text_sub"/>
-                <ProgressBar android:id="@+id/pbAiProgress" style="?android:attr/progressBarStyleHorizontal"
-                    android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp" android:max="100" android:visibility="gone"/>
             </LinearLayout>
 
             <!-- 分组：题库下载目录 -->
@@ -312,6 +292,27 @@
                             android:background="@drawable/bg_btn_primary"/>
                     </LinearLayout>
                 </HorizontalScrollView>
+            </LinearLayout>
+
+            <!-- 分组：更多 -->
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="20dp" android:text="更多" android:textSize="13sp"
+                android:textColor="@color/text_sub" android:layout_marginBottom="8dp"/>
+
+            <!-- 自动翻页 -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:padding="16dp" android:background="@drawable/bg_card">
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="自动下一题" android:textSize="16sp" android:textColor="@color/text_main"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp" android:text="做对题目自动切换下一题，做错不自动切换"
+                        android:textSize="12sp" android:textColor="@color/text_sub"/>
+                </LinearLayout>
+                <androidx.appcompat.widget.SwitchCompat android:id="@+id/swAutoNext"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
             </LinearLayout>
         </LinearLayout>
     </ScrollView>

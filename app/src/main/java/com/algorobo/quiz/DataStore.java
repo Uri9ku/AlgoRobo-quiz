@@ -208,6 +208,14 @@ public class DataStore {
         sp(c).edit().putInt("setting_dark_mode", mode).apply();
     }
 
+    // 主题色：以预设色板索引存储，0=默认蓝紫，默认 0
+    public static int getThemeColor(Context c) {
+        return sp(c).getInt("setting_theme_color", 0);
+    }
+    public static void setThemeColor(Context c, int index) {
+        sp(c).edit().putInt("setting_theme_color", index).apply();
+    }
+
     // 自定义项：自动翻页（待完善）示例，0=关闭，1=开启
     public static boolean isAutoNext(Context c) {
         return sp(c).getBoolean("setting_auto_next", false);

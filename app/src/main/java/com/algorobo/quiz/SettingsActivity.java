@@ -3,7 +3,6 @@ package com.algorobo.quiz;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
-import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -19,14 +18,19 @@ public class SettingsActivity extends AppCompatActivity {
     private SeekBar sbToast, sbAnim;
     private SwitchCompat swAutoNext;
     private TextView tvAiModelValue;
-    private TextView tvAiProgress;
-    private ProgressBar pbAiProgress;
     private TextView tvWrongThresholdValue;
     private SeekBar sbWrongThreshold;
     private SwitchCompat swAutoWrong;
     private SwitchCompat swAutoAiAnalysis;
     private TextView tvAutoAiAnalysisModeValue;
     private TextView tvExamDir;
+    private android.widget.LinearLayout headerTopBar;
+    private android.widget.LinearLayout themeColorPalette;
+
+    // 主题色预设色板（索引 0 为默认蓝紫）
+    private static final String[] THEME_COLORS = {
+            "#5B5FEF", "#22C55E", "#F59E0B", "#EF4444", "#0EA5E9", "#EC4899", "#8B5CF6"
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,16 +44,24 @@ public class SettingsActivity extends AppCompatActivity {
         sbAnim = findViewById(R.id.sbAnim);
         swAutoNext = findViewById(R.id.swAutoNext);
         tvAiModelValue = findViewById(R.id.tvAiModelValue);
-        tvAiProgress = findViewById(R.id.tvAiProgress);
-        pbAiProgress = findViewById(R.id.pbAiProgress);
         tvWrongThresholdValue = findViewById(R.id.tvWrongThresholdValue);
         sbWrongThreshold = findViewById(R.id.sbWrongThreshold);
         swAutoWrong = findViewById(R.id.swAutoWrong);
         swAutoAiAnalysis = findViewById(R.id.swAutoAiAnalysis);
         tvAutoAiAnalysisModeValue = findViewById(R.id.tvAutoAiAnalysisModeValue);
         tvExamDir = findViewById(R.id.tvExamDir);
+        headerTopBar = findViewById(R.id.settingsTopBar);
+        themeColorPalette = findViewById(R.id.themeColorPalette);
 
         findViewById(R.id.btnBackSettings).setOnClickListener(v -> finish());
+
+        // 点击标题行折叠/展开滑动条（三个数字类设置卡片）
+        setupCollapse(R.id.cardToastHeader, R.id.cardToastBody);
+        setupCollapse(R.id.cardAnimHeader, R.id.cardAnimBody);
+        setupCollapse(R.id.cardThresholdHeader, R.id.cardThresholdBody);
+
+        // 主题色：渲染色板 + 即时染色
+        setupThemeColor();
 
         // 读取并显示当前设置
         refreshUi();
@@ -130,6 +142,71 @@ public class SettingsActivity extends AppCompatActivity {
         findViewById(R.id.btnOpenExamDir).setOnClickListener(v -> onOpenExamDir());
 
         initAiConfig();
+    }
+
+    private void setupCollapse(int headerId, int bodyId) {
+        android.view.View header = findViewById(headerId);
+        android.view.View body = findViewById(bodyId);
+        header.setOnClickListener(v -> {
+            if (body.getVisibility() == android.view.View.GONE) {
+                body.setVisibility(android.view.View.VISIBLE);
+            } else {
+                body.setVisibility(android.view.View.GONE);
+            }
+        });
+    }
+
+    private void setupThemeColor() {
+        for (int i = 0; i < THEME_COLORS.length; i++) {
+            final int idx = i;
+            android.widget.TextView dot = new android.widget.TextView(this);
+            int size = (int) (40 * getResources().getDisplayMetrics().density);
+            android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(size, size);
+            lp.setMarginEnd((int) (12 * getResources().getDisplayMetrics().density));
+            dot.setLayoutParams(lp);
+            dot.setText("");
+            dot.setOnClickListener(v -> {
+                DataStore.setThemeColor(this, idx);
+                applyThemeColor(idx);
+                renderThemePalette();
+            });
+            themeColorPalette.addView(dot);
+        }
+        renderThemePalette();
+        applyThemeColor(DataStore.getThemeColor(this));
+    }
+
+    /** 用当前主题色即时染色顶栏与设置页值文字。 */
+    private void applyThemeColor(int idx) {
+        int color = android.graphics.Color.parseColor(THEME_COLORS[idx]);
+        headerTopBar.setBackgroundColor(color);
+        // 染色所有引用 @color/primary 的值文字
+        int[] valueIds = {
+                R.id.tvToastValue, R.id.tvAnimValue, R.id.tvWrongThresholdValue,
+                R.id.tvDarkModeValue, R.id.tvAutoAiAnalysisModeValue, R.id.tvAiModelValue
+        };
+        for (int id : valueIds) {
+            android.widget.TextView tv = findViewById(id);
+            if (tv != null) tv.setTextColor(color);
+        }
+    }
+
+    /** 渲染色板时给当前选中项加边框指示。 */
+    private void renderThemePalette() {
+        int current = DataStore.getThemeColor(this);
+        for (int i = 0; i < themeColorPalette.getChildCount(); i++) {
+            android.view.View child = themeColorPalette.getChildAt(i);
+            int size = (int) (40 * getResources().getDisplayMetrics().density);
+            android.graphics.drawable.GradientDrawable gd = new android.graphics.drawable.GradientDrawable();
+            gd.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+            gd.setColor(android.graphics.Color.parseColor(THEME_COLORS[i]));
+            if (i == current) {
+                gd.setStroke((int) (3 * getResources().getDisplayMetrics().density), android.graphics.Color.WHITE);
+            } else {
+                gd.setStroke((int) (1 * getResources().getDisplayMetrics().density), 0x33000000);
+            }
+            child.setBackground(gd);
+        }
     }
 
     private void refreshUi() {
@@ -290,8 +367,6 @@ public class SettingsActivity extends AppCompatActivity {
         findViewById(R.id.btnAiModelConfig).setOnClickListener(v -> {
             startActivity(new Intent(this, AiConfigActivity.class));
         });
-        findViewById(R.id.btnAiTest).setOnClickListener(v -> onAiTest());
-        findViewById(R.id.btnRecognizeKnowledge).setOnClickListener(v -> onRecognizeKnowledge());
     }
 
     private String aiModelDisplayName(String model) {
@@ -316,57 +391,5 @@ public class SettingsActivity extends AppCompatActivity {
                 })
                 .setNegativeButton("取消", null)
                 .show();
-    }
-
-    private void onAiTest() {
-        AiApi.Config cfg = DataStore.getCurrentAiConfig(this);
-        if (cfg == null || !cfg.isComplete()) {
-            showToast("请先点击上方「AI 模型配置」完善 API 配置");
-            startActivity(new Intent(this, AiConfigActivity.class));
-            return;
-        }
-        pbAiProgress.setVisibility(android.view.View.VISIBLE);
-        tvAiProgress.setText("正在测试连接…");
-        new Thread(() -> {
-            AiApi.Result r = AiApi.testConnection(cfg);
-            runOnUiThread(() -> {
-                pbAiProgress.setVisibility(android.view.View.GONE);
-                if (r.ok) {
-                    tvAiProgress.setText("连接成功");
-                    showToast("连接测试成功");
-                } else {
-                    tvAiProgress.setText("连接失败");
-                    showToast("连接失败：" + r.text);
-                }
-            });
-        }).start();
-    }
-
-    private void onRecognizeKnowledge() {
-        AiApi.Config cfg = DataStore.getCurrentAiConfig(this);
-        if (cfg == null || !cfg.isComplete()) {
-            showToast("请先点击上方「AI 模型配置」完善 API 配置");
-            startActivity(new Intent(this, AiConfigActivity.class));
-            return;
-        }
-        pbAiProgress.setVisibility(android.view.View.VISIBLE);
-        tvAiProgress.setText("正在识别知识点…");
-        new Thread(() -> {
-            Question sample = new Question(0, Question.TYPE_SINGLE,
-                    "衡量一个国家教育水平的重要指标是（ ）",
-                    new String[]{"经济发展水平", "国民受教育程度", "人口数量", "国土面积"},
-                    1, "国民受教育程度是衡量教育发展水平的核心指标。");
-            AiApi.Result r = AiApi.recognizeKnowledge(this, cfg, sample);
-            runOnUiThread(() -> {
-                pbAiProgress.setVisibility(android.view.View.GONE);
-                if (r.ok) {
-                    tvAiProgress.setText("识别完成");
-                    showToast("知识点识别成功");
-                } else {
-                    tvAiProgress.setText("识别失败");
-                    showToast("识别失败：" + r.text);
-                }
-            });
-        }).start();
     }
 }
