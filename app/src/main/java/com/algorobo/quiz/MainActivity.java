@@ -293,7 +293,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void bindResume() {
         DataStore.ResumeState resume = DataStore.getResume(this);
-        TextView btnResume = findViewById(R.id.btnResume);
+        LinearLayout btnResume = findViewById(R.id.btnResume);
         if (resume == null) {
             btnResume.setVisibility(View.GONE);
             return;
