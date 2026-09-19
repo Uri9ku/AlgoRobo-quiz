@@ -66,7 +66,6 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.fabSettings).setOnClickListener(v ->
             startActivity(new Intent(this, SettingsActivity.class)));
 
-        bindProgress();
         bindBadges();
         bindResume();
 
@@ -320,23 +319,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return card;
-    }
-
-
-    // ===== 原有数据绑定 =====
-    private void bindProgress() {
-        TextView tvToday = findViewById(R.id.tvTodayCount);
-        TextView tvTotal = findViewById(R.id.tvTotalCount);
-        TextView tvAccuracy = findViewById(R.id.tvAccuracy);
-        TextView tvStreak = findViewById(R.id.tvStreak);
-        if (tvToday == null && tvTotal == null && tvAccuracy == null && tvStreak == null) {
-            return;
-        }
-        int[] today = DataStore.getTodayStats(this);
-        if (tvToday != null) tvToday.setText(String.valueOf(today[0]));
-        if (tvTotal != null) tvTotal.setText(String.valueOf(DataStore.getTotal(this)));
-        if (tvAccuracy != null) tvAccuracy.setText(DataStore.getAccuracy(this) + "%");
-        if (tvStreak != null) tvStreak.setText(String.valueOf(DataStore.getStreakDays(this)));
     }
 
     private void bindBadges() {
