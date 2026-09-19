@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.Set;
 
 public class DataStore {
-    private static final String PREFS = "practice_prefs";
+    private static final String PREFS = "algorobo_prefs";
     private static final Gson gson = new Gson();
 
     private static SharedPreferences sp(Context c) { return c.getSharedPreferences(PREFS, Context.MODE_PRIVATE); }
