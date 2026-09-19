@@ -341,7 +341,15 @@ public class RobotExamUpdater {
         if (lower.contains("graphical")) return "gx";
         if (lower.contains("python")) return "py";
         if (lower.contains("rle") || lower.contains("robot")) return "robot";
-        if (lower.contains(".c.") || lower.contains("c语言")) return "c";
+        if (lower.contains("c语言")) return "c";
+        // C 语言：按 "." 切段后精确匹配，避免 ".c." 子串对非标准命名的脆弱依赖。
+        String base = fileName;
+        int dot = base.lastIndexOf('.');
+        if (dot > 0) base = base.substring(0, dot);
+        String[] parts = base.split("\\.");
+        for (String p : parts) {
+            if (p.trim().equalsIgnoreCase("c")) return "c";
+        }
         return "robot";
     }
 

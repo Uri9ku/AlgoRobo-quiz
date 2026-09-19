@@ -73,7 +73,7 @@ public class ExamListActivity extends AppCompatActivity {
 
     // 在线导入题库：GitHub 仓库源（release 资产为题库文件）
     private static final String GITHUB_OWNER = "Uri9ku";
-    private static final String GITHUB_REPO = "AlgoRobo-quiz";
+    private static final String GITHUB_REPO = "CIE-ETQ";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
