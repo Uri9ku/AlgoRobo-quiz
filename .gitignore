@@ -23,3 +23,8 @@ local.properties
 
 # 环境
 captures/
+
+# 上一轮 mv build build_old 产生的隔离目录
+build_old/
+app/build_old/
+*.log

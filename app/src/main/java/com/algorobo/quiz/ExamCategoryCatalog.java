@@ -18,6 +18,63 @@ public class ExamCategoryCatalog {
         public Node add(String child) { children.add(child); return this; }
     }
 
+    /**
+     * 统一三级目录树模型。
+     * 一级 = 大类/级别，二级 = 子分类/分组，三级 = 叶子知识点（未来挂接分类刷题入口）。
+     * 每一级都支持点击展开/折叠。
+     */
+    public static class TreeNode {
+        public String title;
+        public List<TreeNode> children = new ArrayList<>();
+        public String progress = null;   // 叶子节点刷题进度，如 "164/165"；null 则不显示
+        public boolean leaf = false;      // 是否为三级叶子（知识点，可点击跳转刷题）
+
+        public TreeNode(String title) { this.title = title; }
+        public TreeNode(String title, String progress) { this.title = title; this.progress = progress; }
+        public TreeNode add(TreeNode child) { children.add(child); return this; }
+        public TreeNode leaf() { this.leaf = true; return this; }
+    }
+
+    /**
+     * 将类目数据映射为统一三级树。
+     * - 普通类目：Node.title 作为一级，Node.children 直接作为三级叶子。
+     * - 机器人类目：Level.name 一级，Section.title 二级，Item 三级叶子（subs 并入文本）。
+     */
+    public static List<TreeNode> buildTree(Category category) {
+        List<TreeNode> roots = new ArrayList<>();
+        if (category.levels != null && !category.levels.isEmpty()) {
+            for (RobotLevel.Level lv : category.levels) {
+                TreeNode l1 = new TreeNode(lv.name);
+                for (RobotLevel.Section sec : lv.sections) {
+                    TreeNode l2 = new TreeNode(sec.title);
+                    for (RobotLevel.Item item : sec.items) {
+                        StringBuilder sb = new StringBuilder(item.text);
+                        if (!item.subs.isEmpty()) {
+                            sb.append("（");
+                            for (int k = 0; k < item.subs.size(); k++) {
+                                if (k > 0) sb.append("、");
+                                sb.append(item.subs.get(k));
+                            }
+                            sb.append("）");
+                        }
+                        l2.add(new TreeNode(sb.toString()).leaf());
+                    }
+                    l1.add(l2);
+                }
+                roots.add(l1);
+            }
+        } else {
+            for (Node node : category.nodes) {
+                TreeNode l1 = new TreeNode(node.title);
+                for (String child : node.children) {
+                    l1.add(new TreeNode(child).leaf());
+                }
+                roots.add(l1);
+            }
+        }
+        return roots;
+    }
+
     /** 类目：如 C语言 / Python / 图形化 / 机器人 */
     public static class Category {
         public String name;

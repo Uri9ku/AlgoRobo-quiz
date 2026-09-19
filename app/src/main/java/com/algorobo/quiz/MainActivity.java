@@ -18,13 +18,13 @@ import java.util.HashSet;
 
 import com.algorobo.quiz.ExamCategoryCatalog.Category;
 import com.algorobo.quiz.ExamCategoryCatalog.ExamType;
-import com.algorobo.quiz.ExamCategoryCatalog.Node;
+import com.algorobo.quiz.ExamCategoryCatalog.TreeNode;
 
 public class MainActivity extends AppCompatActivity {
 
     private int currentTypeIndex = 0;
     private int currentCategoryIndex = 0;
-    private final Set<Integer> expandedLevels = new HashSet<>();
+    private final Set<String> expandedPaths = new HashSet<>();
 
     private TextView tvExamTypeName;
     private TextView tvExamTypeSubtitle;
@@ -172,15 +172,9 @@ public class MainActivity extends AppCompatActivity {
         }
         Category c = t.categories.get(currentCategoryIndex);
 
-        // 机器人等级考试：多级折叠展开容器
-        if (c.levels != null && !c.levels.isEmpty()) {
-            for (int i = 0; i < c.levels.size(); i++) {
-                llGreenContainer.addView(buildLevelCard(c.levels.get(i), i));
-            }
-            return;
-        }
-
-        if (c.nodes.isEmpty()) {
+        // 统一三级树：所有类目（普通 + 机器人）都映射为 TreeNode 树
+        List<TreeNode> roots = ExamCategoryCatalog.buildTree(c);
+        if (roots.isEmpty()) {
             TextView empty = new TextView(this);
             empty.setText("暂无目录，待完善");
             empty.setTextSize(13);
@@ -190,135 +184,100 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
 
-        for (Node node : c.nodes) {
-            llGreenContainer.addView(buildNodeCard(node));
+        for (int i = 0; i < roots.size(); i++) {
+            llGreenContainer.addView(buildTreeNode(roots.get(i), String.valueOf(i), 0));
         }
     }
 
-    private View buildNodeCard(Node node) {
-        // 紧凑卡片：二级标题 + 三级子项内联文本（自动换行，自适应美观）
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(12), dp(10), dp(12), dp(10));
-        card.setBackgroundResource(R.drawable.bg_card);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.setMargins(0, 0, 0, dp(8));
-        card.setLayoutParams(lp);
-
-        // 二级标题（加粗带图标）
-        TextView title = new TextView(this);
-        title.setText("▸ " + node.title);
-        title.setTextSize(14);
-        title.setTextColor(getColor(R.color.primary));
-        title.setTypeface(null, android.graphics.Typeface.BOLD);
-        title.setPadding(0, 0, 0, dp(4));
-        card.addView(title);
-
-        // 三级子项：内联逗号分隔，自动换行
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < node.children.size(); i++) {
-            if (i > 0) sb.append("  ·  ");
-            sb.append(node.children.get(i));
-        }
-        TextView items = new TextView(this);
-        items.setText(sb.toString());
-        items.setTextSize(13);
-        items.setTextColor(getColor(R.color.text_sub));
-        items.setLineSpacing(dp(2), 1f);
-        card.addView(items);
-        return card;
-    }
-
-    private View buildLevelCard(RobotLevel.Level level, final int index) {
-        final boolean expanded = expandedLevels.contains(index);
+    /**
+     * 递归构建三级目录节点卡片。
+     * @param node  当前节点
+     * @param path  当前节点路径（如 "0"、"0/1"、"0/1/2"），作为展开状态 key
+     * @param depth 层级深度：0=一级，1=二级，2=三级叶子
+     */
+    private View buildTreeNode(TreeNode node, String path, int depth) {
+        final boolean hasChildren = node.children != null && !node.children.isEmpty();
+        final boolean expanded = expandedPaths.contains(path);
+        final boolean isLeaf = !hasChildren; // 三级叶子（知识点）
 
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(12), dp(10), dp(12), dp(10));
+        card.setPadding(dp(12), dp(8), dp(12), dp(8));
         card.setBackgroundResource(R.drawable.bg_card);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.setMargins(0, 0, 0, dp(8));
+        lp.setMargins(dp(depth * 8), 0, 0, dp(8));
         card.setLayoutParams(lp);
 
+        // 标题行：箭头 + 标题 + 进度（叶子）
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
 
-        TextView title = new TextView(this);
-        title.setText((expanded ? "\u25be " : "\u25b8 ") + level.name);
-        title.setTextSize(15);
-        title.setTextColor(getColor(R.color.primary));
-        title.setTypeface(null, android.graphics.Typeface.BOLD);
-        header.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-
-        if (!expanded && !level.metas.isEmpty()) {
-            TextView hint = new TextView(this);
-            hint.setText(level.metas.get(0));
-            hint.setTextSize(11);
-            hint.setTextColor(getColor(R.color.text_sub));
-            hint.setMaxLines(1);
-            hint.setEllipsize(android.text.TextUtils.TruncateAt.END);
-            header.addView(hint, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView arrow = new TextView(this);
+        if (hasChildren) {
+            arrow.setText(expanded ? "\u25be" : "\u25b8");
+        } else {
+            arrow.setText("\u00b7"); // 叶子用小圆点
         }
+        arrow.setTextSize(15);
+        arrow.setTextColor(getColor(R.color.primary));
+        arrow.setPadding(0, 0, dp(6), 0);
+        header.addView(arrow);
+
+        TextView title = new TextView(this);
+        title.setText(node.title);
+        title.setTextSize(depth == 0 ? 15 : (depth == 1 ? 14 : 13));
+        title.setTextColor(depth == 0 ? getColor(R.color.primary) : getColor(R.color.text_main));
+        if (depth == 0 || depth == 1) {
+            title.setTypeface(null, android.graphics.Typeface.BOLD);
+        }
+        header.addView(title, new LinearLayout.LayoutParams(
+            0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        // 叶子节点右侧显示刷题进度
+        if (isLeaf && node.progress != null && !node.progress.isEmpty()) {
+            TextView prog = new TextView(this);
+            prog.setText(node.progress);
+            prog.setTextSize(12);
+            prog.setTextColor(getColor(R.color.text_sub));
+            header.addView(prog);
+        }
+
         card.addView(header);
 
-        final LinearLayout body = new LinearLayout(this);
-        body.setOrientation(LinearLayout.VERTICAL);
-        body.setPadding(0, dp(6), 0, 0);
-        card.addView(body);
-
+        // 点击交互：有子节点→展开/折叠；叶子→跳转知识点刷题（预留）
         header.setOnClickListener(v -> {
-            if (expandedLevels.contains(index)) {
-                expandedLevels.remove(index);
+            if (hasChildren) {
+                if (expandedPaths.contains(path)) {
+                    expandedPaths.remove(path);
+                } else {
+                    expandedPaths.add(path);
+                }
+                renderGreenContainer();
             } else {
-                expandedLevels.add(index);
+                onLeafClick(node, path);
             }
-            renderGreenContainer();
         });
 
-        if (expanded) {
-            for (String m : level.metas) {
-                TextView mv = new TextView(this);
-                mv.setText(m);
-                mv.setTextSize(12);
-                mv.setTextColor(getColor(R.color.text_sub));
-                mv.setPadding(0, 0, 0, dp(2));
-                body.addView(mv);
-            }
-            for (RobotLevel.Section sec : level.sections) {
-                TextView st = new TextView(this);
-                st.setText(sec.title);
-                st.setTextSize(13);
-                st.setTextColor(getColor(R.color.text_main));
-                st.setTypeface(null, android.graphics.Typeface.BOLD);
-                st.setPadding(0, dp(6), 0, dp(2));
-                body.addView(st);
-
-                for (RobotLevel.Item item : sec.items) {
-                    StringBuilder sb = new StringBuilder();
-                    sb.append(item.text);
-                    if (!item.subs.isEmpty()) {
-                        sb.append("  \uff08");
-                        for (int k = 0; k < item.subs.size(); k++) {
-                            if (k > 0) sb.append("\u3001");
-                            sb.append(item.subs.get(k));
-                        }
-                        sb.append("\uff09");
-                    }
-                    TextView iv = new TextView(this);
-                    iv.setText(sb.toString());
-                    iv.setTextSize(12);
-                    iv.setTextColor(getColor(R.color.text_sub));
-                    iv.setLineSpacing(dp(2), 1f);
-                    iv.setPadding(dp(8), dp(1), 0, dp(1));
-                    body.addView(iv);
-                }
+        // 展开时递归渲染子节点
+        if (expanded && hasChildren) {
+            LinearLayout body = new LinearLayout(this);
+            body.setOrientation(LinearLayout.VERTICAL);
+            body.setPadding(0, dp(4), 0, 0);
+            card.addView(body);
+            for (int i = 0; i < node.children.size(); i++) {
+                body.addView(buildTreeNode(node.children.get(i),
+                    path + "/" + i, depth + 1));
             }
         }
 
         return card;
+    }
+
+    /** 三级叶子节点点击：后期用于知识点分类刷题跳转 */
+    private void onLeafClick(TreeNode node, String path) {
+        Toast.makeText(this, "知识点：「" + node.title + "」", Toast.LENGTH_SHORT).show();
     }
 
     private void bindBadges() {
