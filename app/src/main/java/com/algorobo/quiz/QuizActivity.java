@@ -34,7 +34,7 @@ public class QuizActivity extends AppCompatActivity {
     private boolean random;
     private String source = "all"; // all / wrong / custom / paper:<key>
 
-    private TextView tvQuestionType, tvQuestion;
+    private TextView tvQuestionType, tvQuestion, tvKnowledgeTag;
     private ImageView ivStemImage;
     private LinearLayout optionsContainer;
     private LinearLayout actionContainer;
@@ -99,6 +99,7 @@ public class QuizActivity extends AppCompatActivity {
 
         tvQuestionType = findViewById(R.id.tvQuestionType);
         tvQuestion = findViewById(R.id.tvQuestion);
+        tvKnowledgeTag = findViewById(R.id.tvKnowledgeTag);
         ivStemImage = findViewById(R.id.ivStemImage);
         optionsContainer = findViewById(R.id.optionsContainer);
         pbProgress = findViewById(R.id.pbProgress);
@@ -233,6 +234,7 @@ public class QuizActivity extends AppCompatActivity {
         Question q = questions.get(index);
         pbProgress.setProgress(index + 1);
         tvQuestionType.setText(q.type);
+        renderKnowledgeTag(q);
         tvQuestion.setText((index + 1) + ". " + q.stem);
         renderStemImage(q);
 
@@ -261,6 +263,26 @@ public class QuizActivity extends AppCompatActivity {
 
         updateToolbarIcons();
         saveResumeNow();
+    }
+    // 展示题目知识点标签：多知识点用「/」连接；无知识点则隐藏
+    private void renderKnowledgeTag(Question q) {
+        String[] kps = q.knowledgePoints;
+        if (kps == null || kps.length == 0) {
+            tvKnowledgeTag.setVisibility(View.GONE);
+            return;
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < kps.length; i++) {
+            if (kps[i] == null || kps[i].trim().isEmpty()) continue;
+            if (sb.length() > 0) sb.append(" / ");
+            sb.append(kps[i].trim());
+        }
+        if (sb.length() == 0) {
+            tvKnowledgeTag.setVisibility(View.GONE);
+            return;
+        }
+        tvKnowledgeTag.setText(sb.toString());
+        tvKnowledgeTag.setVisibility(View.VISIBLE);
     }
     private void renderOptions(Question q) {
         int n = q.options == null ? 0 : q.options.length;

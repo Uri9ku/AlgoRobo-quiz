@@ -25,6 +25,8 @@ public class Question implements Serializable {
     public String judgeAnswer;
     public boolean hasAnswer;
     public String difficulty;
+    /** 该题关联的知识点名称列表（可空，多知识点用数组表达）。 */
+    public String[] knowledgePoints;
 
     public Question(int id, String type, String stem, String[] options, int answerIndex, String analysis) {
         this.id = id;
