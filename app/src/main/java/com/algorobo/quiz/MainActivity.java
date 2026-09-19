@@ -27,7 +27,6 @@ public class MainActivity extends AppCompatActivity {
     private final Set<String> expandedPaths = new HashSet<>();
 
     private TextView tvExamTypeName;
-    private TextView tvExamTypeSubtitle;
     private LinearLayout llCategories;
     private LinearLayout llGreenContainer;
 
@@ -40,7 +39,6 @@ public class MainActivity extends AppCompatActivity {
         ThemeManager.applyTopInset(this, R.id.rowExamType);
 
         tvExamTypeName = findViewById(R.id.tvExamTypeName);
-        tvExamTypeSubtitle = findViewById(R.id.tvExamTypeSubtitle);
         llCategories = findViewById(R.id.llCategories);
         llGreenContainer = findViewById(R.id.llGreenContainer);
 
@@ -121,7 +119,6 @@ public class MainActivity extends AppCompatActivity {
     private void renderExamType(int index) {
         ExamType t = ExamCategoryCatalog.getByIndex(index);
         tvExamTypeName.setText(t.name);
-        tvExamTypeSubtitle.setText(t.subtitle);
     }
 
     // ===== 类目标签（红框） =====

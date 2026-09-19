@@ -17,22 +17,19 @@
             android:gravity="center_vertical" android:paddingStart="12dp" android:paddingEnd="12dp"
             android:paddingTop="4dp" android:paddingBottom="4dp">
 
-            <!-- 考试类型（缩小卡片） -->
+            <!-- 考试类型（紧凑胶囊，单行） -->
             <LinearLayout android:id="@+id/rowExamType" android:layout_width="wrap_content"
                 android:layout_height="wrap_content" android:orientation="horizontal"
-                android:gravity="center_vertical" android:padding="6dp"
+                android:gravity="center_vertical" android:paddingStart="10dp" android:paddingEnd="8dp"
+                android:paddingTop="6dp" android:paddingBottom="6dp"
                 android:background="@drawable/bg_card" android:clickable="true" android:focusable="true">
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:text="🏆" android:textSize="15sp" />
-                <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp" android:orientation="vertical">
-                    <TextView android:id="@+id/tvExamTypeName" android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" android:text="中国电子学会等级考试"
-                        android:textSize="13sp" android:textStyle="bold" android:textColor="@color/text_main" />
-                    <TextView android:id="@+id/tvExamTypeSubtitle" android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" android:layout_marginTop="1dp"
-                        android:text="全国青少年软件编程等级考试" android:textSize="10sp" android:textColor="@color/text_sub" />
-                </LinearLayout>
+                    android:text="🏆" android:textSize="14sp" />
+                <TextView android:id="@+id/tvExamTypeName" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:layout_marginStart="5dp"
+                    android:text="中国电子学会等级考试" android:maxLines="1" android:ellipsize="end"
+                    android:maxWidth="150dp"
+                    android:textSize="13sp" android:textStyle="bold" android:textColor="@color/text_main" />
                 <ImageView android:layout_width="wrap_content" android:layout_height="wrap_content"
                     android:src="@drawable/ic_arrow_down" android:contentDescription="选择考试类型" />
             </LinearLayout>
