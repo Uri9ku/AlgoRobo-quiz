@@ -64,7 +64,7 @@
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                     android:text="真题练习" android:textSize="16sp" android:textStyle="bold" android:textColor="@color/text_main" />
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp" android:text="历年真题在线刷" android:textSize="12sp" android:textColor="@color/text_sub" />
+                    android:layout_marginTop="2dp" android:text="编程题库在线练" android:textSize="12sp" android:textColor="@color/text_sub" />
             </LinearLayout>
             <TextView android:id="@+id/btnResume" android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:text="继续上次▶" android:textSize="12sp" android:textColor="@color/primary"

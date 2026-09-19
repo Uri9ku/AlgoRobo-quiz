@@ -145,7 +145,7 @@
             android:paddingEnd="12dp"
             android:paddingTop="6dp"
             android:paddingBottom="4dp"
-            android:text="数据来源于 GitHub 仓库 Uri9ku/CIE-ETQ"
+            android:text="数据来源于 GitHub 仓库 Uri9ku/AlgoRobo-quiz"
             android:textSize="11sp"
             android:textColor="@color/text_sub"
             android:background="@color/bg_page" />

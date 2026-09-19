@@ -71,9 +71,9 @@ public class ExamListActivity extends AppCompatActivity {
     private String filterSubject = null;
     private int filterLevel = -1;
 
-    // 在线导入真题：GitHub 仓库源（release 资产为 .docx/.doc 真题文件）
+    // 在线导入题库：GitHub 仓库源（release 资产为题库文件）
     private static final String GITHUB_OWNER = "Uri9ku";
-    private static final String GITHUB_REPO = "CIE-ETQ";
+    private static final String GITHUB_REPO = "AlgoRobo-quiz";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

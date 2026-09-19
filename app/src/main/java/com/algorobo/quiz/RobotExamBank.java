@@ -122,7 +122,7 @@ public class RobotExamBank {
 
     /**
      * 清除所有真题缓存：删除缓存 JSON、图片目录，并清空内存缓存。
-     * 用于「历年真题页」的「清除真题」功能。
+     * 用于「题库页」的「清除真题」功能。
      */
     public static synchronized void clearCache(Context ctx) {
         // 先收集缓存 JSON 中引用的图片文件名，用于连同散图一起清理。
@@ -171,7 +171,7 @@ public class RobotExamBank {
 
     /**
      * 按 key 批量移除指定真题的缓存（从缓存 JSON 中删除，并清理对应自定义标题）。
-     * 用于「历年真题页」的「移除真题库」功能。
+     * 用于「题库页」的「移除真题库」功能。
      */
     public static synchronized void removePapersByKeys(Context ctx, java.util.Collection<String> keys) {
         if (keys == null || keys.isEmpty()) return;
