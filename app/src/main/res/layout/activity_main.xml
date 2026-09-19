@@ -11,35 +11,42 @@
         android:layout_width="match_parent" android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- ===== 顶部：考试类型选择（去框化） ===== -->
-        <LinearLayout android:id="@+id/rowExamType" android:layout_width="match_parent"
+        <!-- ===== 顶部：考试类型选择（缩小）+ 类目标签同行 ===== -->
+        <LinearLayout android:layout_width="match_parent"
             android:layout_height="wrap_content" android:orientation="horizontal"
-            android:gravity="center_vertical" android:padding="12dp"
-            android:layout_marginStart="12dp" android:layout_marginEnd="12dp" android:layout_marginTop="0dp"
-            android:background="@drawable/bg_card" android:clickable="true" android:focusable="true">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="🏆" android:textSize="22sp" />
-            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
-                android:layout_weight="1" android:layout_marginStart="10dp" android:orientation="vertical">
-                <TextView android:id="@+id/tvExamTypeName" android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" android:text="中国电子学会等级考试"
-                    android:textSize="16sp" android:textStyle="bold" android:textColor="@color/text_main" />
-                <TextView android:id="@+id/tvExamTypeSubtitle" android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" android:layout_marginTop="2dp"
-                    android:text="全国青少年软件编程等级考试" android:textSize="12sp" android:textColor="@color/text_sub" />
-            </LinearLayout>
-            <ImageView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:src="@drawable/ic_arrow_down" android:contentDescription="选择考试类型" />
-        </LinearLayout>
+            android:gravity="center_vertical" android:paddingStart="12dp" android:paddingEnd="12dp"
+            android:paddingTop="4dp" android:paddingBottom="4dp">
 
-        <!-- 类目标签容器（横向滚动） -->
-        <HorizontalScrollView android:layout_width="match_parent"
-            android:layout_height="wrap_content" android:layout_marginTop="10dp"
-            android:scrollbars="none" android:overScrollMode="never"
-            android:paddingStart="12dp" android:paddingEnd="12dp">
-            <LinearLayout android:id="@+id/llCategories" android:layout_width="wrap_content"
-                android:layout_height="wrap_content" android:orientation="horizontal" />
-        </HorizontalScrollView>
+            <!-- 考试类型（缩小卡片） -->
+            <LinearLayout android:id="@+id/rowExamType" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:orientation="horizontal"
+                android:gravity="center_vertical" android:padding="6dp"
+                android:background="@drawable/bg_card" android:clickable="true" android:focusable="true">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="🏆" android:textSize="15sp" />
+                <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp" android:orientation="vertical">
+                    <TextView android:id="@+id/tvExamTypeName" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="中国电子学会等级考试"
+                        android:textSize="13sp" android:textStyle="bold" android:textColor="@color/text_main" />
+                    <TextView android:id="@+id/tvExamTypeSubtitle" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:layout_marginTop="1dp"
+                        android:text="全国青少年软件编程等级考试" android:textSize="10sp" android:textColor="@color/text_sub" />
+                </LinearLayout>
+                <ImageView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:src="@drawable/ic_arrow_down" android:contentDescription="选择考试类型" />
+            </LinearLayout>
+
+            <!-- 类目标签容器（横向滚动，与考试类型同行） -->
+            <HorizontalScrollView android:layout_width="0dp"
+                android:layout_height="wrap_content" android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:scrollbars="none" android:overScrollMode="never">
+                <LinearLayout android:id="@+id/llCategories" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:orientation="horizontal"
+                    android:gravity="center_vertical" />
+            </HorizontalScrollView>
+        </LinearLayout>
 
         <!-- ===== 中部黄框：功能卡片区 ===== -->
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"

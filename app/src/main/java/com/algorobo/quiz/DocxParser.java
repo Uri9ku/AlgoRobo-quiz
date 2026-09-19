@@ -87,9 +87,16 @@ public class DocxParser {
         for (Para p : paras) {
             String text = p.text.replace('\u00a0', ' ').trim();
             String img = p.firstImageRid();
-            // 题号行（如 "1."）触发新题。真实 docx 中「试题编号：」等元数据位于题目内容（题干+选项）之后，
+            // 题号行触发新题。真实 docx 中「试题编号：」等元数据位于题目内容（题干+选项）之后，
             // 因此必须以题号行作为新题的唯一触发标志，而非「试题编号：」。
-            if (isQuestionNumberLine(text)) {
+            // 题号有两种格式：
+            //  A) 题号单独成段（如 "1."），题干在后续段落 —— 2026.6.CIE.RLE 系列。
+            //  B) 题号与题干合并成段（如 "1.下列选项中……"）—— 2026.3.CIE.RLE 实操卷系列。
+            String stripped = stripQuestionNumberPrefix(text);
+            // 实操卷的评分项编号（如 "1.器件及器件连接（20分）"、"3.功能实现（60分）"）
+            // 同样以「N.」开头，但不属于题目，必须排除，否则会多算题数。
+            if (stripped != null && isScoringItemText(stripped)) stripped = null;
+            if (stripped != null) {
                 if (cur != null) flush(paper, cur, curStem, curStemImg, curOptions, curOptionImgs);
                 cur = new Question();
                 cur.hasAnswer = true;
@@ -98,6 +105,9 @@ public class DocxParser {
                 curOptionImgs = new ArrayList<>();
                 curStemImg = null;
                 inOptions = false;
+                // 题号与题干合并成段时，剥离题号后剩余文本即题干首行。同时记录该段图片。
+                if (stripped.length() > 0) curStem.append(stripped);
+                if (img != null) curStemImg = img;
                 continue;
             }
             if (cur == null) continue;
@@ -236,9 +246,37 @@ public class DocxParser {
         return text.matches("^[一二三四五六七八九十]+、.*(共\\d+题|共\\d+分).*");
     }
 
-    /** 纯题号行：如 "1."、"30."。真实 docx 中题号单独成段，是触发新题的唯一标志。 */
+    /**
+     * 纯题号行：如 "1."、"30."。真实 docx 中题号单独成段，是触发新题的唯一标志。
+     * @deprecated 已由 {@link #stripQuestionNumberPrefix(String)} 取代，兼容「题号+题干合并」的实操卷格式。
+     */
     private static boolean isQuestionNumberLine(String text) {
         return text.matches("^\\d+\\.$");
+    }
+
+    /**
+     * 判断一行是否为「题号行」并返回剥离题号前缀后的剩余文本。
+     * 兼容两种格式：
+     *  - "1."         -> 返回 ""（题号单独成段，题干在后续段落）
+     *  - "1.下列选项…" -> 返回 "下列选项…"（题号与题干合并成段）
+     * 无法匹配题号格式时返回 null，表示不是题号行。
+     */
+    private static String stripQuestionNumberPrefix(String text) {
+        if (text.matches("^\\d+\\.$")) return "";
+        java.util.regex.Pattern ptn = java.util.regex.Pattern.compile("^(\\d+)\\.\\s*(.+)$");
+        java.util.regex.Matcher m = ptn.matcher(text);
+        if (m.matches()) return m.group(2).trim();
+        return null;
+    }
+
+    /**
+     * 判断剥离题号后的文本是否为「实操卷评分项」标题（如 "器件及器件连接（20分）"、
+     * "功能实现（60分）"）。此类行与题目一样以「N.」开头，但以「（N分）」结尾，
+     * 是评分细则而非题目，必须排除以免多算题数。
+     */
+    private static boolean isScoringItemText(String stripped) {
+        if (stripped == null || stripped.isEmpty()) return false;
+        return stripped.matches(".*（\\d+分）\\s*");
     }
     private static boolean isOptionStart(String text) {
         if (text.matches("^[A-D]\\..*")) return true;
