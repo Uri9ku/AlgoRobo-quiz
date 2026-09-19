@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="@color/bg_page">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="56dp"
+        android:background="@color/primary" android:orientation="horizontal"
+        android:gravity="center_vertical" android:paddingHorizontal="12dp">
+        <TextView android:id="@+id/btnBack" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="←" android:textColor="#FFFFFF" android:textSize="22sp" android:padding="8dp"/>
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+            android:gravity="center" android:text="打卡日历" android:textColor="#FFFFFF" android:textSize="18sp"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#FFFFFF"/>
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="48dp"
+        android:background="@color/card_bg" android:orientation="horizontal"
+        android:gravity="center_vertical" android:paddingHorizontal="20dp">
+        <TextView android:id="@+id/btnPrev" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="‹" android:textSize="28sp" android:textColor="@color/text_main" android:padding="8dp"/>
+        <TextView android:id="@+id/tvMonth" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+            android:gravity="center" android:text="2026年9月" android:textSize="16sp" android:textColor="@color/text_main"/>
+        <TextView android:id="@+id/btnNext" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="›" android:textSize="28sp" android:textColor="@color/text_main" android:padding="8dp"/>
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="36dp"
+        android:background="@color/card_bg" android:orientation="horizontal">
+        <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:text="日" android:textColor="@color/danger" android:textSize="12sp"/>
+        <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:text="一" android:textColor="@color/text_sub" android:textSize="12sp"/>
+        <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:text="二" android:textColor="@color/text_sub" android:textSize="12sp"/>
+        <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:text="三" android:textColor="@color/text_sub" android:textSize="12sp"/>
+        <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:text="四" android:textColor="@color/text_sub" android:textSize="12sp"/>
+        <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:text="五" android:textColor="@color/text_sub" android:textSize="12sp"/>
+        <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:text="六" android:textColor="@color/text_sub" android:textSize="12sp"/>
+    </LinearLayout>
+    <GridView android:id="@+id/gridCalendar" android:layout_width="match_parent" android:layout_height="0dp"
+        android:layout_weight="1" android:numColumns="7" android:verticalSpacing="2dp"
+        android:paddingHorizontal="8dp" android:background="@color/card_bg"/>
+</LinearLayout>

@@ -1,0 +1,1139 @@
+package com.algorobo.quiz;
+
+import android.app.Dialog;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.SystemClock;
+import android.view.GestureDetector;
+import android.view.Gravity;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
+import android.widget.BaseAdapter;
+import android.widget.GridView;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+public class QuizActivity extends AppCompatActivity {
+    private List<Question> questions = new ArrayList<>();
+    private int[] userAnswers; // -1 未答；单选/判断用此（判断：0=正确,1=错误）
+    private int[][] multiAnswers; // 多选题选中的选项索引
+    private boolean[] answered;
+    private int index = 0;
+    private boolean random;
+    private String source = "all"; // all / wrong / custom / paper:<key>
+
+    private TextView tvQuestionType, tvQuestion;
+    private ImageView ivStemImage;
+    private LinearLayout optionsContainer;
+    private LinearLayout actionContainer;
+    private android.widget.ProgressBar pbProgress;
+    private android.widget.ScrollView scrollQuestion;
+    private GestureDetector gestureDetector;
+    private LinearLayout questionContent;
+
+    private ImageView btnToolTime, btnToolWrongbook, btnToolDownload, btnToolSheet, btnToolMore;
+
+    private LinearLayout analysisPanel;
+    private TextView tvAnalysisCorrect, tvAnalysisText;
+    private android.widget.Button btnAiAnalysis;
+    private TextView tvAiAnalysis;
+    private MarkdownUtil markdownRenderer;
+    private LinearLayout analysisImagesContainer;
+    private TextView tvQuestionTime;
+    private long perQuestionStart;
+    private long[] questionStartTimes; // 每题首次展示时的已耗时基准
+    private long[] questionDurations;  // 每题真实作答用时（首次作答时记录）
+
+    private boolean nightMode = false; // 会话内夜间/日间切换
+    private boolean brushMode = false; // false=背题模式（点选项立即显示答案）；true=刷题模式（交卷前不显示答案）
+    private Handler handler = new Handler(Looper.getMainLooper());
+    private long startTime;
+    private Runnable timerRunnable;
+    private Runnable moreTimeRunnable;
+    private long elapsed = 0;
+    private final HashMap<Integer, ArrayList<DrawPadView.StrokeData>> draftByQuestion = new HashMap<>();
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_quiz);
+
+        random = getIntent().getBooleanExtra("random", false);
+        source = getIntent().getStringExtra("source");
+        if (source == null) source = "all";
+        boolean resume = getIntent().getBooleanExtra("resume", false);
+        int resumeIndex = getIntent().getIntExtra("resume_index", -1);
+        java.util.ArrayList<String> resumeUids = getIntent().getStringArrayListExtra("resume_uids");
+        questions = loadQuestions(source);
+        // 恢复上次进度：按 uid 重新排序题目，并定位到上次作答的索引
+        if (resume && resumeUids != null && !resumeUids.isEmpty()) {
+            questions = reorderByUids(questions, resumeUids);
+            random = false; // 恢复时沿用快照顺序，不再重新随机
+        }
+        if (questions.isEmpty()) {
+            showToast("暂无题目");
+            finish();
+            return;
+        }
+        if (random) Collections.shuffle(questions);
+        if (resume && resumeIndex >= 0 && resumeIndex < questions.size()) {
+            index = resumeIndex;
+        }
+        userAnswers = new int[questions.size()];
+        multiAnswers = new int[questions.size()][];
+        answered = new boolean[questions.size()];
+        questionStartTimes = new long[questions.size()];
+        questionDurations = new long[questions.size()];
+        for (int i = 0; i < userAnswers.length; i++) userAnswers[i] = -1;
+
+        tvQuestionType = findViewById(R.id.tvQuestionType);
+        tvQuestion = findViewById(R.id.tvQuestion);
+        ivStemImage = findViewById(R.id.ivStemImage);
+        optionsContainer = findViewById(R.id.optionsContainer);
+        pbProgress = findViewById(R.id.pbProgress);
+        questionContent = findViewById(R.id.questionContent);
+        View btnBack = findViewById(R.id.btnBack);
+
+        analysisPanel = findViewById(R.id.analysisPanel);
+        tvAnalysisCorrect = findViewById(R.id.tvAnalysisCorrect);
+        tvAnalysisText = findViewById(R.id.tvAnalysisText);
+        btnAiAnalysis = findViewById(R.id.btnAiAnalysis);
+        tvAiAnalysis = findViewById(R.id.tvAiAnalysis);
+        markdownRenderer = new MarkdownUtil(
+                getColor(R.color.text_main), getColor(R.color.accent));
+        btnAiAnalysis.setOnClickListener(v -> onAiAnalysisClick());
+
+        analysisImagesContainer = findViewById(R.id.analysisImagesContainer);
+
+        tvQuestionTime = findViewById(R.id.tvQuestionTime);
+        btnToolTime = findViewById(R.id.btnToolTime);
+        btnToolWrongbook = findViewById(R.id.btnToolWrongbook);
+        btnToolDownload = findViewById(R.id.btnToolDownload);
+        btnToolSheet = findViewById(R.id.btnToolSheet);
+        btnToolMore = findViewById(R.id.btnToolMore);
+
+        // 操作容器：用于放置判断按钮 / 多选确认按钮
+        actionContainer = new LinearLayout(this);
+        actionContainer.setOrientation(LinearLayout.VERTICAL);
+        actionContainer.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        ((LinearLayout) questionContent).addView(actionContainer, questionContent.indexOfChild(optionsContainer) + 1);
+
+        pbProgress.setMax(questions.size());
+
+        btnBack.setOnClickListener(v -> finish());
+        btnToolTime.setOnClickListener(v -> toggleFavorite());
+        btnToolWrongbook.setOnClickListener(v -> addToWrongBook());
+        btnToolDownload.setOnClickListener(v -> showDraftPaper());
+        btnToolSheet.setOnClickListener(v -> showAnswerSheet());
+        btnToolMore.setOnClickListener(v -> showMorePanel());
+
+        scrollQuestion = findViewById(R.id.scrollQuestion);
+        gestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
+            private static final int SWIPE_THRESHOLD = 100;
+            private static final int SWIPE_VELOCITY = 100;
+            @Override public boolean onDown(MotionEvent e) { return true; }
+            @Override public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+                if (e1 == null || e2 == null) return false;
+                float diffX = e2.getX() - e1.getX();
+                float diffY = e2.getY() - e1.getY();
+                if (Math.abs(diffX) > Math.abs(diffY)
+                        && Math.abs(diffX) > SWIPE_THRESHOLD
+                        && Math.abs(velocityX) > SWIPE_VELOCITY) {
+                    if (diffX < 0 && index < questions.size() - 1) { index++; renderWithAnimation(true); }
+                    else if (diffX > 0 && index > 0) { index--; renderWithAnimation(false); }
+                    return true;
+                }
+                return false;
+            }
+        });
+        scrollQuestion.setOnTouchListener((v, event) -> {
+            gestureDetector.onTouchEvent(event);
+            return false;
+        });
+
+        startTimer();
+        applyFontScale();
+        render();
+    }
+
+    private List<Question> loadQuestions(String src) {
+        if ("custom".equals(src)) {
+            return new ArrayList<>(DataStore.getCustomQuestions(this));
+        }
+        if (src != null && src.startsWith("paper:")) {
+            String key = src.substring("paper:".length());
+            return new ArrayList<>(RobotExamBank.getQuestions(this, key));
+        }
+        List<Question> all = QuestionBank.getAll();
+        if ("wrong".equals(src) || "favorite".equals(src)) {
+            java.util.Set<String> ids = "wrong".equals(src)
+                    ? DataStore.getWrongIds(this)
+                    : DataStore.getFavoriteIds(this);
+            List<Question> result = new ArrayList<>();
+            for (Question q : all) if (ids.contains(q.uniqueKey())) result.add(q);
+            // 收集真题缓存（RobotExamBank）中的错题/收藏题
+            for (RobotExamBank.Paper p : RobotExamBank.getCachedPapersList(this)) {
+                for (Question q : p.questions) {
+                    if (ids.contains(q.uniqueKey())) result.add(q);
+                }
+            }
+            return result;
+        }
+        return new ArrayList<>(all);
+    }
+    // 按 uid 快照顺序重排题目（恢复上次进度用）；缺失的题目忽略，未出现在快照中的题追加在末尾
+    private List<Question> reorderByUids(List<Question> all, List<String> uids) {
+        java.util.Map<String, Question> byUid = new java.util.HashMap<>();
+        for (Question q : all) byUid.put(q.uniqueKey(), q);
+        List<Question> ordered = new ArrayList<>();
+        java.util.Set<String> used = new java.util.HashSet<>();
+        for (String uid : uids) {
+            Question q = byUid.get(uid);
+            if (q != null && used.add(uid)) ordered.add(q);
+        }
+        for (Question q : all) if (!used.contains(q.uniqueKey())) ordered.add(q);
+        return ordered;
+    }
+    // 保存当前进度快照（uid 列表 + 当前索引 + source + random）
+    private void saveResumeNow() {
+        List<String> uids = new ArrayList<>();
+        for (Question q : questions) uids.add(q.uniqueKey());
+        DataStore.saveResume(this, uids, index, source, random);
+    }
+
+    private void startTimer() {
+        startTime = SystemClock.elapsedRealtime();
+        timerRunnable = new Runnable() {
+            @Override public void run() {
+                elapsed = SystemClock.elapsedRealtime() - startTime;
+                handler.postDelayed(this, 500);
+            }
+        };
+        handler.post(timerRunnable);
+    }
+
+    private void render() {
+        perQuestionStart = elapsed;
+        // 首次展示该题时记录起始时间基准（已答题的起始时间在作答时固定，此处不覆盖）
+        if (questionStartTimes[index] == 0) {
+            questionStartTimes[index] = elapsed;
+        }
+        Question q = questions.get(index);
+        pbProgress.setProgress(index + 1);
+        tvQuestionType.setText(q.type);
+        tvQuestion.setText((index + 1) + ". " + q.stem);
+        renderStemImage(q);
+
+        optionsContainer.removeAllViews();
+        actionContainer.removeAllViews();
+
+        if (q.isJudge()) {
+            renderJudge(q);
+        } else {
+            renderOptions(q);
+        }
+
+        if (answered[index]) {
+            if (brushMode) {
+                highlightChosenOnly(q);
+                analysisPanel.setVisibility(View.GONE);
+            } else {
+                highlightOptions(q);
+                showAnalysis(q, isCurrentCorrect());
+            }
+            showQuestionTime();
+        } else {
+            analysisPanel.setVisibility(View.GONE);
+            tvQuestionTime.setVisibility(View.GONE);
+        }
+
+        updateToolbarIcons();
+        saveResumeNow();
+    }
+    private void renderOptions(Question q) {
+        int n = q.options == null ? 0 : q.options.length;
+        for (int i = 0; i < n; i++) {
+            final int opt = i;
+            View row = getLayoutInflater().inflate(R.layout.item_option, optionsContainer, false);
+            TextView label = row.findViewById(R.id.tvOptionLabel);
+            TextView text = row.findViewById(R.id.tvOptionText);
+            ImageView img = row.findViewById(R.id.ivOptionImage);
+            label.setText(String.valueOf((char) ('A' + i)));
+
+            String imgName = (q.optionImgs != null && i < q.optionImgs.length) ? q.optionImgs[i] : null;
+            boolean hasImg = imgName != null && !imgName.isEmpty();
+            if (hasImg) {
+                text.setVisibility(View.GONE);
+                img.setVisibility(View.VISIBLE);
+                final android.graphics.Bitmap bmp = loadMediaBitmap(imgName);
+                if (bmp != null) {
+                    img.setImageBitmap(bmp);
+                    img.setOnClickListener(v -> showImageDialog(bmp));
+                }
+            } else {
+                text.setVisibility(View.VISIBLE);
+                img.setVisibility(View.GONE);
+                text.setText(q.options[i]);
+            }
+
+            row.setOnClickListener(v -> onOptionClick(opt));
+            optionsContainer.addView(row);
+        }
+
+        // 多选题：显示"确认答案"按钮
+        if (q.isMulti() && !answered[index]) {
+            TextView btnConfirm = new TextView(this);
+            btnConfirm.setText("确认答案");
+            btnConfirm.setTextSize(16);
+            btnConfirm.setTextColor(getColor(android.R.color.white));
+            btnConfirm.setGravity(Gravity.CENTER);
+            btnConfirm.setPadding(0, dp(12), 0, dp(12));
+            btnConfirm.setBackgroundResource(R.drawable.bg_option_correct);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            lp.topMargin = dp(16);
+            btnConfirm.setLayoutParams(lp);
+            btnConfirm.setOnClickListener(v -> confirmMultiAnswer());
+            actionContainer.addView(btnConfirm);
+        }
+    }
+
+    private void renderJudge(Question q) {
+        // 判断题为两个按钮：正确 / 错误
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        TextView btnTrue = makeJudgeButton("正确", 0);
+        TextView btnFalse = makeJudgeButton("错误", 1);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        lp.rightMargin = dp(8);
+        btnTrue.setLayoutParams(lp);
+        LinearLayout.LayoutParams lp2 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        lp2.leftMargin = dp(8);
+        btnFalse.setLayoutParams(lp2);
+        row.addView(btnTrue);
+        row.addView(btnFalse);
+        LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        rlp.topMargin = dp(16);
+        row.setLayoutParams(rlp);
+        actionContainer.addView(row);
+    }
+
+    private TextView makeJudgeButton(String text, final int val) {
+        TextView btn = new TextView(this);
+        btn.setText(text);
+        btn.setTextSize(16);
+        btn.setTextColor(getColor(R.color.text_main));
+        btn.setGravity(Gravity.CENTER);
+        btn.setPadding(0, dp(14), 0, dp(14));
+        btn.setBackgroundResource(R.drawable.bg_option_normal);
+        btn.setOnClickListener(v -> onJudgeClick(val));
+        return btn;
+    }
+
+    private int dp(int v) {
+        return (int) (v * getResources().getDisplayMetrics().density);
+    }
+
+    private void onOptionClick(int opt) {
+        Question q = questions.get(index);
+        if (answered[index]) return;
+
+        if (q.isMulti()) {
+            toggleMultiSelect(opt);
+            return;
+        }
+
+        // 单选 / 实操等
+        userAnswers[index] = opt;
+        answered[index] = true;
+        questionDurations[index] = elapsed - questionStartTimes[index];
+        boolean correct = isCurrentCorrect();
+        DataStore.recordAnswer(this, String.valueOf(q.id), correct, q.type);
+        DataStore.setFirstAnswer(this, q.uniqueKey(), opt);
+        if (correct) handleCorrectAnswer(q); else handleWrongAnswer(q);
+        if (brushMode) {
+            highlightChosenOnly(q);
+        } else {
+            highlightOptions(q);
+            showAnalysis(q, correct);
+        }
+        showQuestionTime();
+        if (correct && !brushMode && DataStore.isAutoNext(this) && index < questions.size() - 1) {
+            final int curIndex = index;
+            handler.postDelayed(() -> {
+                if (index == curIndex && !isFinishing()) { index++; renderWithAnimation(true); }
+            }, Math.max(600, DataStore.getAnimDuration(this) + 400));
+        }
+    }
+
+    private void toggleMultiSelect(int opt) {
+        Question q = questions.get(index);
+        int[] cur = multiAnswers[index];
+        java.util.Set<Integer> set = new java.util.HashSet<>();
+        if (cur != null) for (int v : cur) set.add(v);
+        if (set.contains(opt)) set.remove(opt); else set.add(opt);
+        java.util.List<Integer> sorted = new ArrayList<>(set);
+        Collections.sort(sorted);
+        int[] arr = new int[sorted.size()];
+        for (int i = 0; i < arr.length; i++) arr[i] = sorted.get(i);
+        multiAnswers[index] = arr;
+        highlightMultiSelection(q);
+    }
+
+    private void confirmMultiAnswer() {
+        Question q = questions.get(index);
+        int[] sel = multiAnswers[index];
+        if (sel == null || sel.length == 0) {
+            showToast("请先选择答案");
+            return;
+        }
+        answered[index] = true;
+        questionDurations[index] = elapsed - questionStartTimes[index];
+        boolean correct = isCurrentCorrect();
+        DataStore.recordAnswer(this, String.valueOf(q.id), correct, q.type);
+        if (correct) handleCorrectAnswer(q); else handleWrongAnswer(q);
+        if (brushMode) {
+            highlightChosenOnly(q);
+        } else {
+            highlightOptions(q);
+            showAnalysis(q, correct);
+        }
+        showQuestionTime();
+    }
+
+    private void onJudgeClick(int val) {
+        Question q = questions.get(index);
+        if (answered[index]) return;
+        userAnswers[index] = val;
+        answered[index] = true;
+        questionDurations[index] = elapsed - questionStartTimes[index];
+        boolean correct = isCurrentCorrect();
+        DataStore.recordAnswer(this, String.valueOf(q.id), correct, q.type);
+        DataStore.setFirstAnswer(this, q.uniqueKey(), val);
+        if (correct) handleCorrectAnswer(q); else handleWrongAnswer(q);
+        if (brushMode) {
+            highlightChosenOnly(q);
+        } else {
+            highlightOptions(q);
+            showAnalysis(q, correct);
+        }
+    }
+
+    private boolean isCurrentCorrect() {
+        Question q = questions.get(index);
+        if (!q.hasAnswer) return true;
+        if (q.isJudge()) {
+            String expect = q.judgeAnswer == null ? "" : q.judgeAnswer;
+            String got = userAnswers[index] == 0 ? "正确" : (userAnswers[index] == 1 ? "错误" : "");
+            return expect.equals(got);
+        }
+        if (q.isMulti()) {
+            int[] sel = multiAnswers[index];
+            String[] expect = q.answerIndexes;
+            if (sel == null || expect == null) return false;
+            if (sel.length != expect.length) return false;
+            java.util.Set<String> exp = new java.util.HashSet<>();
+            for (String s : expect) exp.add(s.trim());
+            for (int v : sel) if (!exp.contains(String.valueOf(v))) return false;
+            return true;
+        }
+        return userAnswers[index] == q.answerIndex;
+    }
+
+    private void highlightOptions(Question q) {
+        if (q.isJudge()) {
+            highlightJudge(q);
+            return;
+        }
+        int colorDefault = getColor(R.color.text_main);
+        int colorCorrect = getColor(R.color.answer_correct_text);
+        int colorWrong = getColor(R.color.answer_wrong_text);
+
+        java.util.Set<Integer> correctIdx = new java.util.HashSet<>();
+        if (q.isMulti()) {
+            if (q.answerIndexes != null) for (String s : q.answerIndexes) {
+                try { correctIdx.add(Integer.parseInt(s.trim())); } catch (Exception e) {}
+            }
+        } else {
+            correctIdx.add(q.answerIndex);
+        }
+        java.util.Set<Integer> chosenIdx = new java.util.HashSet<>();
+        if (q.isMulti()) {
+            if (multiAnswers[index] != null) for (int v : multiAnswers[index]) chosenIdx.add(v);
+        } else {
+            chosenIdx.add(userAnswers[index]);
+        }
+
+        for (int i = 0; i < optionsContainer.getChildCount(); i++) {
+            View row = optionsContainer.getChildAt(i);
+            LinearLayout root = row.findViewById(R.id.optionRoot);
+            TextView label = row.findViewById(R.id.tvOptionLabel);
+            TextView text = row.findViewById(R.id.tvOptionText);
+            ImageView img = row.findViewById(R.id.ivOptionImage);
+            int bg;
+            int textColor;
+            if (correctIdx.contains(i)) {
+                bg = R.drawable.bg_option_correct;
+                textColor = colorCorrect;
+            } else if (chosenIdx.contains(i)) {
+                bg = R.drawable.bg_option_wrong;
+                textColor = colorWrong;
+            } else {
+                bg = R.drawable.bg_option_normal;
+                textColor = colorDefault;
+            }
+            if (root != null) root.setBackgroundResource(bg);
+            else row.setBackgroundResource(bg);
+            label.setTextColor(textColor);
+            text.setTextColor(textColor);
+        }
+    }
+
+    /** 刷题模式下高亮：仅标记用户已选，不区分对错、不显示正确答案。 */
+    private void highlightChosenOnly(Question q) {
+        if (q.isJudge()) {
+            int chosenVal = userAnswers[index];
+            for (int i = 0; i < actionContainer.getChildCount(); i++) {
+                View child = actionContainer.getChildAt(i);
+                if (child instanceof LinearLayout) {
+                    LinearLayout row = (LinearLayout) child;
+                    for (int j = 0; j < row.getChildCount(); j++) {
+                        View btn = row.getChildAt(j);
+                        if (btn instanceof TextView) {
+                            TextView tv = (TextView) btn;
+                            boolean isTrueBtn = "正确".equals(tv.getText().toString());
+                            int thisVal = isTrueBtn ? 0 : 1;
+                            if (thisVal == chosenVal) {
+                                tv.setBackgroundResource(R.drawable.bg_option_correct);
+                                tv.setTextColor(getColor(R.color.primary));
+                            } else {
+                                tv.setBackgroundResource(R.drawable.bg_option_normal);
+                                tv.setTextColor(getColor(R.color.text_main));
+                            }
+                        }
+                    }
+                }
+            }
+            return;
+        }
+        int colorSelected = getColor(R.color.primary);
+        int colorDefault = getColor(R.color.text_main);
+        java.util.Set<Integer> sel = new java.util.HashSet<>();
+        if (q.isMulti()) {
+            if (multiAnswers[index] != null) for (int v : multiAnswers[index]) sel.add(v);
+        } else {
+            sel.add(userAnswers[index]);
+        }
+        for (int i = 0; i < optionsContainer.getChildCount(); i++) {
+            View row = optionsContainer.getChildAt(i);
+            LinearLayout root = row.findViewById(R.id.optionRoot);
+            TextView label = row.findViewById(R.id.tvOptionLabel);
+            TextView text = row.findViewById(R.id.tvOptionText);
+            if (sel.contains(i)) {
+                if (root != null) root.setBackgroundResource(R.drawable.bg_option_correct);
+                label.setTextColor(colorSelected);
+                text.setTextColor(colorSelected);
+            } else {
+                if (root != null) root.setBackgroundResource(R.drawable.bg_option_normal);
+                label.setTextColor(colorDefault);
+                text.setTextColor(colorDefault);
+            }
+        }
+    }
+    private void highlightMultiSelection(Question q) {
+        // 多选作答前的高亮：仅标记选中项，不判分
+        int colorSelected = getColor(R.color.primary);
+        int colorDefault = getColor(R.color.text_main);
+        java.util.Set<Integer> sel = new java.util.HashSet<>();
+        if (multiAnswers[index] != null) for (int v : multiAnswers[index]) sel.add(v);
+        for (int i = 0; i < optionsContainer.getChildCount(); i++) {
+            View row = optionsContainer.getChildAt(i);
+            LinearLayout root = row.findViewById(R.id.optionRoot);
+            TextView label = row.findViewById(R.id.tvOptionLabel);
+            TextView text = row.findViewById(R.id.tvOptionText);
+            if (sel.contains(i)) {
+                if (root != null) root.setBackgroundResource(R.drawable.bg_option_correct);
+                label.setTextColor(colorSelected);
+                text.setTextColor(colorSelected);
+            } else {
+                if (root != null) root.setBackgroundResource(R.drawable.bg_option_normal);
+                label.setTextColor(colorDefault);
+                text.setTextColor(colorDefault);
+            }
+        }
+    }
+
+    private void highlightJudge(Question q) {
+        // 判断按钮高亮：正确的答案按钮标绿，用户选的标红
+        String expect = q.judgeAnswer == null ? "" : q.judgeAnswer;
+        int expectVal = "正确".equals(expect) ? 0 : ("错误".equals(expect) ? 1 : -1);
+        int chosenVal = userAnswers[index];
+        for (int i = 0; i < actionContainer.getChildCount(); i++) {
+            View child = actionContainer.getChildAt(i);
+            if (child instanceof LinearLayout) {
+                LinearLayout row = (LinearLayout) child;
+                for (int j = 0; j < row.getChildCount(); j++) {
+                    View btn = row.getChildAt(j);
+                    if (btn instanceof TextView) {
+                        TextView tv = (TextView) btn;
+                        boolean isTrueBtn = "正确".equals(tv.getText().toString());
+                        int thisVal = isTrueBtn ? 0 : 1;
+                        int bg;
+                        int tc;
+                        if (thisVal == expectVal) {
+                            bg = R.drawable.bg_option_correct;
+                            tc = getColor(R.color.answer_correct_text);
+                        } else if (thisVal == chosenVal) {
+                            bg = R.drawable.bg_option_wrong;
+                            tc = getColor(R.color.answer_wrong_text);
+                        } else {
+                            bg = R.drawable.bg_option_normal;
+                            tc = getColor(R.color.text_main);
+                        }
+                        tv.setBackgroundResource(bg);
+                        tv.setTextColor(tc);
+                    }
+                }
+            }
+        }
+    }
+
+    private void showAnalysis(Question q, boolean correct) {
+        analysisPanel.setVisibility(View.VISIBLE);
+        String correctStr = formatCorrectAnswer(q);
+        tvAnalysisCorrect.setText(correct ? "回答正确 ✓  正确答案：" + correctStr
+                : "回答错误 ✗  正确答案：" + correctStr);
+        tvAnalysisCorrect.setTextColor(correct
+                ? getColor(R.color.answer_correct_text)
+                : getColor(R.color.answer_wrong_text));
+        tvAnalysisText.setText(markdownRenderer.render(q.analysis == null ? "" : q.analysis));
+        renderAnalysisImages(q);
+        // AI 解析区：重置 + 缓存优先恢复 + 自动触发判断
+        resetAiAnalysis();
+        if (hasAiAnalysisCached(q)) {
+            showAiAnalysis(DataStore.getAiAnalysis(this, q.uniqueKey()));
+        }
+        maybeAutoAiAnalysis(q, correct);
+    }
+    // 重置 AI 解析区显示（不删除缓存）
+    private void resetAiAnalysis() {
+        tvAiAnalysis.setVisibility(View.GONE);
+        tvAiAnalysis.setText("");
+    }
+    private boolean hasAiAnalysisCached(Question q) {
+        return DataStore.hasAiAnalysis(this, q.uniqueKey());
+    }
+    // 显示 AI 解析结果（含提示文案「AI 解析，酌情参考」）
+    private void showAiAnalysis(String text) {
+        if (text == null || text.trim().isEmpty()) {
+            tvAiAnalysis.setVisibility(View.GONE);
+            tvAiAnalysis.setText("");
+            return;
+        }
+        tvAiAnalysis.setText(markdownRenderer.render("AI 解析，酌情参考：\n" + text.trim()));
+        tvAiAnalysis.setVisibility(View.VISIBLE);
+    }
+    // 自动解析：根据设置开关与模式决定是否自动触发
+    private void maybeAutoAiAnalysis(Question q, boolean correct) {
+        if (!DataStore.getAutoAiAnalysis(this)) return;
+        String mode = DataStore.getAutoAiAnalysisMode(this);
+        if ("wrong".equals(mode) && correct) return; // 只对错题解析时，答对不触发
+        triggerAiAnalysis(q, correct);
+    }
+    // 手动触发（按钮点击）
+    private void onAiAnalysisClick() {
+        Question q = questions.get(index);
+        boolean correct = isCurrentCorrect();
+        triggerAiAnalysis(q, correct);
+    }
+    // 触发 AI 解析：缓存优先，无线程阻塞地后台调用
+    private void triggerAiAnalysis(Question q, boolean correct) {
+        // 缓存优先：已生成过则直接展示
+        if (hasAiAnalysisCached(q)) {
+            showAiAnalysis(DataStore.getAiAnalysis(this, q.uniqueKey()));
+            return;
+        }
+        AiApi.Config cfg = DataStore.getCurrentAiConfig(this);
+        if (cfg == null || !cfg.isComplete()) {
+            showToast("请先在「AI 模型配置」中设置模型和 API Key");
+            return;
+        }
+        String userAnswerText = formatUserAnswer(q);
+        tvAiAnalysis.setVisibility(View.VISIBLE);
+        tvAiAnalysis.setText("AI 解析生成中…");
+        new Thread(() -> {
+            AiApi.Result r = AiApi.analyzeQuestion(this, cfg, q, userAnswerText, correct);
+            runOnUiThread(() -> {
+                if (r != null && r.ok) {
+                    DataStore.setAiAnalysis(this, q.uniqueKey(), r.text);
+                    showAiAnalysis(r.text);
+                } else {
+                    tvAiAnalysis.setText("AI 解析失败：" + (r == null ? "未知错误" : r.text));
+                    tvAiAnalysis.setVisibility(View.VISIBLE);
+                }
+            });
+        }).start();
+    }
+    // 格式化用户答案为可读文本（用于 prompt）
+    private String formatUserAnswer(Question q) {
+        if (q.isJudge()) {
+            int v = userAnswers[index];
+            return v == 0 ? "正确" : (v == 1 ? "错误" : "未作答");
+        }
+        if (q.isMulti()) {
+            int[] sel = multiAnswers[index];
+            if (sel == null || sel.length == 0) return "未作答";
+            StringBuilder sb = new StringBuilder();
+            for (int v : sel) {
+                if (sb.length() > 0) sb.append("、");
+                sb.append((char) ('A' + v));
+            }
+            return sb.toString();
+        }
+        int v = userAnswers[index];
+        if (v < 0) return "未作答";
+        return String.valueOf((char) ('A' + v));
+    }
+    private void renderAnalysisImages(Question q) {
+        // 答案解析区：展示题目/选项中的图片，便于回顾
+        analysisImagesContainer.removeAllViews();
+        boolean hasStem = q.stemImg != null && !q.stemImg.isEmpty();
+        boolean hasOpt = q.hasOptionImages();
+        if (!hasStem && !hasOpt) {
+            analysisImagesContainer.setVisibility(View.GONE);
+            return;
+        }
+        analysisImagesContainer.setVisibility(View.VISIBLE);
+        if (hasStem) {
+            android.graphics.Bitmap bmp = loadMediaBitmap(q.stemImg);
+            if (bmp != null) {
+                analysisImagesContainer.addView(makeAnalysisImage(bmp, null));
+            }
+        }
+        if (hasOpt) {
+            int n = q.options == null ? 0 : q.options.length;
+            for (int i = 0; i < n; i++) {
+                String imgName = (q.optionImgs != null && i < q.optionImgs.length) ? q.optionImgs[i] : null;
+                if (imgName == null || imgName.isEmpty()) continue;
+                android.graphics.Bitmap bmp = loadMediaBitmap(imgName);
+                if (bmp != null) {
+                    analysisImagesContainer.addView(makeAnalysisImage(bmp, String.valueOf((char) ('A' + i))));
+                }
+            }
+        }
+    }
+    private View makeAnalysisImage(final android.graphics.Bitmap bmp, String label) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        rlp.topMargin = dp(8);
+        row.setLayoutParams(rlp);
+        if (label != null) {
+            TextView tv = new TextView(this);
+            tv.setText(label);
+            tv.setGravity(Gravity.CENTER);
+            tv.setTextColor(getColor(R.color.text_main));
+            tv.setTextSize(14);
+            tv.setBackgroundResource(R.drawable.bg_tag_gray);
+            LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(dp(28), dp(28));
+            tlp.rightMargin = dp(12);
+            row.addView(tv, tlp);
+        }
+        ImageView iv = new ImageView(this);
+        iv.setImageBitmap(bmp);
+        iv.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        iv.setAdjustViewBounds(true);
+        iv.setMaxHeight(dp(240));
+        iv.setContentDescription("解析图片");
+        LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        row.addView(iv, ilp);
+        iv.setOnClickListener(v -> showImageDialog(bmp));
+        return row;
+    }
+    private String formatCorrectAnswer(Question q) {
+        if (!q.hasAnswer) return "—";
+        if (q.isJudge()) return q.judgeAnswer == null ? "" : q.judgeAnswer;
+        if (q.isMulti()) {
+            if (q.answerIndexes == null) return "";
+            StringBuilder sb = new StringBuilder();
+            for (String s : q.answerIndexes) {
+                int idx = 0;
+                try { idx = Integer.parseInt(s.trim()); } catch (Exception e) {}
+                if (sb.length() > 0) sb.append("、");
+                sb.append((char) ('A' + idx));
+            }
+            return sb.toString();
+        }
+        return String.valueOf((char) ('A' + q.answerIndex));
+    }
+
+    private void addToWrongBook() {
+        Question q = questions.get(index);
+        java.util.Set<String> wrongIds = DataStore.getWrongIds(this);
+        String id = q.uniqueKey();
+        if (wrongIds.contains(id)) {
+            DataStore.removeWrong(this, q.uniqueKey());
+            DataStore.resetCorrectCount(this, q.uniqueKey());
+            showToast("已从错题本移除");
+        } else {
+            DataStore.addWrong(this, q.uniqueKey());
+            showToast("已加入错题本");
+        }
+        updateToolbarIcons();
+    }
+
+    // 答对时的错题本处理：递增做对次数，达到阈值后自动移除并复位计数（仅对已在错题本中的题生效）
+    private void handleCorrectAnswer(Question q) {
+        if (!DataStore.getWrongIds(this).contains(q.uniqueKey())) return;
+        DataStore.incCorrectCount(this, q.uniqueKey());
+        if (DataStore.getCorrectCount(this, q.uniqueKey()) >= DataStore.getWrongThreshold(this)) {
+            DataStore.removeWrong(this, q.uniqueKey());
+            DataStore.resetCorrectCount(this, q.uniqueKey());
+        }
+    }
+
+    // 答错时的错题本处理：检查「自动加入」开关，开启时将题加入错题本并重置做对次数
+    private void handleWrongAnswer(Question q) {
+        if (!DataStore.isAutoWrong(this)) return;
+        DataStore.addWrong(this, q.uniqueKey());
+        DataStore.resetCorrectCount(this, q.uniqueKey());
+    }
+
+    private void renderWithAnimation(boolean toNext) {
+        int inAnim = toNext ? R.anim.slide_in_right : R.anim.slide_in_left;
+        int duration = DataStore.getAnimDuration(this);
+        // 先同步渲染新题目内容，再播放入屏动画，避免出屏结束到 render 完成之间的空白帧，实现无缝切换
+        render();
+        Animation in = AnimationUtils.loadAnimation(this, inAnim);
+        in.setDuration(duration);
+        questionContent.startAnimation(in);
+    }
+
+    private void showToast(String msg) {
+        int duration = DataStore.getToastDuration(this);
+        android.widget.Toast.makeText(this, msg,
+                duration >= 3500 ? android.widget.Toast.LENGTH_LONG : android.widget.Toast.LENGTH_SHORT).show();
+    }
+
+    private void toggleFavorite() {
+        Question q = questions.get(index);
+        boolean wasFavorite = DataStore.isFavorite(this, q.uniqueKey());
+        DataStore.toggleFavorite(this, q.uniqueKey());
+        showToast(wasFavorite ? "已取消收藏" : "已收藏本题");
+        updateToolbarIcons();
+    }
+
+    private void showDraftPaper() {
+        Dialog d = new Dialog(this);
+        d.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        View v = getLayoutInflater().inflate(R.layout.dialog_draft_paper, null);
+        d.setContentView(v);
+        DrawPadView drawPad = v.findViewById(R.id.drawPad);
+        TextView btnDraftClear = v.findViewById(R.id.btnDraftClear);
+        TextView btnDraftSave = v.findViewById(R.id.btnDraftSave);
+        TextView btnDraftClose = v.findViewById(R.id.btnDraftClose);
+        // 打开时恢复本题已有草稿
+        ArrayList<DrawPadView.StrokeData> saved = draftByQuestion.get(index);
+        if (saved != null) {
+            drawPad.restoreStrokes(saved);
+        }
+        btnDraftClear.setOnClickListener(x -> drawPad.clear());
+        btnDraftSave.setOnClickListener(x -> {
+            draftByQuestion.put(index, drawPad.getStrokeData());
+            showToast("草稿已保存");
+        });
+        btnDraftClose.setOnClickListener(x -> {
+            // 关闭时自动保存本题草稿
+            draftByQuestion.put(index, drawPad.getStrokeData());
+            d.dismiss();
+        });
+        Window w = d.getWindow();
+        if (w != null) {
+            w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+            w.setGravity(Gravity.BOTTOM);
+            w.setBackgroundDrawableResource(android.R.color.transparent);
+        }
+        d.show();
+    }
+    private void showMorePanel() {
+        Dialog d = new Dialog(this);
+        d.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        View v = getLayoutInflater().inflate(R.layout.dialog_more_panel, null);
+        d.setContentView(v);
+
+        TextView btnFontSmall = v.findViewById(R.id.btnFontSmall);
+        TextView btnFontMedium = v.findViewById(R.id.btnFontMedium);
+        TextView btnFontLarge = v.findViewById(R.id.btnFontLarge);
+        TextView btnThemeDay = v.findViewById(R.id.btnThemeDay);
+        TextView btnThemeNight = v.findViewById(R.id.btnThemeNight);
+        TextView btnModeRecite = v.findViewById(R.id.btnModeRecite);
+        TextView btnModeBrush = v.findViewById(R.id.btnModeBrush);
+        TextView tvTotalTime = v.findViewById(R.id.tvTotalTime);
+        TextView btnMoreClose = v.findViewById(R.id.btnMoreClose);
+        btnFontSmall.setOnClickListener(x -> { DataStore.setFontScale(this, 0); applyFontScale(); });
+        btnFontMedium.setOnClickListener(x -> { DataStore.setFontScale(this, 1); applyFontScale(); });
+        btnFontLarge.setOnClickListener(x -> { DataStore.setFontScale(this, 2); applyFontScale(); });
+        btnThemeDay.setOnClickListener(x -> { DataStore.setDarkMode(this, 1); AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO); });
+        btnThemeNight.setOnClickListener(x -> { DataStore.setDarkMode(this, 2); AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES); });
+        updateThemeButtons(btnThemeDay, btnThemeNight);
+        btnModeRecite.setOnClickListener(x -> { brushMode = false; updateModeButtons(btnModeRecite, btnModeBrush); showToast("已切换为背题模式，点击选项后立即显示答案"); render(); });
+        btnModeBrush.setOnClickListener(x -> { brushMode = true; updateModeButtons(btnModeRecite, btnModeBrush); showToast("已切换为刷题模式，交卷前不显示答案"); render(); });
+        updateModeButtons(btnModeRecite, btnModeBrush);
+        // 做题用时实时刷新
+        if (moreTimeRunnable != null) handler.removeCallbacks(moreTimeRunnable);
+        moreTimeRunnable = new Runnable() {
+            @Override public void run() {
+                long sec = elapsed / 1000;
+                long m = sec / 60, s = sec % 60;
+                tvTotalTime.setText(String.format("%02d:%02d", m, s));
+                handler.postDelayed(this, 500);
+            }
+        };
+        handler.post(moreTimeRunnable);
+        btnMoreClose.setOnClickListener(x -> d.dismiss());
+        d.setOnDismissListener(x -> { if (moreTimeRunnable != null) handler.removeCallbacks(moreTimeRunnable); });
+
+        Window w = d.getWindow();
+        if (w != null) {
+            w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            w.setGravity(Gravity.BOTTOM);
+            w.setBackgroundDrawableResource(android.R.color.transparent);
+        }
+        d.show();
+    }
+
+    private void updateToolbarIcons() {
+        Question q = questions.get(index);
+        btnToolTime.setImageResource(DataStore.isFavorite(this, q.uniqueKey())
+                ? R.drawable.ic_tool_favorite_filled : R.drawable.ic_tool_favorite);
+        boolean inWrong = DataStore.getWrongIds(this).contains(q.uniqueKey());
+        btnToolWrongbook.setImageResource(inWrong
+                ? R.drawable.ic_tool_wrongbook_filled : R.drawable.ic_tool_wrongbook);
+    }
+
+    private void applyFontScale() {
+        int scale = DataStore.getFontScale(this);
+        float questionSize, analysisSize;
+        if (scale <= 0) { questionSize = 15f; analysisSize = 13f; }
+        else if (scale >= 2) { questionSize = 22f; analysisSize = 15f; }
+        else { questionSize = 18f; analysisSize = 14f; }
+        tvQuestion.setTextSize(questionSize);
+        tvAnalysisText.setTextSize(analysisSize);
+    }
+
+    private void updateThemeButtons(TextView btnThemeDay, TextView btnThemeNight) {
+        int mode = DataStore.getDarkMode(this);
+        btnThemeDay.setBackgroundResource(mode == 1 ? R.drawable.bg_option_correct : R.drawable.bg_option_normal);
+        btnThemeNight.setBackgroundResource(mode == 2 ? R.drawable.bg_option_correct : R.drawable.bg_option_normal);
+    }
+    private void updateModeButtons(TextView btnModeRecite, TextView btnModeBrush) {
+        btnModeRecite.setBackgroundResource(!brushMode ? R.drawable.bg_option_correct : R.drawable.bg_option_normal);
+        btnModeBrush.setBackgroundResource(brushMode ? R.drawable.bg_option_correct : R.drawable.bg_option_normal);
+        int selected = getColor(android.R.color.white);
+        int normal = getColor(R.color.text_main);
+        btnModeRecite.setTextColor(!brushMode ? selected : normal);
+        btnModeBrush.setTextColor(brushMode ? selected : normal);
+    }
+    private void applyTheme() {
+        View root = findViewById(android.R.id.content);
+        View questionContentView = questionContent;
+        if (nightMode) {
+            root.setBackgroundColor(getColor(R.color.bg_page_dark));
+            questionContentView.setBackgroundColor(getColor(R.color.bg_page_dark));
+            tvQuestion.setTextColor(getColor(R.color.text_main_dark));
+            analysisPanel.setBackgroundColor(getColor(R.color.card_bg_dark));
+            tvAnalysisText.setTextColor(getColor(R.color.text_main_dark));
+        } else {
+            root.setBackgroundColor(getColor(R.color.bg_page));
+            questionContentView.setBackgroundColor(getColor(R.color.bg_page));
+            tvQuestion.setTextColor(getColor(R.color.text_main));
+            analysisPanel.setBackgroundColor(getColor(R.color.card_bg));
+            tvAnalysisText.setTextColor(getColor(R.color.text_main));
+        }
+    }
+
+    private void showQuestionTime() {
+        long ms = questionDurations[index];
+        long sec = ms / 1000;
+        long m = sec / 60, s = sec % 60;
+        tvQuestionTime.setText("本题用时 " + String.format("%02d:%02d", m, s));
+        tvQuestionTime.setVisibility(View.VISIBLE);
+    }
+
+    private void showAnswerSheet() {
+        Dialog d = new Dialog(this);
+        d.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        View v = getLayoutInflater().inflate(R.layout.dialog_answer_sheet, null);
+        d.setContentView(v);
+
+        TextView progress = v.findViewById(R.id.tvSheetProgress);
+        GridView grid = v.findViewById(R.id.gridSheet);
+        TextView btnClose = v.findViewById(R.id.btnSheetClose);
+        TextView btnSubmit = v.findViewById(R.id.btnSheetSubmit);
+
+        int done = 0;
+        for (boolean b : answered) if (b) done++;
+        progress.setText("已答 " + done + "/" + questions.size() + " 题");
+
+        grid.setAdapter(new BaseAdapter() {
+            @Override public int getCount() { return questions.size(); }
+            @Override public Object getItem(int p) { return null; }
+            @Override public long getItemId(int p) { return p; }
+            @Override public View getView(int p, View c, ViewGroup parent) {
+                if (c == null) c = getLayoutInflater().inflate(R.layout.item_sheet_cell, parent, false);
+                TextView cell = c.findViewById(R.id.tvSheetCell);
+                cell.setText(String.valueOf(p + 1));
+                int bg;
+                boolean doneHere = answered[p];
+                boolean wrongHere = doneHere && !isCorrectAt(p);
+                if (p == index) bg = R.drawable.bg_sheet_current;
+                else if (wrongHere) bg = R.drawable.bg_sheet_marked;
+                else if (doneHere) bg = R.drawable.bg_sheet_done;
+                else bg = R.drawable.bg_sheet_blank;
+                cell.setBackgroundResource(bg);
+                cell.setTextColor(doneHere
+                        ? getColor(R.color.sheet_cell_text_done)
+                        : getColor(R.color.sheet_cell_text_blank));
+                return c;
+            }
+        });
+        grid.setOnItemClickListener((parent, view, pos, id) -> {
+            index = pos;
+            d.dismiss();
+            render();
+        });
+
+        btnClose.setOnClickListener(x -> d.dismiss());
+        btnSubmit.setOnClickListener(x -> { d.dismiss(); submit(); });
+
+        Window w = d.getWindow();
+        if (w != null) {
+            w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            w.setGravity(Gravity.BOTTOM);
+            w.setBackgroundDrawableResource(android.R.color.transparent);
+        }
+        d.show();
+    }
+
+    private boolean isCorrectAt(int p) {
+        Question q = questions.get(p);
+        if (!answered[p]) return false;
+        if (!q.hasAnswer) return true;
+        if (q.isJudge()) {
+            String expect = q.judgeAnswer == null ? "" : q.judgeAnswer;
+            String got = userAnswers[p] == 0 ? "正确" : (userAnswers[p] == 1 ? "错误" : "");
+            return expect.equals(got);
+        }
+        if (q.isMulti()) {
+            int[] sel = multiAnswers[p];
+            String[] expect = q.answerIndexes;
+            if (sel == null || expect == null) return false;
+            if (sel.length != expect.length) return false;
+            java.util.Set<String> exp = new java.util.HashSet<>();
+            for (String s : expect) exp.add(s.trim());
+            for (int v : sel) if (!exp.contains(String.valueOf(v))) return false;
+            return true;
+        }
+        return userAnswers[p] == q.answerIndex;
+    }
+
+    private void submit() {
+        DataStore.clearResume(this); // 交卷后清除上次进度快照
+        int correct = 0;
+        for (int i = 0; i < questions.size(); i++) {
+            if (isCorrectAt(i)) correct++;
+        }
+        long usedSec = elapsed / 1000;
+        List<AnswerRecord> records = new ArrayList<>();
+        for (int i = 0; i < questions.size(); i++) {
+            Question q = questions.get(i);
+            int ua = answered[i] ? userAnswers[i] : -1;
+            AnswerRecord r = new AnswerRecord(q, ua);
+            r.userAnswerIndexes = multiAnswers[i];
+            records.add(r);
+        }
+        // 交卷后清除全部草稿
+        draftByQuestion.clear();
+        android.content.Intent intent = new android.content.Intent(this, ResultActivity.class);
+        intent.putExtra("total", questions.size());
+        intent.putExtra("correct", correct);
+        intent.putExtra("duration_sec", usedSec);
+        intent.putExtra("records", (java.io.Serializable) records);
+        startActivity(intent);
+        finish();
+    }
+
+    private void renderStemImage(Question q) {
+        String imgName = q.stemImg;
+        boolean hasImg = imgName != null && !imgName.isEmpty();
+        if (hasImg) {
+            final android.graphics.Bitmap bmp = loadMediaBitmap(imgName);
+            if (bmp != null) {
+                ivStemImage.setVisibility(View.VISIBLE);
+                ivStemImage.setImageBitmap(bmp);
+                ivStemImage.setOnClickListener(v -> showImageDialog(bmp));
+            } else {
+                ivStemImage.setVisibility(View.GONE);
+            }
+        } else {
+            ivStemImage.setVisibility(View.GONE);
+        }
+    }
+    private void showImageDialog(android.graphics.Bitmap bmp) {
+        if (bmp == null) return;
+        Dialog d = new Dialog(this);
+        d.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        ImageView iv = new ImageView(this);
+        iv.setImageBitmap(bmp);
+        iv.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        iv.setBackgroundColor(0xFF000000);
+        iv.setOnClickListener(v -> d.dismiss());
+        d.setContentView(iv);
+        android.view.Window w = d.getWindow();
+        if (w != null) {
+            w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+            w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0xFF000000));
+        }
+        d.show();
+    }
+    private android.graphics.Bitmap loadMediaBitmap(String fileName) {
+        if (fileName == null || fileName.isEmpty()) return null;
+        try {
+            // 图片已由 RobotExamUpdater 提取到 filesDir 缓存目录，这里按文件路径直接读取。
+            java.io.File f = new java.io.File(fileName);
+            if (!f.isAbsolute()) f = new java.io.File(getFilesDir(), fileName);
+            if (!f.exists()) return null;
+            java.io.InputStream is = new java.io.FileInputStream(f);
+            android.graphics.Bitmap bmp = android.graphics.BitmapFactory.decodeStream(is);
+            is.close();
+            return bmp;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (moreTimeRunnable != null) handler.removeCallbacks(moreTimeRunnable);
+        super.onDestroy();
+        handler.removeCallbacks(timerRunnable);
+    }
+}

@@ -1,0 +1,358 @@
+package com.algorobo.quiz;
+
+import android.content.Context;
+import android.util.Log;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+
+/**
+ * 真题 docx 解析器：将标准 OOXML(.docx) 解析为 {@link RobotExamBank.Paper}。
+ *
+ * 解析规则（基于 2026.6.CIE.RLE 系列样本实测）：
+ *  - 大题标题行："一、单选题(共N题，共N分)" 等，用中文数字编号。
+ *  - 题干：以 "N." 开头（N 为题号），其后为题干文本，可能内嵌图片。
+ *  - 选项：以 "A." "B." "C." "D." 开头（文本或图片）；判断题选项固定为 "正确"/"错误"。
+ *  - 元数据行（固定前缀）：试题编号：/ 试题类型：/ 标准答案：/ 试题难度：/ 试题解析：。
+ *  - 答案格式：单选单个字母(C)；多选 "A|B|C"（| 分隔）；判断 "正确"/"错误"。
+ *
+ * 图片：docx 中图片以 r:embed="rIdN" 引用，rels 文件建立 rId -> media/imageN.jpeg 映射。
+ * 解析时同步将图片解压到 mediaDir 目录，Question 中以文件名记录。
+ */
+public class DocxParser {
+    private static final String TAG = "DocxParser";
+
+    /**
+     * 解析 docx 字节流为 Paper。mediaDir 用于存放提取出的图片（可传 null 表示不提取图片）。
+     */
+    public static RobotExamBank.Paper parse(byte[] docx, String key, File mediaDir) throws Exception {
+        if (docx == null || docx.length == 0) throw new Exception("docx 数据为空");
+
+        String documentXml = null;
+        String relsXml = null;
+        Map<String, byte[]> mediaImages = new HashMap<>();
+        Map<String, String> relMap = new HashMap<>();
+
+        ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(docx));
+        ZipEntry entry;
+        while ((entry = zis.getNextEntry()) != null) {
+            String name = entry.getName();
+            if (entry.isDirectory()) { zis.closeEntry(); continue; }
+            byte[] data = readAll(zis);
+            if ("word/document.xml".equals(name)) {
+                documentXml = new String(data, "UTF-8");
+            } else if ("word/_rels/document.xml.rels".equals(name)) {
+                relsXml = new String(data, "UTF-8");
+            } else if (name.startsWith("word/media/") && isImageFile(name)) {
+                mediaImages.put(name.substring("word/".length()), data);
+            }
+            zis.closeEntry();
+        }
+        zis.close();
+
+        if (documentXml == null) throw new Exception("docx 缺少 word/document.xml");
+
+        if (relsXml != null) {
+            Matcher m = Pattern.compile("Id=\"([^\"]+)\"[^>]*Target=\"([^\"]+)\"").matcher(relsXml);
+            while (m.find()) {
+                String rid = m.group(1);
+                String target = m.group(2);
+                if (target.contains("media/")) relMap.put(rid, target);
+            }
+        }
+
+        List<Para> paras = extractParagraphs(documentXml);
+
+        RobotExamBank.Paper paper = new RobotExamBank.Paper();
+        paper.key = key;
+        paper.questions = new ArrayList<>();
+
+        Question cur = null;
+        List<String> curOptions = new ArrayList<>();
+        List<String> curOptionImgs = new ArrayList<>();
+        boolean inOptions = false;
+        String curStemImg = null;
+        StringBuilder curStem = new StringBuilder();
+        for (Para p : paras) {
+            String text = p.text.replace('\u00a0', ' ').trim();
+            String img = p.firstImageRid();
+            // 题号行（如 "1."）触发新题。真实 docx 中「试题编号：」等元数据位于题目内容（题干+选项）之后，
+            // 因此必须以题号行作为新题的唯一触发标志，而非「试题编号：」。
+            if (isQuestionNumberLine(text)) {
+                if (cur != null) flush(paper, cur, curStem, curStemImg, curOptions, curOptionImgs);
+                cur = new Question();
+                cur.hasAnswer = true;
+                curStem = new StringBuilder();
+                curOptions = new ArrayList<>();
+                curOptionImgs = new ArrayList<>();
+                curStemImg = null;
+                inOptions = false;
+                continue;
+            }
+            if (cur == null) continue;
+            if (text.startsWith("试题编号：")) {
+                // 试题编号只是元数据，仅设置 id，不触发新题。
+                String idStr = text.substring("试题编号：".length()).trim();
+                cur.id = parseId(idStr);
+                continue;
+            }
+            if (text.startsWith("试题类型：")) {
+                cur.type = text.substring("试题类型：".length()).trim();
+                continue;
+            }
+            if (text.startsWith("标准答案：")) {
+                setAnswer(cur, text.substring("标准答案：".length()).trim());
+                continue;
+            }
+            if (text.startsWith("试题难度：")) {
+                cur.difficulty = text.substring("试题难度：".length()).trim();
+                continue;
+            }
+            if (text.startsWith("试题解析：")) {
+                cur.analysis = text.substring("试题解析：".length()).trim();
+                continue;
+            }
+            if (text.startsWith("考生答案：") || text.startsWith("考生得分：")
+                    || text.startsWith("是否评分：") || text.startsWith("评价描述：")) {
+                continue;
+            }
+            if (isSectionTitle(text)) continue;
+
+            if (isOptionStart(text)) {
+                inOptions = true;
+                curOptions.add(stripOptionPrefix(text));
+                curOptionImgs.add(img);
+                continue;
+            }
+            if (!inOptions) {
+                // 题干及其续行（含题干图片）
+                if (text.length() > 0) curStem.append(text);
+                if (img != null && curStemImg == null) curStemImg = img;
+            } else {
+                // 选项文本续行：真实 docx 中选项文字出现在选项字母（A.）的下一行，
+                // 需拼接到最后一个选项上；若为图片则附加到对应选项。
+                if (text.length() > 0 && curOptions.size() > 0) {
+                    int last = curOptions.size() - 1;
+                    curOptions.set(last, curOptions.get(last) + text);
+                }
+                if (img != null && curOptions.size() > 0) {
+                    int last = curOptions.size() - 1;
+                    if (curOptionImgs.get(last) == null) curOptionImgs.set(last, img);
+                }
+            }
+        }
+        flush(paper, cur, curStem, curStemImg, curOptions, curOptionImgs);
+
+        if (mediaDir != null && !mediaImages.isEmpty()) {
+            mediaDir.mkdirs();
+            for (Map.Entry<String, byte[]> e : mediaImages.entrySet()) {
+                String relTarget = e.getKey();
+                String fileName = relTarget.substring("media/".length());
+                File out = new File(mediaDir, fileName);
+                FileOutputStream fos = new FileOutputStream(out);
+                fos.write(e.getValue());
+                fos.close();
+            }
+            resolveImageRefs(paper, relMap);
+        }
+
+        return paper;
+    }
+
+    private static void flush(RobotExamBank.Paper paper, Question cur,
+                              StringBuilder stem, String stemImg,
+                              List<String> options, List<String> optionImgs) {
+        if (cur == null) return;
+        cur.stem = stem.toString().trim();
+        if (stemImg != null) cur.stemImg = stemImg;
+        if (!options.isEmpty()) {
+            cur.options = options.toArray(new String[0]);
+            boolean hasImg = false;
+            for (String s : optionImgs) if (s != null && !s.isEmpty()) { hasImg = true; break; }
+            if (hasImg) {
+                String[] arr = new String[options.size()];
+                for (int i = 0; i < options.size(); i++) arr[i] = optionImgs.get(i);
+                cur.optionImgs = arr;
+            }
+        }
+        paper.questions.add(cur);
+    }
+
+    private static void setAnswer(Question q, String ans) {
+        if (ans == null) return;
+        ans = ans.trim();
+        if (Question.TYPE_JUDGE.equals(q.type)) {
+            q.judgeAnswer = ans;
+            return;
+        }
+        if (Question.TYPE_MULTI.equals(q.type)) {
+            String[] parts = ans.split("\\|");
+            List<String> list = new ArrayList<>();
+            List<Integer> idx = new ArrayList<>();
+            for (String part : parts) {
+                part = part.trim();
+                if (part.isEmpty()) continue;
+                if (part.length() >= 1) {
+                    char c = part.charAt(0);
+                    if (c >= 'A' && c <= 'Z') {
+                        list.add(part);
+                        idx.add(c - 'A');
+                    }
+                }
+            }
+            if (!list.isEmpty()) {
+                q.answerIndexes = list.toArray(new String[0]);
+                if (!idx.isEmpty()) q.answerIndex = idx.get(0);
+            }
+            return;
+        }
+        if (ans.length() >= 1) {
+            char c = ans.charAt(0);
+            if (c >= 'A' && c <= 'Z') q.answerIndex = c - 'A';
+        }
+    }
+
+    private static int parseId(String idStr) {
+        try {
+            long v = Long.parseLong(idStr);
+            return (int) (v % Integer.MAX_VALUE);
+        } catch (Exception e) {
+            return idStr.hashCode() & 0x7fffffff;
+        }
+    }
+
+    private static boolean isSectionTitle(String text) {
+        return text.matches("^[一二三四五六七八九十]+、.*(共\\d+题|共\\d+分).*");
+    }
+
+    /** 纯题号行：如 "1."、"30."。真实 docx 中题号单独成段，是触发新题的唯一标志。 */
+    private static boolean isQuestionNumberLine(String text) {
+        return text.matches("^\\d+\\.$");
+    }
+    private static boolean isOptionStart(String text) {
+        if (text.matches("^[A-D]\\..*")) return true;
+        if (text.matches("^[A-D]$")) return true;
+        if (text.equals("正确") || text.equals("错误")) return true;
+        return false;
+    }
+
+    private static String stripOptionPrefix(String text) {
+        if (text.matches("^[A-D]\\..*")) return text.replaceFirst("^[A-D]\\.", "").trim();
+        if (text.matches("^[A-D]$")) return "";
+        return text;
+    }
+
+    private static void resolveImageRefs(RobotExamBank.Paper paper, Map<String, String> relMap) {
+        for (Question q : paper.questions) {
+            q.stemImg = toFileName(q.stemImg, relMap);
+            if (q.optionImgs != null) {
+                for (int i = 0; i < q.optionImgs.length; i++) {
+                    q.optionImgs[i] = toFileName(q.optionImgs[i], relMap);
+                }
+            }
+        }
+    }
+
+    private static String toFileName(String rid, Map<String, String> relMap) {
+        if (rid == null || rid.isEmpty()) return rid;
+        String target = relMap.get(rid);
+        if (target == null) return rid;
+        if (target.startsWith("media/")) return target.substring("media/".length());
+        return target;
+    }
+
+    private static class Para {
+        String text = "";
+        List<String> imageRids = new ArrayList<>();
+        String firstImageRid() { return imageRids.isEmpty() ? null : imageRids.get(0); }
+    }
+
+    private static List<Para> extractParagraphs(String xml) {
+        List<Para> result = new ArrayList<>();
+        // 段落切分：WPS 导出的 docx 含大量嵌套表格(<w:tbl>/<w:tc>/<w:tr>)，
+        // 段落标签 <w:p ...> 与 </w:p> 并非严格顺序相邻，非贪婪正则 <w:p[ >].*?</w:p>
+        // 会提前在嵌套空段落处错误闭合。改为按标签位置栈配对，精确定位每个真正
+        // <w:p>...</w:p>（或自闭合 <w:p .../>）的边界。
+        // <w:p> 开标签需排除 <w:pPr>/<w:pBdr>/<w:pStyle> 等属性标签，用 <w:p(?=[ >]) 约束。
+        Matcher openM = Pattern.compile("<w:p(?=[ >])").matcher(xml);
+        Matcher closeM = Pattern.compile("</w:p>").matcher(xml);
+        List<Integer> opens = new ArrayList<>();
+        List<Integer> closes = new ArrayList<>();
+        while (openM.find()) opens.add(openM.start());
+        while (closeM.find()) closes.add(closeM.start());
+        Matcher selfM = Pattern.compile("<w:p[^>]*/>").matcher(xml);
+        List<Integer> selfCloses = new ArrayList<>();
+        while (selfM.find()) selfCloses.add(selfM.start());
+
+        List<int[]> events = new ArrayList<>();
+        for (int p : opens) events.add(new int[]{p, 0});       // 0=open
+        for (int p : closes) events.add(new int[]{p, 1});      // 1=close
+        for (int p : selfCloses) events.add(new int[]{p, 2});  // 2=selfclose
+        events.sort((a, b) -> Integer.compare(a[0], b[0]));
+
+        List<int[]> ranges = new ArrayList<>();
+        java.util.ArrayDeque<Integer> stack = new java.util.ArrayDeque<>();
+        for (int[] ev : events) {
+            int pos = ev[0], typ = ev[1];
+            if (typ == 0) {
+                stack.push(pos);
+            } else if (typ == 1) {
+                if (!stack.isEmpty()) {
+                    int s = stack.pop();
+                    ranges.add(new int[]{s, pos});
+                }
+            } else {
+                int end = xml.indexOf("/>", pos);
+                if (end < 0) end = pos;
+                else end += 2;
+                ranges.add(new int[]{pos, end});
+            }
+        }
+        ranges.sort((a, b) -> Integer.compare(a[0], b[0]));
+
+        // 关键修复：<w:t> 文本标签用 <w:t(?=[ >]) 约束，排除 <w:tblPrEx>、
+        // <w:tblBorders>、<w:tcPr>、<w:tr> 等 w:t 开头的非文本标签，
+        // 否则 (.*?)</w:t> 非贪婪会跨结构拉到垃圾 XML 碎片。
+        Pattern textP = Pattern.compile("<w:t(?=[ >])[^>]*>(.*?)</w:t>", Pattern.DOTALL);
+        Pattern imgP = Pattern.compile("r:embed=\"([^\"]+)\"");
+        for (int[] r : ranges) {
+            String p = xml.substring(r[0], r[1]);
+            Para para = new Para();
+            Matcher tm = textP.matcher(p);
+            StringBuilder sb = new StringBuilder();
+            while (tm.find()) sb.append(tm.group(1));
+            para.text = sb.toString();
+            Matcher im = imgP.matcher(p);
+            while (im.find()) para.imageRids.add(im.group(1));
+            result.add(para);
+        }
+        return result;
+    }
+
+    private static byte[] readAll(InputStream is) throws Exception {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        byte[] buf = new byte[8192];
+        int n;
+        while ((n = is.read(buf)) != -1) baos.write(buf, 0, n);
+        return baos.toByteArray();
+    }
+
+    /** 判断是否为常见图片格式（大小写不敏感）。 */
+    private static boolean isImageFile(String name) {
+        String lower = name.toLowerCase();
+        return lower.endsWith(".jpeg") || lower.endsWith(".jpg")
+                || lower.endsWith(".png") || lower.endsWith(".gif")
+                || lower.endsWith(".bmp") || lower.endsWith(".webp");
+    }
+}

@@ -1,0 +1,55 @@
+<resources>
+    <!-- 主色调：现代蓝紫系 -->
+    <color name="primary">#5B5FEF</color>
+    <color name="primary_dark">#4A4ED6</color>
+    <color name="primary_light">#EEF0FF</color>
+
+    <!-- 强调/语义色 -->
+    <color name="success">#22C55E</color>
+    <color name="success_light">#ECFDF5</color>
+    <color name="danger">#EF4444</color>
+    <color name="danger_light">#FEF2F2</color>
+    <color name="warning">#F59E0B</color>
+
+    <!-- 强调蓝（图标/日历选中/图表） -->
+    <color name="accent">#4A6CF7</color>
+    <!-- 禁用按钮背景 -->
+    <color name="btn_disabled_bg">#CCCCCC</color>
+
+    <!-- 背景与文字 -->
+    <color name="bg_page">#F6F7FB</color>
+    <color name="text_main">#1F2430</color>
+    <color name="text_sub">#8A8F9C</color>
+    <color name="divider">#EDEFF3</color>
+
+    <!-- 卡片 -->
+    <color name="card_bg">#FFFFFF</color>
+
+    <!-- 答题卡格子 -->
+    <color name="sheet_blank_bg">#F0F0F0</color>
+    <color name="sheet_marked_bg">#FFF8E1</color>
+    <color name="sheet_marked_stroke">#FF9800</color>
+
+    <!-- 答题卡格子文字（未答/已答） -->
+    <color name="sheet_cell_text_done">#FFFFFF</color>
+    <color name="sheet_cell_text_blank">#333333</color>
+
+    <!-- 答题选项/解析语义色 -->
+    <color name="answer_correct">#16A34A</color>
+    <color name="answer_correct_text">#16A34A</color>
+    <color name="answer_wrong">#DC2626</color>
+    <color name="answer_wrong_text">#DC2626</color>
+
+    <!-- 图表颜色 -->
+    <color name="chart_line">#4A6CF7</color>
+    <color name="chart_text">#999999</color>
+    <color name="chart_grid">#EEEEEE</color>
+    <color name="chart_percent_text">#333333</color>
+
+    <!-- 夜间模式配色 -->
+    <color name="bg_page_dark">#12141A</color>
+    <color name="card_bg_dark">#1E2129</color>
+    <color name="text_main_dark">#E5E7EB</color>
+    <color name="text_sub_dark">#9CA3AF</color>
+    <color name="divider_dark">#2A2E39</color>
+</resources>

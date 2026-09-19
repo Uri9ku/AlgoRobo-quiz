@@ -1,0 +1,25 @@
+# Gradle
+.gradle/
+build/
+app/build/
+
+# Android
+local.properties
+*.apk
+*.aab
+
+# Python 临时脚本
+*.py
+
+# 临时图片/文件
+*.jpg
+*.jpeg
+*.png
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+
+# 环境
+captures/

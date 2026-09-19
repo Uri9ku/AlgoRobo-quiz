@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#CCFFFFFF"
+    android:padding="16dp">
+
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="草稿纸" android:textSize="16sp" android:textStyle="bold"
+        android:textColor="@color/text_main" android:gravity="center"/>
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="12dp" android:orientation="horizontal" android:gravity="center_vertical">
+        <TextView android:id="@+id/btnDraftClear" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:text="清空" android:textSize="14sp"
+            android:textColor="@color/primary" android:padding="8dp"/>
+        <TextView android:id="@+id/btnDraftSave" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:text="保存" android:textSize="14sp"
+            android:textColor="@color/primary" android:padding="8dp" android:layout_marginLeft="16dp"/>
+        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1"/>
+        <TextView android:id="@+id/btnDraftClose" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:text="关闭" android:textSize="14sp"
+            android:textColor="@color/text_sub" android:padding="8dp"/>
+    </LinearLayout>
+
+    <View android:layout_width="match_parent" android:layout_height="1dp"
+        android:layout_marginTop="4dp" android:background="@color/divider"/>
+
+    <com.algorobo.quiz.DrawPadView
+        android:id="@+id/drawPad"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="8dp"
+        android:background="#00FFFFFF"/>
+</LinearLayout>

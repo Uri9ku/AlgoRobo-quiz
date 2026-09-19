@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 注意：path 必须指向 exam_downloads 的父目录（files），不能精确等于目录本身。
+         否则 FileProvider.getUriForFile 在 substring(root.length()+1) 时越界
+         （StringIndexOutOfBoundsException: length=76; index=77）。 -->
+    <external-files-path name="exam_downloads" path="." />
+    <files-path name="files" path="." />
+    <!-- 覆盖用户通过 ACTION_OPEN_DOCUMENT_TREE 自定义的外部存储路径 -->
+    <external-path name="external_root" path="." />
+    <root-path name="root" path="." />
+</paths>

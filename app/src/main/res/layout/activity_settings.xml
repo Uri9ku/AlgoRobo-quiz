@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="@color/bg_page">
+
+    <!-- 顶部栏 -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:background="@color/primary" android:padding="12dp">
+        <TextView android:id="@+id/btnBackSettings" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:text="‹ 返回"
+            android:textSize="16sp" android:textColor="@android:color/white" android:padding="4dp"/>
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:gravity="center" android:text="设置"
+            android:textSize="17sp" android:textStyle="bold" android:textColor="@android:color/white"/>
+        <TextView android:layout_width="40dp" android:layout_height="wrap_content"/>
+    </LinearLayout>
+
+    <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:padding="16dp">
+
+            <!-- 分组：显示 -->
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="常规" android:textSize="13sp" android:textColor="@color/text_sub"
+                android:layout_marginBottom="8dp"/>
+
+            <!-- 深色模式 -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:padding="16dp" android:background="@drawable/bg_card">
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="深色模式" android:textSize="16sp" android:textColor="@color/text_main"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp" android:text="跟随系统 / 浅色 / 深色"
+                        android:textSize="12sp" android:textColor="@color/text_sub"/>
+                </LinearLayout>
+                <LinearLayout android:id="@+id/btnDarkMode" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:orientation="horizontal"
+                    android:gravity="center_vertical" android:padding="4dp"
+                    android:background="?attr/selectableItemBackgroundBorderless">
+                    <TextView android:id="@+id/tvDarkModeValue" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="跟随系统"
+                        android:textSize="14sp" android:textColor="@color/primary"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text=" ›" android:textSize="18sp" android:textColor="@color/text_sub"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Toast 显示时长 -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="8dp" android:orientation="vertical"
+                android:padding="16dp" android:background="@drawable/bg_card">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="Toast 显示时长" android:textSize="16sp" android:textColor="@color/text_main"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:text="提示气泡停留的时间"
+                            android:textSize="12sp" android:textColor="@color/text_sub"/>
+                    </LinearLayout>
+                    <TextView android:id="@+id/tvToastValue" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="2.0 秒"
+                        android:textSize="14sp" android:textColor="@color/primary"/>
+                </LinearLayout>
+                <android.widget.SeekBar android:id="@+id/sbToast" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginTop="12dp"
+                    android:max="40"/>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp" android:orientation="horizontal">
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="1 秒" android:textSize="11sp"
+                        android:textColor="@color/text_sub"/>
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:gravity="end" android:text="5 秒"
+                        android:textSize="11sp" android:textColor="@color/text_sub"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- 题目切换动画时长 -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="8dp" android:orientation="vertical"
+                android:padding="16dp" android:background="@drawable/bg_card">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="题目切换动画时长" android:textSize="16sp" android:textColor="@color/text_main"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:text="滑动切换题目时的动画速度"
+                            android:textSize="12sp" android:textColor="@color/text_sub"/>
+                    </LinearLayout>
+                    <TextView android:id="@+id/tvAnimValue" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="250 毫秒"
+                        android:textSize="14sp" android:textColor="@color/primary"/>
+                </LinearLayout>
+                <android.widget.SeekBar android:id="@+id/sbAnim" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginTop="12dp"
+                    android:max="50"/>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp" android:orientation="horizontal">
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="100 毫秒" android:textSize="11sp"
+                        android:textColor="@color/text_sub"/>
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:gravity="end" android:text="600 毫秒"
+                        android:textSize="11sp" android:textColor="@color/text_sub"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- 分组：更多 -->
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="20dp" android:text="更多" android:textSize="13sp"
+                android:textColor="@color/text_sub" android:layout_marginBottom="8dp"/>
+
+            <!-- 自动翻页（自定义项，待完善） -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:padding="16dp" android:background="@drawable/bg_card">
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="自动下一题" android:textSize="16sp" android:textColor="@color/text_main"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                       android:layout_marginTop="4dp" android:text="做对题目自动切换下一题，做错不自动切换"
+                        android:textSize="12sp" android:textColor="@color/text_sub"/>
+                </LinearLayout>
+                <androidx.appcompat.widget.SwitchCompat android:id="@+id/swAutoNext"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            </LinearLayout>
+
+            <!-- 分组：错题本 -->
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="20dp" android:text="错题本" android:textSize="13sp"
+                android:textColor="@color/text_sub" android:layout_marginBottom="8dp"/>
+
+            <!-- 做对次数阈值 -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:padding="16dp" android:background="@drawable/bg_card">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="做对次数阈值" android:textSize="16sp" android:textColor="@color/text_main"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:text="错题做对 N 次后自动移出错题本"
+                            android:textSize="12sp" android:textColor="@color/text_sub"/>
+                    </LinearLayout>
+                    <TextView android:id="@+id/tvWrongThresholdValue" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="2 次"
+                        android:textSize="14sp" android:textColor="@color/primary"/>
+                </LinearLayout>
+                <android.widget.SeekBar android:id="@+id/sbWrongThreshold" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginTop="12dp"
+                    android:max="9"/>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp" android:orientation="horizontal">
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="1 次" android:textSize="11sp"
+                        android:textColor="@color/text_sub"/>
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:gravity="end" android:text="10 次"
+                        android:textSize="11sp" android:textColor="@color/text_sub"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- 自动加入错题本 -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="8dp" android:orientation="horizontal"
+                android:gravity="center_vertical" android:padding="16dp" android:background="@drawable/bg_card">
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="自动加入错题本" android:textSize="16sp" android:textColor="@color/text_main"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                       android:layout_marginTop="4dp" android:text="答错时自动将题目加入错题本"
+                        android:textSize="12sp" android:textColor="@color/text_sub"/>
+                </LinearLayout>
+                <androidx.appcompat.widget.SwitchCompat android:id="@+id/swAutoWrong"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            </LinearLayout>
+
+
+
+            <!-- 分组：AI 功能 -->
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="20dp" android:text="AI 功能" android:textSize="14sp"
+                android:textStyle="bold" android:textColor="@color/text_main" android:layout_marginBottom="8dp"/>
+
+            <!-- AI 自动解析 -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:padding="16dp" android:background="@drawable/bg_card">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="自动生成解析" android:textSize="16sp" android:textColor="@color/text_main"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:text="为题目自动生成 AI 解析"
+                            android:textSize="12sp" android:textColor="@color/text_sub"/>
+                    </LinearLayout>
+                    <androidx.appcompat.widget.SwitchCompat android:id="@+id/swAutoAiAnalysis"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                </LinearLayout>
+                <View android:layout_width="match_parent" android:layout_height="1dp"
+                    android:layout_marginTop="14dp" android:background="@color/bg_page"/>
+                <LinearLayout android:id="@+id/btnAutoAiAnalysisMode"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp" android:orientation="horizontal" android:gravity="center_vertical">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="解析模式" android:textSize="16sp" android:textColor="@color/text_main"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:text="选择自动解析的触发范围"
+                            android:textSize="12sp" android:textColor="@color/text_sub"/>
+                    </LinearLayout>
+                    <TextView android:id="@+id/tvAutoAiAnalysisModeValue"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="对错都生成解析" android:textSize="14sp" android:textColor="@color/primary"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text=" ›" android:textSize="18sp" android:textColor="@color/text_sub"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- AI 模型配置（单一入口组件） -->
+            <LinearLayout android:id="@+id/btnAiModelConfig" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:layout_marginTop="16dp"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:padding="16dp" android:background="@drawable/bg_card"
+                android:foreground="?attr/selectableItemBackground">
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="AI 模型配置" android:textSize="16sp" android:textColor="@color/text_main"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp" android:text="模型、API Key 与 Base URL"
+                        android:textSize="12sp" android:textColor="@color/text_sub"/>
+                </LinearLayout>
+                <TextView android:id="@+id/tvAiModelValue" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="Operit AI"
+                    android:textSize="14sp" android:textColor="@color/primary"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text=" ›" android:textSize="18sp" android:textColor="@color/text_sub"/>
+            </LinearLayout>
+
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="16dp" android:text="测试与识别" android:textSize="13sp"
+                android:textColor="@color/text_sub" android:layout_marginBottom="8dp"/>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:padding="16dp" android:background="@drawable/bg_card">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="识别知识点" android:textSize="16sp" android:textColor="@color/text_main"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp" android:text="先检查本地缓存，缺失时再调用 AI 识别"
+                    android:textSize="12sp" android:textColor="@color/text_sub"/>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp" android:orientation="horizontal">
+                    <TextView android:id="@+id/btnAiTest" android:layout_width="0dp"
+                        android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center"
+                        android:paddingVertical="10dp" android:text="测试连接" android:textSize="14sp"
+                        android:textColor="@android:color/white" android:background="@drawable/bg_btn_primary"/>
+                    <TextView android:id="@+id/btnRecognizeKnowledge" android:layout_width="0dp"
+                        android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center"
+                        android:layout_marginStart="12dp" android:paddingVertical="10dp" android:text="识别知识点"
+                        android:textSize="14sp" android:textColor="@android:color/white"
+                        android:background="@drawable/bg_btn_primary"/>
+                </LinearLayout>
+                <TextView android:id="@+id/tvAiProgress" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:layout_marginTop="12dp"
+                    android:text="" android:textSize="12sp" android:textColor="@color/text_sub"/>
+                <ProgressBar android:id="@+id/pbAiProgress" style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp" android:max="100" android:visibility="gone"/>
+            </LinearLayout>
+
+            <!-- 分组：题库下载目录 -->
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="20dp" android:text="题库下载目录" android:textSize="13sp"
+                android:textColor="@color/text_sub" android:layout_marginBottom="8dp"/>
+
+            <!-- 当前目录 + 操作 -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:padding="16dp" android:background="@drawable/bg_card">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="下载目录" android:textSize="16sp" android:textColor="@color/text_main"/>
+                <TextView android:id="@+id/tvExamDir" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginTop="6dp"
+                    android:text="" android:textSize="12sp" android:textColor="@color/text_sub"
+                    android:textIsSelectable="true"/>
+                <HorizontalScrollView android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginTop="12dp"
+                    android:scrollbars="none">
+                    <LinearLayout android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:orientation="horizontal">
+                        <TextView android:id="@+id/btnChangeExamDir" android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" android:paddingVertical="10dp" android:paddingHorizontal="18dp"
+                            android:text="更改目录" android:textSize="14sp" android:textColor="@android:color/white"
+                            android:background="@drawable/bg_btn_primary"/>
+                        <TextView android:id="@+id/btnOpenExamDir" android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" android:paddingVertical="10dp" android:paddingHorizontal="18dp"
+                            android:layout_marginStart="12dp" android:text="打开目录"
+                            android:textSize="14sp" android:textColor="@android:color/white"
+                            android:background="@drawable/bg_btn_primary"/>
+                    </LinearLayout>
+                </HorizontalScrollView>
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

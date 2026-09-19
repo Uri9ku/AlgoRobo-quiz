@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp" android:background="@color/card_bg">
+<TextView android:id="@+id/tvWrongQuestion" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="" android:textSize="15sp" android:textColor="@color/text_main" android:maxLines="2" android:ellipsize="end"/>
+<TextView android:id="@+id/tvWrongAnswer" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="正确答案：A" android:textSize="13sp" android:textColor="@color/answer_correct_text"/>
+<TextView android:id="@+id/tvWrongDate" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="" android:textSize="12sp" android:textColor="@color/text_sub"/>
+</LinearLayout>
