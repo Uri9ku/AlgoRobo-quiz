@@ -35,6 +35,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        // 刘海屏适配：状态栏延伸/染色（首页无主题色顶栏，仅适配刘海）
+        ThemeManager.applyStatusBar(this);
+        ThemeManager.applyTopInset(this, R.id.rowExamType);
 
         tvExamTypeName = findViewById(R.id.tvExamTypeName);
         tvExamTypeSubtitle = findViewById(R.id.tvExamTypeSubtitle);

@@ -19,6 +19,8 @@ public class CheckInActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_checkin);
+        ThemeManager.applyStatusBar(this);
+        ThemeManager.applyTopBarColor(this, R.id.topBar);
 
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());
         tvStreak = findViewById(R.id.tvStreak);

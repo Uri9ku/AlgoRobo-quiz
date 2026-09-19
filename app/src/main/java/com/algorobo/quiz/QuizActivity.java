@@ -68,6 +68,9 @@ public class QuizActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_quiz);
+        ThemeManager.applyStatusBar(this);
+        ThemeManager.applyTopBarColor(this, R.id.topBar);
+        ThemeManager.applyTopInset(this, R.id.topBarInner);
 
         random = getIntent().getBooleanExtra("random", false);
         source = getIntent().getStringExtra("source");

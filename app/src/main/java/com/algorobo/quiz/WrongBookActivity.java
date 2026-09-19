@@ -17,6 +17,8 @@ public class WrongBookActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_wrong_book);
+        ThemeManager.applyStatusBar(this);
+        ThemeManager.applyTopBarColor(this, R.id.topBar);
 
         findViewById(R.id.btnWrongBack).setOnClickListener(v -> finish());
         findViewById(R.id.btnWrongClear).setOnClickListener(v -> {

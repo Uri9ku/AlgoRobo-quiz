@@ -75,7 +75,13 @@ public class QuestionBank {
             new String[]{"红外/灰度传感器", "温度传感器", "湿度传感器", "声音传感器"}, 0,
             "巡线通常使用红外或灰度传感器识别地面黑线的颜色深浅。"));
 
-        for (Question q : list) q.uid = Question.makeUid("builtin", q.id);
+        for (Question q : list) {
+            q.uid = Question.makeUid("builtin", q.id);
+            // 内建题库的 type 字段原本存的是分类/章节（例如"Scratch基础"）。
+            // 现将分类迁移到 knowledgePoints（知识点标识），并把 type 规范为正确题型（均为单选题）。
+            q.knowledgePoints = new String[]{ q.type };
+            q.type = Question.TYPE_SINGLE;
+        }
         return list;
     }
 }

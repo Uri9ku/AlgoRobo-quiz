@@ -36,6 +36,8 @@ public class AiConfigActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_ai_config);
+        ThemeManager.applyStatusBar(this);
+        ThemeManager.applyTopBarColor(this, R.id.topBar);
 
         tvCurrentConfig = findViewById(R.id.tvCurrentConfig);
         tvProviderValue = findViewById(R.id.tvProviderValue);

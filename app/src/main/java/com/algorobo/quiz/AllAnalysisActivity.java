@@ -24,6 +24,8 @@ public class AllAnalysisActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_analysis);
+        ThemeManager.applyStatusBar(this);
+        ThemeManager.applyTopBarColor(this, R.id.topBar);
 
         java.io.Serializable data = getIntent().getSerializableExtra("records");
         if (data instanceof List) {

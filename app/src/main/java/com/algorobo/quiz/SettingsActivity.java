@@ -26,17 +26,17 @@ public class SettingsActivity extends AppCompatActivity {
     private TextView tvExamDir;
     private android.widget.LinearLayout headerTopBar;
     private android.widget.LinearLayout themeColorPalette;
-
-    // 主题色预设色板（索引 0 为默认蓝紫）
-    private static final String[] THEME_COLORS = {
-            "#5B5FEF", "#22C55E", "#F59E0B", "#EF4444", "#0EA5E9", "#EC4899", "#8B5CF6"
-    };
+    private android.widget.HorizontalScrollView themeColorScroll;
+    private android.widget.LinearLayout customColorRow;
+    private android.widget.TextView customColorBtn;
+    private android.widget.TextView customColorSwatch;
+    private boolean themeColorExpanded = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
-
+        ThemeManager.applyStatusBar(this);
         tvToastValue = findViewById(R.id.tvToastValue);
         tvAnimValue = findViewById(R.id.tvAnimValue);
         tvDarkModeValue = findViewById(R.id.tvDarkModeValue);
@@ -52,6 +52,10 @@ public class SettingsActivity extends AppCompatActivity {
         tvExamDir = findViewById(R.id.tvExamDir);
         headerTopBar = findViewById(R.id.settingsTopBar);
         themeColorPalette = findViewById(R.id.themeColorPalette);
+        themeColorScroll = findViewById(R.id.themeColorScroll);
+        customColorRow = findViewById(R.id.customColorRow);
+        customColorBtn = findViewById(R.id.customColorBtn);
+        customColorSwatch = findViewById(R.id.customColorSwatch);
 
         findViewById(R.id.btnBackSettings).setOnClickListener(v -> finish());
 
@@ -157,7 +161,13 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     private void setupThemeColor() {
-        for (int i = 0; i < THEME_COLORS.length; i++) {
+        // 点击标题行展开/收起色板
+        findViewById(R.id.tvThemeColorTitle).setOnClickListener(v -> toggleThemePalette());
+        findViewById(R.id.tvThemeColorSub).setOnClickListener(v -> toggleThemePalette());
+        // 自定义颜色入口
+        customColorBtn.setOnClickListener(v -> showCustomColorDialog());
+        // 渲染色板
+        for (int i = 0; i < ThemeManager.PRESET_COLORS.length; i++) {
             final int idx = i;
             android.widget.TextView dot = new android.widget.TextView(this);
             int size = (int) (40 * getResources().getDisplayMetrics().density);
@@ -166,19 +176,31 @@ public class SettingsActivity extends AppCompatActivity {
             dot.setLayoutParams(lp);
             dot.setText("");
             dot.setOnClickListener(v -> {
-                DataStore.setThemeColor(this, idx);
-                applyThemeColor(idx);
+                ThemeManager.applyPreset(this, idx);
+                applyThemeColor();
                 renderThemePalette();
             });
             themeColorPalette.addView(dot);
         }
         renderThemePalette();
-        applyThemeColor(DataStore.getThemeColor(this));
+        applyThemeColor();
+    }
+
+    /** 展开/收起主题色色板。 */
+    private void toggleThemePalette() {
+        themeColorExpanded = !themeColorExpanded;
+        if (themeColorExpanded) {
+            themeColorScroll.setVisibility(android.view.View.VISIBLE);
+            customColorRow.setVisibility(android.view.View.VISIBLE);
+        } else {
+            themeColorScroll.setVisibility(android.view.View.GONE);
+            customColorRow.setVisibility(android.view.View.GONE);
+        }
     }
 
     /** 用当前主题色即时染色顶栏与设置页值文字。 */
-    private void applyThemeColor(int idx) {
-        int color = android.graphics.Color.parseColor(THEME_COLORS[idx]);
+    private void applyThemeColor() {
+        int color = ThemeManager.getThemeColor(this);
         headerTopBar.setBackgroundColor(color);
         // 染色所有引用 @color/primary 的值文字
         int[] valueIds = {
@@ -191,15 +213,15 @@ public class SettingsActivity extends AppCompatActivity {
         }
     }
 
-    /** 渲染色板时给当前选中项加边框指示。 */
+    /** 渲染色板时给当前选中项加边框指示 + 显示自定义色块。 */
     private void renderThemePalette() {
-        int current = DataStore.getThemeColor(this);
+        int current = ThemeManager.getThemeColorIndex(this);
         for (int i = 0; i < themeColorPalette.getChildCount(); i++) {
             android.view.View child = themeColorPalette.getChildAt(i);
             int size = (int) (40 * getResources().getDisplayMetrics().density);
             android.graphics.drawable.GradientDrawable gd = new android.graphics.drawable.GradientDrawable();
             gd.setShape(android.graphics.drawable.GradientDrawable.OVAL);
-            gd.setColor(android.graphics.Color.parseColor(THEME_COLORS[i]));
+            gd.setColor(android.graphics.Color.parseColor(ThemeManager.PRESET_COLORS[i]));
             if (i == current) {
                 gd.setStroke((int) (3 * getResources().getDisplayMetrics().density), android.graphics.Color.WHITE);
             } else {
@@ -207,8 +229,46 @@ public class SettingsActivity extends AppCompatActivity {
             }
             child.setBackground(gd);
         }
+        // 显示自定义色块
+        if (ThemeManager.isCustom(this)) {
+            android.graphics.drawable.GradientDrawable gd = new android.graphics.drawable.GradientDrawable();
+            gd.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+            gd.setColor(ThemeManager.getThemeColor(this));
+            gd.setStroke((int) (3 * getResources().getDisplayMetrics().density), android.graphics.Color.WHITE);
+            customColorSwatch.setBackground(gd);
+        } else {
+            android.graphics.drawable.GradientDrawable gd = new android.graphics.drawable.GradientDrawable();
+            gd.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+            gd.setColor(android.graphics.Color.TRANSPARENT);
+            gd.setStroke((int) (1 * getResources().getDisplayMetrics().density), 0x33000000);
+            customColorSwatch.setBackground(gd);
+        }
     }
 
+    /** 自定义色盘：hex 输入对话框。 */
+    private void showCustomColorDialog() {
+        final android.widget.EditText input = new android.widget.EditText(this);
+        input.setHint("#RRGGBB 或 RRGGBB");
+        String cur = ThemeManager.getCustomColor(this);
+        if (cur != null && !cur.isEmpty()) input.setText(cur);
+        new AlertDialog.Builder(this)
+                .setTitle("自定义主题色")
+                .setMessage("输入十六进制颜色值，例如 #FF6600")
+                .setView(input)
+                .setPositiveButton("确定", (d, which) -> {
+                    String hex = ThemeManager.normalizeHex(input.getText().toString());
+                    if (hex == null) {
+                        Toast.makeText(this, "颜色值格式无效", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    ThemeManager.applyCustom(this, hex);
+                    applyThemeColor();
+                    renderThemePalette();
+                    Toast.makeText(this, "已应用 " + hex, Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
     private void refreshUi() {
         int toastMs = DataStore.getToastDuration(this);
         tvToastValue.setText(String.format(java.util.Locale.US, "%.1f 秒", toastMs / 1000.0));

@@ -48,16 +48,17 @@ public class ExamCategoryCatalog {
                 for (RobotLevel.Section sec : lv.sections) {
                     TreeNode l2 = new TreeNode(sec.title);
                     for (RobotLevel.Item item : sec.items) {
-                        StringBuilder sb = new StringBuilder(item.text);
                         if (!item.subs.isEmpty()) {
-                            sb.append("（");
-                            for (int k = 0; k < item.subs.size(); k++) {
-                                if (k > 0) sb.append("、");
-                                sb.append(item.subs.get(k));
+                            // 含子条目：item.text 作为三级主题节点，subs 每个作为四级叶子
+                            TreeNode l3 = new TreeNode(item.text);
+                            for (String sub : item.subs) {
+                                l3.add(new TreeNode(sub).leaf());
                             }
-                            sb.append("）");
+                            l2.add(l3);
+                        } else {
+                            // 无子条目：直接作为三级叶子
+                            l2.add(new TreeNode(item.text).leaf());
                         }
-                        l2.add(new TreeNode(sb.toString()).leaf());
                     }
                     l1.add(l2);
                 }

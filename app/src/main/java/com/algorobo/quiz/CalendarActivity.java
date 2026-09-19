@@ -21,6 +21,8 @@ public class CalendarActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_calendar);
+        ThemeManager.applyStatusBar(this);
+        ThemeManager.applyTopBarColor(this, R.id.topBar);
 
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());
         tvMonth = findViewById(R.id.tvMonth);

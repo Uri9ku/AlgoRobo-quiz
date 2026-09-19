@@ -55,6 +55,8 @@ public class ImportOnlineActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_import_online);
+        ThemeManager.applyStatusBar(this);
+        ThemeManager.applyTopBarColor(this, R.id.topBar);
 
         lv = findViewById(R.id.listImportExam);
         etSearch = findViewById(R.id.etImportSearch);
