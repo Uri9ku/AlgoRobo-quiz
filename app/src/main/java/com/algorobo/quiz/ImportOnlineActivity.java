@@ -368,7 +368,7 @@ public class ImportOnlineActivity extends AppCompatActivity {
     private void updateCount() {
         int sel = 0;
         for (Cand c : all) if (c.selected) sel++;
-        tvCount.setText("共 " + shown.size() + " 套，已选 " + sel + " 套");
+        tvCount.setText("共 " + shown.size() + " 套\n已选 " + sel + " 套");
         updateSelectAllState();
         // 需求5/6：选中状态变化时刷新底栏可见性
         if (llImportBottom != null) {
@@ -445,13 +445,18 @@ public class ImportOnlineActivity extends AppCompatActivity {
     private void showYearPicker() {
         Set<Integer> years = new TreeSet<>();
         for (Cand c : all) if (c.year > 0) years.add(c.year);
-        if (years.isEmpty()) { Toast.makeText(this, "暂无年份数据", Toast.LENGTH_SHORT).show(); return; }
+        // 需求2：即使无年份数据也允许下拉，仅显示「全部」（或「无年份数据」提示项）
         final Integer[] ys = years.toArray(new Integer[0]);
-        final String[] labels = new String[ys.length + 1];
-        labels[0] = "全部";
-        for (int i = 0; i < ys.length; i++) labels[i + 1] = String.valueOf(ys[i]);
+        final String[] labels;
+        if (ys.length == 0) {
+            labels = new String[]{"全部"};
+        } else {
+            labels = new String[ys.length + 1];
+            labels[0] = "全部";
+            for (int i = 0; i < ys.length; i++) labels[i + 1] = String.valueOf(ys[i]);
+        }
         showDropdown(btnYear, labels, choice -> {
-            filterYear = choice == 0 ? -1 : ys[choice - 1];
+            filterYear = (ys.length == 0 || choice == 0) ? -1 : ys[choice - 1];
             refreshFilterLabels(); apply();
         });
     }
@@ -515,7 +520,10 @@ public class ImportOnlineActivity extends AppCompatActivity {
         p.setTextSize(14 * getResources().getDisplayMetrics().scaledDensity);
         int maxTextW = 0;
         for (String s : labels) maxTextW = Math.max(maxTextW, (int) p.measureText(s));
-        int width = anchor.getWidth();
+        float density = getResources().getDisplayMetrics().density;
+        int textW = maxTextW + (int) (32 * density + 0.5f); // 左右 padding 各 16dp
+        int anchorW = anchor.getWidth();
+        int width = Math.max(anchorW, Math.max(textW, (int) (120 * density + 0.5f)));
         dropdownPopup = new PopupWindow(dlv, width, height, true);
         dlv.setBackgroundResource(R.drawable.bg_popup_menu);
         dropdownPopup.setElevation(12f);
