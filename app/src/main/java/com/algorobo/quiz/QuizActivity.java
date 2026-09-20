@@ -38,7 +38,7 @@ public class QuizActivity extends AppCompatActivity {
     private boolean random;
     private String source = "all"; // all / wrong / custom / paper:<key>
 
-    private TextView tvQuestionType, tvQuestion, tvKnowledgeTag;
+    private TextView tvQuestionType, tvQuestion, tvKnowledgeTag, tvScore;
     private TextView btnStat;
     private ImageView ivStemImage;
     private LinearLayout optionsContainer;
@@ -109,6 +109,7 @@ public class QuizActivity extends AppCompatActivity {
         tvQuestionType = findViewById(R.id.tvQuestionType);
         tvQuestion = findViewById(R.id.tvQuestion);
         tvKnowledgeTag = findViewById(R.id.tvKnowledgeTag);
+        tvScore = findViewById(R.id.tvScore);
         btnStat = findViewById(R.id.btnStat);
         btnStat.setOnClickListener(v -> showQuestionStat());
         ivStemImage = findViewById(R.id.ivStemImage);
@@ -274,6 +275,7 @@ public class QuizActivity extends AppCompatActivity {
         renderIndexBar();
         tvQuestionType.setText(q.type);
         renderKnowledgeTag(q);
+        renderScore(q);
         tvQuestion.setText((index + 1) + ". " + q.stem);
         renderStemImage(q);
 
@@ -366,6 +368,15 @@ public class QuizActivity extends AppCompatActivity {
         }
         tvKnowledgeTag.setText(sb.toString());
         tvKnowledgeTag.setVisibility(View.VISIBLE);
+    }
+    // 展示题目分值：score > 0 时显示"分值：N分"，否则隐藏
+    private void renderScore(Question q) {
+        if (q.score > 0) {
+            tvScore.setText("分值：" + q.score + "分");
+            tvScore.setVisibility(View.VISIBLE);
+        } else {
+            tvScore.setVisibility(View.GONE);
+        }
     }
     private void renderOptions(Question q) {
         int n = q.options == null ? 0 : q.options.length;

@@ -73,7 +73,12 @@ public class ExamListActivity extends AppCompatActivity {
 
     // 在线导入题库：GitHub 仓库源（release 资产为题库文件）
     private static final String GITHUB_OWNER = "Uri9ku";
-    private static final String GITHUB_REPO = "CIE-ETQ";
+    private static final String[] GITHUB_REPOS = {
+        "cie-graphical-exam", // 软件编程图形化
+        "cie-python-exam",    // 软件编程 Python
+        "cie-c-exam",         // 软件编程 C 语言
+        "cie-robot-exam"      // 机器人技术等级考试
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -320,9 +325,18 @@ public class ExamListActivity extends AppCompatActivity {
         final java.util.Map<String, RobotExamBank.Paper> existing =
                 RobotExamUpdater.loadCache(this);
         new Thread(() -> {
-            final java.util.List<RobotExamUpdater.ReleaseAsset> assets;
+            final java.util.List<RobotExamUpdater.ReleaseAsset> assets = new ArrayList<>();
             try {
-                assets = RobotExamUpdater.fetchGitHubReleases(this, GITHUB_OWNER, GITHUB_REPO);
+                // 依次抓取多个科目仓库的 release 资产并合并，任一仓库失败仅跳过该仓库。
+                for (String repo : GITHUB_REPOS) {
+                    try {
+                        java.util.List<RobotExamUpdater.ReleaseAsset> list =
+                                RobotExamUpdater.fetchGitHubReleases(this, GITHUB_OWNER, repo);
+                        if (list != null) assets.addAll(list);
+                    } catch (Exception e) {
+                        android.util.Log.w("ExamListActivity", "抓取仓库 " + repo + " 失败：" + e.getMessage());
+                    }
+                }
             } catch (Exception e) {
                 runOnUiThread(() ->
                         Toast.makeText(this, "获取在线列表失败：" + e.getMessage(), Toast.LENGTH_LONG).show());

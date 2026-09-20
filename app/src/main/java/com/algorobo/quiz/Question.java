@@ -27,6 +27,8 @@ public class Question implements Serializable {
     public String difficulty;
     /** 该题关联的知识点名称列表（可空，多知识点用数组表达）。 */
     public String[] knowledgePoints;
+    /** 该题分值（0 表示未解析到分值）。 */
+    public int score;
 
     public Question(int id, String type, String stem, String[] options, int answerIndex, String analysis) {
         this.id = id;
@@ -41,10 +43,12 @@ public class Question implements Serializable {
         this.judgeAnswer = null;
         this.hasAnswer = true;
         this.difficulty = "";
+        this.score = 0;
     }
 
     public Question() {
         this.hasAnswer = true;
+        this.score = 0;
     }
 
     public boolean isJudgeable() {

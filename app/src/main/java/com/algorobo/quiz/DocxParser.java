@@ -106,7 +106,12 @@ public class DocxParser {
                 curStemImg = null;
                 inOptions = false;
                 // 题号与题干合并成段时，剥离题号后剩余文本即题干首行。同时记录该段图片。
-                if (stripped.length() > 0) curStem.append(stripped);
+                // 若题干末尾附带分值后缀「（N分）」，则剥离并填充分值。
+                if (stripped.length() > 0) {
+                    ScoreStripped ss = stripTrailingScore(stripped);
+                    curStem.append(ss.text);
+                    if (ss.score > 0) cur.score = ss.score;
+                }
                 if (img != null) curStemImg = img;
                 continue;
             }
@@ -133,6 +138,11 @@ public class DocxParser {
                 cur.analysis = text.substring("试题解析：".length()).trim();
                 continue;
             }
+            if (text.startsWith("分值：") || text.startsWith("试题分值：")) {
+                String prefix = text.startsWith("分值：") ? "分值：" : "试题分值：";
+                cur.score = parseScore(text.substring(prefix.length()).trim());
+                continue;
+            }
             if (text.startsWith("考生答案：") || text.startsWith("考生得分：")
                     || text.startsWith("是否评分：") || text.startsWith("评价描述：")) {
                 continue;
@@ -146,8 +156,12 @@ public class DocxParser {
                 continue;
             }
             if (!inOptions) {
-                // 题干及其续行（含题干图片）
-                if (text.length() > 0) curStem.append(text);
+                // 题干及其续行（含题干图片）。若末段文本附带分值后缀「（N分）」，则剥离并填充分值。
+                if (text.length() > 0) {
+                    ScoreStripped ss = stripTrailingScore(text);
+                    curStem.append(ss.text);
+                    if (ss.score > 0) cur.score = ss.score;
+                }
                 if (img != null && curStemImg == null) curStemImg = img;
             } else {
                 // 选项文本续行：真实 docx 中选项文字出现在选项字母（A.）的下一行，
@@ -240,6 +254,41 @@ public class DocxParser {
         } catch (Exception e) {
             return idStr.hashCode() & 0x7fffffff;
         }
+    }
+
+    /**
+     * 从分值字符串解析整数分值，支持 "5"、"5分"、"5.0" 等形式，解析失败返回 0。
+     */
+    private static int parseScore(String s) {
+        if (s == null) return 0;
+        s = s.replace("分", "").replace("（", "").replace("）", "").trim();
+        if (s.isEmpty()) return 0;
+        try {
+            double d = Double.parseDouble(s);
+            return (int) Math.round(d);
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    /**
+     * 剥离文本末尾的分值后缀「（N分）」。返回剥离分值后的文本及分值。
+     */
+    private static ScoreStripped stripTrailingScore(String text) {
+        if (text == null) return new ScoreStripped("", 0);
+        java.util.regex.Pattern ptn = java.util.regex.Pattern.compile("^(.*?)[（(](\\d+(?:\\.\\d+)?)分[)）]\\s*$");
+        java.util.regex.Matcher m = ptn.matcher(text);
+        if (m.matches()) {
+            int score = parseScore(m.group(2));
+            return new ScoreStripped(m.group(1).trim(), score);
+        }
+        return new ScoreStripped(text, 0);
+    }
+
+    private static class ScoreStripped {
+        final String text;
+        final int score;
+        ScoreStripped(String text, int score) { this.text = text; this.score = score; }
     }
 
     private static boolean isSectionTitle(String text) {
