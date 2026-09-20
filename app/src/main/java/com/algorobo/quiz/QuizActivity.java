@@ -225,6 +225,7 @@ public class QuizActivity extends AppCompatActivity {
             else title = "全部真题";
         }
         if (tvPaperTitle != null) tvPaperTitle.setText(title);
+        applyTitleMarquee();
     }
     // 按 uid 快照顺序重排题目（恢复上次进度用）；缺失的题目忽略，未出现在快照中的题追加在末尾
     private List<Question> reorderByUids(List<Question> all, List<String> uids) {
@@ -1031,13 +1032,23 @@ public class QuizActivity extends AppCompatActivity {
     }
 
     private void applyFontScale() {
-        int scale = DataStore.getFontScale(this);
-        float questionSize, analysisSize;
-        if (scale <= 0) { questionSize = 15f; analysisSize = 13f; }
-        else if (scale >= 2) { questionSize = 22f; analysisSize = 15f; }
-        else { questionSize = 18f; analysisSize = 14f; }
-        tvQuestion.setTextSize(questionSize);
-        tvAnalysisText.setTextSize(analysisSize);
+        float q = DataStore.getQuestionFontSp(this);
+        float a = q - 4f;
+        if (a < 11f) a = 11f;
+        tvQuestion.setTextSize(q);
+        tvAnalysisText.setTextSize(a);
+    }
+    // 根据设置开关决定试卷标题是否启用跑马灯（自动滚动）
+    private void applyTitleMarquee() {
+        if (tvPaperTitle == null) return;
+        boolean on = DataStore.isTitleMarquee(this);
+        tvPaperTitle.setSingleLine(on);
+        tvPaperTitle.setEllipsize(on ? android.text.TextUtils.TruncateAt.MARQUEE : android.text.TextUtils.TruncateAt.END);
+        tvPaperTitle.setMarqueeRepeatLimit(on ? -1 : 0);
+        tvPaperTitle.setSelected(on);
+        tvPaperTitle.setFocusable(on);
+        tvPaperTitle.setFocusableInTouchMode(on);
+        if (on) tvPaperTitle.requestFocus();
     }
 
     private void updateThemeButtons(TextView btnThemeDay, TextView btnThemeNight) {

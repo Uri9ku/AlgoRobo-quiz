@@ -114,6 +114,20 @@ public class DataStore {
     public static void setFontScale(Context c, int scale) {
         sp(c).edit().putInt("setting_font_scale", scale).apply();
     }
+    // 真题题干字号（sp），默认 18
+    public static float getQuestionFontSp(Context c) {
+        return sp(c).getFloat("setting_question_font_sp", 18f);
+    }
+    public static void setQuestionFontSp(Context c, float sp) {
+        sp(c).edit().putFloat("setting_question_font_sp", sp).apply();
+    }
+    // 试卷标题自动滚动（跑马灯），默认开启
+    public static boolean isTitleMarquee(Context c) {
+        return sp(c).getBoolean("setting_title_marquee", true);
+    }
+    public static void setTitleMarquee(Context c, boolean on) {
+        sp(c).edit().putBoolean("setting_title_marquee", on).apply();
+    }
 
     public static Set<String> getCheckinDays(Context c) {
         return new HashSet<>(sp(c).getStringSet("checkin_days", new HashSet<>()));

@@ -123,6 +123,42 @@
                 </LinearLayout>
             </LinearLayout>
 
+            <!-- 真题字号 -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp" android:background="@drawable/bg_card">
+                <LinearLayout android:id="@+id/cardFontSizeHeader" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="真题题干字号" android:textSize="16sp" android:textColor="@color/text_main"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:text="刷题页题目与解析文字的大小"
+                            android:textSize="12sp" android:textColor="@color/text_sub"/>
+                    </LinearLayout>
+                    <TextView android:id="@+id/tvFontSizeValue" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="18 sp"
+                        android:textSize="14sp" android:textColor="@color/primary"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text=" ˯" android:textSize="14sp" android:textColor="@color/text_sub"/>
+                </LinearLayout>
+                <LinearLayout android:id="@+id/cardFontSizeBody" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+                    <android.widget.SeekBar android:id="@+id/sbFontSize" android:layout_width="match_parent"
+                        android:layout_height="wrap_content" android:layout_marginTop="12dp"
+                        android:max="12"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp" android:orientation="horizontal">
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:text="14 sp" android:textSize="11sp"
+                            android:textColor="@color/text_sub"/>
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:gravity="end" android:text="26 sp"
+                            android:textSize="11sp" android:textColor="@color/text_sub"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
             <!-- 主题色 -->
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:orientation="vertical" android:padding="16dp" android:background="@drawable/bg_card">
@@ -333,6 +369,22 @@
                         android:textSize="12sp" android:textColor="@color/text_sub"/>
                 </LinearLayout>
                 <androidx.appcompat.widget.SwitchCompat android:id="@+id/swAutoNext"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            </LinearLayout>
+            <!-- 试卷标题滚动 -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:layout_marginTop="8dp"
+                android:padding="16dp" android:background="@drawable/bg_card">
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="试卷标题自动滚动" android:textSize="16sp" android:textColor="@color/text_main"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp" android:text="标题过长时自动跑马灯滚动显示"
+                        android:textSize="12sp" android:textColor="@color/text_sub"/>
+                </LinearLayout>
+                <androidx.appcompat.widget.SwitchCompat android:id="@+id/swTitleMarquee"
                     android:layout_width="wrap_content" android:layout_height="wrap_content"/>
             </LinearLayout>
         </LinearLayout>

@@ -17,6 +17,9 @@ public class SettingsActivity extends AppCompatActivity {
     private TextView tvToastValue, tvAnimValue, tvDarkModeValue;
     private SeekBar sbToast, sbAnim;
     private SwitchCompat swAutoNext;
+    private TextView tvFontSizeValue;
+    private SeekBar sbFontSize;
+    private SwitchCompat swTitleMarquee;
     private TextView tvAiModelValue;
     private TextView tvWrongThresholdValue;
     private SeekBar sbWrongThreshold;
@@ -43,6 +46,9 @@ public class SettingsActivity extends AppCompatActivity {
         sbToast = findViewById(R.id.sbToast);
         sbAnim = findViewById(R.id.sbAnim);
         swAutoNext = findViewById(R.id.swAutoNext);
+        tvFontSizeValue = findViewById(R.id.tvFontSizeValue);
+        sbFontSize = findViewById(R.id.sbFontSize);
+        swTitleMarquee = findViewById(R.id.swTitleMarquee);
         tvAiModelValue = findViewById(R.id.tvAiModelValue);
         tvWrongThresholdValue = findViewById(R.id.tvWrongThresholdValue);
         sbWrongThreshold = findViewById(R.id.sbWrongThreshold);
@@ -63,6 +69,7 @@ public class SettingsActivity extends AppCompatActivity {
         setupCollapse(R.id.cardToastHeader, R.id.cardToastBody);
         setupCollapse(R.id.cardAnimHeader, R.id.cardAnimBody);
         setupCollapse(R.id.cardThresholdHeader, R.id.cardThresholdBody);
+        setupCollapse(R.id.cardFontSizeHeader, R.id.cardFontSizeBody);
 
         // 主题色：渲染色板 + 即时染色
         setupThemeColor();
@@ -108,6 +115,26 @@ public class SettingsActivity extends AppCompatActivity {
         swAutoNext.setOnCheckedChangeListener((btn, checked) -> {
             DataStore.setAutoNext(this, checked);
             showToast("自动下一题已" + (checked ? "开启" : "关闭"));
+        });
+        // 试卷标题自动滚动（跑马灯）开关
+        swTitleMarquee.setChecked(DataStore.isTitleMarquee(this));
+        swTitleMarquee.setOnCheckedChangeListener((btn, checked) -> {
+            DataStore.setTitleMarquee(this, checked);
+            showToast("试卷标题滚动已" + (checked ? "开启" : "关闭"));
+        });
+        // 真题字号：SeekBar 范围 14~26sp，步长 1sp
+        sbFontSize.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar bar, int progress, boolean fromUser) {
+                float sp = 14f + progress;
+                tvFontSizeValue.setText(((int) sp) + " sp");
+                if (fromUser) {
+                    DataStore.setQuestionFontSp(SettingsActivity.this, sp);
+                }
+            }
+            @Override public void onStartTrackingTouch(SeekBar bar) {}
+            @Override public void onStopTrackingTouch(SeekBar bar) {
+                showToast("真题字号已设为 " + (14 + bar.getProgress()) + " sp");
+            }
         });
 
         // 做对次数阈值：SeekBar 范围 0~9，映射到 1~10 次
@@ -304,6 +331,10 @@ public class SettingsActivity extends AppCompatActivity {
         tvAutoAiAnalysisModeValue.setText(DataStore.getAutoAiAnalysisMode(this).equals("wrong") ? "只对错题解析" : "对错都生成解析");
 
         tvExamDir.setText(DataStore.getExamDir(this));
+        float fontSp = DataStore.getQuestionFontSp(this);
+        tvFontSizeValue.setText(((int) fontSp) + " sp");
+        sbFontSize.setProgress(Math.max(0, Math.min(12, (int) fontSp - 14)));
+        swTitleMarquee.setChecked(DataStore.isTitleMarquee(this));
     }
 
     private void showAutoAiAnalysisModeDialog() {
