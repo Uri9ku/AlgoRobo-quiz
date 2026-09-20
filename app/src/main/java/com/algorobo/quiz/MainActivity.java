@@ -155,11 +155,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void applyCategoryStyle(TextView tv, boolean selected) {
         if (selected) {
-            tv.setBackgroundResource(R.drawable.bg_category_selected);
-            tv.setTextColor(getColor(R.color.primary_light));
+            tv.setBackgroundResource(R.drawable.bg_category_chalk_selected);
+            tv.setTextColor(getColor(R.color.primary));
         } else {
-            tv.setBackgroundResource(R.drawable.bg_category_normal);
-            tv.setTextColor(getColor(R.color.text_main));
+            tv.setBackgroundResource(R.drawable.bg_category_chalk_normal);
+            tv.setTextColor(getColor(R.color.white));
         }
     }
 

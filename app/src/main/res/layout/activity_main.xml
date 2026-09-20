@@ -15,8 +15,8 @@
         <LinearLayout android:id="@+id/headerContainer" android:layout_width="match_parent"
             android:layout_height="wrap_content" android:orientation="vertical"
             android:layout_marginStart="12dp" android:layout_marginEnd="12dp"
-            android:layout_marginTop="12dp" android:background="@drawable/bg_header"
-            android:padding="12dp">
+            android:layout_marginTop="12dp" android:background="@drawable/bg_header_chalk"
+            android:padding="16dp">
 
             <!-- 第一行：考试类型标题（点击切换） -->
             <LinearLayout android:id="@+id/rowExamType" android:layout_width="wrap_content"
@@ -46,10 +46,10 @@
         <!-- ===== 中部黄框：功能卡片区 ===== -->
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginStart="12dp" android:layout_marginEnd="12dp" android:layout_marginTop="12dp"
-            android:orientation="vertical" android:padding="12dp" android:background="@drawable/bg_frame_yellow">
+            android:orientation="vertical" android:padding="16dp" android:background="@drawable/bg_card_chalk">
 
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="刷题工具箱" android:textSize="13sp" android:textColor="@color/frame_yellow"
+                android:text="刷题工具箱" android:textSize="14sp" android:textColor="@color/frame_yellow"
                 android:textStyle="bold" />
 
             <!-- 宫格导航：5 列图标网格 -->
@@ -201,10 +201,10 @@
         <!-- ===== 底部绿框：三级容器骨架 ===== -->
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginStart="12dp" android:layout_marginEnd="12dp" android:layout_marginTop="12dp"
-            android:layout_marginBottom="80dp" android:orientation="vertical" android:padding="12dp"
-            android:background="@drawable/bg_frame_green">
+            android:layout_marginBottom="80dp" android:orientation="vertical" android:padding="16dp"
+            android:background="@drawable/bg_card_chalk">
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="📚 备考目录" android:textSize="13sp" android:textColor="@color/frame_green"
+                android:text="📚 备考目录" android:textSize="14sp" android:textColor="@color/frame_green"
                 android:textStyle="bold" />
             <LinearLayout android:id="@+id/llGreenContainer" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:layout_marginTop="8dp"
