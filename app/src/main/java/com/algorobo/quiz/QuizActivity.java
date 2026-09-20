@@ -52,6 +52,10 @@ public class QuizActivity extends AppCompatActivity {
     private MarkdownUtil markdownRenderer;
     private LinearLayout analysisImagesContainer;
     private TextView tvQuestionTime;
+    private TextView tvCountdown;
+    private TextView tvQuestionIndex;
+    private LinearLayout indexContainer;
+    private android.widget.HorizontalScrollView indexScroll;
     private long perQuestionStart;
     private long[] questionStartTimes; // 每题首次展示时的已耗时基准
     private long[] questionDurations;  // 每题真实作答用时（首次作答时记录）
@@ -121,6 +125,10 @@ public class QuizActivity extends AppCompatActivity {
         analysisImagesContainer = findViewById(R.id.analysisImagesContainer);
 
         tvQuestionTime = findViewById(R.id.tvQuestionTime);
+        tvCountdown = findViewById(R.id.tvCountdown);
+        tvQuestionIndex = findViewById(R.id.tvQuestionIndex);
+        indexContainer = findViewById(R.id.indexContainer);
+        indexScroll = findViewById(R.id.indexScroll);
         btnToolTime = findViewById(R.id.btnToolTime);
         btnToolWrongbook = findViewById(R.id.btnToolWrongbook);
         btnToolDownload = findViewById(R.id.btnToolDownload);
@@ -222,6 +230,9 @@ public class QuizActivity extends AppCompatActivity {
         timerRunnable = new Runnable() {
             @Override public void run() {
                 elapsed = SystemClock.elapsedRealtime() - startTime;
+                long sec = elapsed / 1000;
+                long m = sec / 60, s = sec % 60;
+                tvCountdown.setText(String.format("%02d:%02d", m, s));
                 handler.postDelayed(this, 500);
             }
         };
@@ -236,6 +247,8 @@ public class QuizActivity extends AppCompatActivity {
         }
         Question q = questions.get(index);
         pbProgress.setProgress(index + 1);
+        tvQuestionIndex.setText((index + 1) + "/" + questions.size());
+        renderIndexBar();
         tvQuestionType.setText(q.type);
         renderKnowledgeTag(q);
         tvQuestion.setText((index + 1) + ". " + q.stem);
@@ -266,6 +279,52 @@ public class QuizActivity extends AppCompatActivity {
 
         updateToolbarIcons();
         saveResumeNow();
+    }
+    // 渲染跳题索引条：水平排列题号圆点，区分「当前/已答/未答」，点击跳转
+    private void renderIndexBar() {
+        indexContainer.removeAllViews();
+        final int n = questions.size();
+        int dotSize = dp(28);
+        int margin = dp(3);
+        for (int i = 0; i < n; i++) {
+            final int pos = i;
+            TextView dot = new TextView(this);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dotSize, dotSize);
+            lp.leftMargin = margin;
+            lp.rightMargin = margin;
+            dot.setLayoutParams(lp);
+            dot.setGravity(Gravity.CENTER);
+            dot.setText(String.valueOf(i + 1));
+            dot.setTextSize(11);
+            dot.setTextColor(getColor(R.color.text_main));
+            int bg;
+            if (i == index) {
+                bg = R.drawable.bg_index_current;
+                dot.setTextColor(getColor(android.R.color.white));
+            } else if (answered[i]) {
+                bg = R.drawable.bg_index_done;
+                dot.setTextColor(getColor(R.color.accent));
+            } else {
+                bg = R.drawable.bg_index_blank;
+            }
+            dot.setBackgroundResource(bg);
+            dot.setOnClickListener(v -> {
+                index = pos;
+                render();
+                scrollIndexToCurrent();
+            });
+            indexContainer.addView(dot);
+        }
+        indexContainer.post(this::scrollIndexToCurrent);
+    }
+    // 将当前题号圆点滚动到可视区中央
+    private void scrollIndexToCurrent() {
+        if (indexContainer == null || indexScroll == null) return;
+        View child = indexContainer.getChildAt(index);
+        if (child == null) return;
+        int targetX = child.getLeft() - (indexScroll.getWidth() - child.getWidth()) / 2;
+        if (targetX < 0) targetX = 0;
+        indexScroll.smoothScrollTo(targetX, 0);
     }
     // 展示题目知识点标签：多知识点用「/」连接；无知识点则隐藏
     private void renderKnowledgeTag(Question q) {
