@@ -146,8 +146,9 @@
             android:paddingEnd="12dp"
             android:paddingTop="6dp"
             android:paddingBottom="4dp"
-            android:text="数据来源于 GitHub 仓库 Uri9ku/AlgoRobo-quiz"
+            android:text="数据来源（真题仓库）：GitHub\nUri9ku/AlgoRobo-quiz"
             android:textSize="11sp"
+            android:lineSpacingExtra="2dp"
             android:textColor="@color/text_sub"
             android:background="@color/bg_page" />
         <ListView
@@ -206,7 +207,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="12dp"
-                android:text="导入所选"
+                android:text="导入"
                 android:textSize="14sp"
                 android:textColor="@android:color/white"
                 android:background="@drawable/bg_btn_primary"
