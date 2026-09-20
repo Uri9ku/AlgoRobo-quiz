@@ -47,12 +47,13 @@ public class ImportOnlineActivity extends AppCompatActivity {
     private TextView tvCount, btnCancel, btnConfirm, btnSelectAll;
     private TextView tvEmpty;
     private PopupWindow dropdownPopup;
-    private LinearLayout llRepos;
     private LinearLayout llImportBottom;
+    private LinearLayout llRepos;
     private final List<TextView> repoTabViews = new ArrayList<>();
     private String currentRepo = null;   // 当前选中的具体仓库名，null 表示尚未选择任何仓库
     private boolean isAllMode = false;     // 是否处于「全部」模式（点击了「全部」Tab）
     private boolean loading = false;     // 是否正在加载某个仓库
+    private boolean selectMode = false;  // 是否处于选择模式（勾选框与底栏可见）
     private int filterYear = -1;
     private int filterMonth = -1;
     private String filterSubject = null;
@@ -79,7 +80,6 @@ public class ImportOnlineActivity extends AppCompatActivity {
         btnConfirm = findViewById(R.id.btnImportConfirm);
         btnSelectAll = findViewById(R.id.btnImportSelectAll);
         llImportBottom = findViewById(R.id.llImportBottom);
-
         findViewById(R.id.btnImportBack).setOnClickListener(v -> finish());
         llRepos = findViewById(R.id.llImportRepos);
         // 动态构建真题来源仓库 Tab（不加载数据）
@@ -101,8 +101,8 @@ public class ImportOnlineActivity extends AppCompatActivity {
                 TextView tvSub = convertView.findViewById(R.id.tvImportSub);
                 TextView tvRepo = convertView.findViewById(R.id.tvImportRepo);
                 CheckBox cb = convertView.findViewById(R.id.cbImportSelect);
-                // 需求5/6：默认隐藏勾选框，仅当该条被选中时显示
-                cb.setVisibility(c.selected ? View.VISIBLE : View.GONE);
+                // 勾选框可见性由选择模式驱动：选择模式下可见，取消后隐藏
+                cb.setVisibility(selectMode ? View.VISIBLE : View.GONE);
                 tvTitle.setText(ra.title != null ? ra.title : ra.fileName);
                 String sub = ra.fileName;
                 tvSub.setText(sub != null ? sub : "");
@@ -114,6 +114,7 @@ public class ImportOnlineActivity extends AppCompatActivity {
                 cb.setChecked(c.selected);
                 cb.setOnCheckedChangeListener((btn, checked) -> {
                     c.selected = checked;
+                    selectMode = true; // 勾选即进入选择模式
                     updateCount();
                     updateSelectAllState();
                 });
@@ -124,6 +125,7 @@ public class ImportOnlineActivity extends AppCompatActivity {
         lv.setOnItemClickListener((parent, view, position, id) -> {
             Cand c = shown.get(position);
             c.selected = !c.selected;
+            selectMode = true; // 条目点击勾选即进入选择模式
             adapter.notifyDataSetChanged();
             updateCount();
             updateSelectAllState();
@@ -148,6 +150,7 @@ public class ImportOnlineActivity extends AppCompatActivity {
 
         btnCancel.setOnClickListener(v -> {
             for (Cand c : all) c.selected = false;
+            selectMode = false; // 退出选择模式：隐藏勾选框和底栏
             adapter.notifyDataSetChanged();
             updateCount();
         });
@@ -161,6 +164,7 @@ public class ImportOnlineActivity extends AppCompatActivity {
             }
             boolean target = !allSelected;
             for (Cand c : shown) c.selected = target;
+            selectMode = true; // 进入选择模式：勾选框与底栏保持可见
             updateSelectAllState();
             adapter.notifyDataSetChanged();
             updateCount();
@@ -358,10 +362,6 @@ public class ImportOnlineActivity extends AppCompatActivity {
             shown.add(c);
         }
         adapter.notifyDataSetChanged();
-        // 需求5/6：仅当存在选中项时显示底栏
-        if (llImportBottom != null) {
-            llImportBottom.setVisibility(hasAnySelected() ? View.VISIBLE : View.GONE);
-        }
         updateCount();
     }
 
@@ -369,18 +369,11 @@ public class ImportOnlineActivity extends AppCompatActivity {
         int sel = 0;
         for (Cand c : all) if (c.selected) sel++;
         tvCount.setText("共 " + shown.size() + " 套\n已选 " + sel + " 套");
+        // 底栏可见性由选择模式驱动：取消全选后仍显示，点击「取消」后隐藏
+        if (llImportBottom != null)
+            llImportBottom.setVisibility(selectMode ? View.VISIBLE : View.GONE);
         updateSelectAllState();
-        // 需求5/6：选中状态变化时刷新底栏可见性
-        if (llImportBottom != null) {
-            llImportBottom.setVisibility(sel > 0 ? View.VISIBLE : View.GONE);
-        }
     }
-    /** 是否存在至少一条被选中的真题（需求5/6）。 */
-    private boolean hasAnySelected() {
-        for (Cand c : all) if (c.selected) return true;
-        return false;
-    }
-
     private void updateSelectAllState() {
         if (btnSelectAll == null) return;
         boolean allSelected = !shown.isEmpty();
