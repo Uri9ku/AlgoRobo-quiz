@@ -199,15 +199,61 @@ public class RobotExamUpdater {
         public String key;         // 缓存 key（用于入库）
     }
 
-    /** 抓取指定 GitHub 仓库的 release 资产列表（含可读标题与元数据）。失败返回空列表。 */
+    /** 抓取指定 GitHub 仓库中的真题文件列表（含可读标题与元数据）。失败返回空列表。 */
     public static List<ReleaseAsset> fetchGitHubReleases(Context ctx, String owner, String repo)
             throws Exception {
         List<ReleaseAsset> result = new ArrayList<>();
+        // 优先使用 Git Trees API 递归列出仓库所有 .docx/.doc 文件（真题直接提交在仓库文件系统里，而非 release 资产）。
+        String treeApi = "https://api.github.com/repos/" + owner + "/" + repo + "/git/trees/main?recursive=1";
+        byte[] data;
+        try {
+            data = httpGetBytes(treeApi);
+        } catch (Exception e) {
+            Log.w(TAG, "Git Trees API 获取失败，回退 release 接口：" + e.getMessage());
+            data = null;
+        }
+        if (data != null && data.length > 0) {
+            String json = new String(data, "UTF-8");
+            try {
+                com.google.gson.JsonObject root = com.google.gson.JsonParser.parseString(json).getAsJsonObject();
+                if (root.has("tree") && root.get("tree").isJsonArray()) {
+                    com.google.gson.JsonArray tree = root.get("tree").getAsJsonArray();
+                    for (int i = 0; i < tree.size(); i++) {
+                        com.google.gson.JsonObject entry = tree.get(i).getAsJsonObject();
+                        String path = entry.has("path") ? entry.get("path").getAsString() : null;
+                        String type = entry.has("type") ? entry.get("type").getAsString() : null;
+                        long size = entry.has("size") ? entry.get("size").getAsLong() : 0;
+                        if (path == null || !"blob".equals(type)) continue;
+                        String lower = path.toLowerCase();
+                        if (!lower.endsWith(".docx") && !lower.endsWith(".doc")) continue;
+                        String name = path;
+                        int slash = name.lastIndexOf('/');
+                        if (slash >= 0) name = name.substring(slash + 1);
+                        ReleaseAsset ra = new ReleaseAsset();
+                        ra.fileName = name;
+                        // 构造 raw 下载地址（路径需 URL 编码，保留 '/' 分隔）
+                        ra.downloadUrl = buildRawDownloadUrl(owner, repo, "main", path);
+                        ra.size = size;
+                        ra.title = formatFileNameToTitle(name);
+                        ra.period = parsePeriodFromFileName(name);
+                        ra.subject = parseSubjectFromFileName(name);
+                        ra.level = parseLevelFromFileName(name);
+                        ra.key = makePaperKey(ra);
+                        result.add(ra);
+                    }
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "解析 Git Trees 响应失败：" + e.getMessage());
+            }
+            if (!result.isEmpty()) return result;
+        }
+
+        // 回退：仓库无 git tree（如空仓库或仅 release），尝试 release 资产接口。
         String api = "https://api.github.com/repos/" + owner + "/" + repo + "/releases";
-        byte[] data = httpGetBytes(api);
-        if (data == null || data.length == 0) return result;
-        String json = new String(data, "UTF-8");
-        com.google.gson.JsonArray arr = com.google.gson.JsonParser.parseString(json).getAsJsonArray();
+        byte[] relData = httpGetBytes(api);
+        if (relData == null || relData.length == 0) return result;
+        String relJson = new String(relData, "UTF-8");
+        com.google.gson.JsonArray arr = com.google.gson.JsonParser.parseString(relJson).getAsJsonArray();
         for (int i = 0; i < arr.size(); i++) {
             com.google.gson.JsonObject rel = arr.get(i).getAsJsonObject();
             com.google.gson.JsonArray assets = rel.has("assets")
@@ -236,6 +282,21 @@ public class RobotExamUpdater {
         return result;
     }
 
+    /** 构造 raw.githubusercontent.com 下载地址（对路径各段做 URL 编码，保留 '/' 分隔）。 */
+    private static String buildRawDownloadUrl(String owner, String repo, String branch, String path) {
+        try {
+            StringBuilder sb = new StringBuilder();
+            for (String seg : path.split("/")) {
+                if (sb.length() > 0) sb.append('/');
+                sb.append(java.net.URLEncoder.encode(seg, "UTF-8")
+                        .replace("+", "%20"));
+            }
+            return "https://raw.githubusercontent.com/" + owner + "/" + repo + "/" + branch + "/" + sb.toString();
+        } catch (Exception e) {
+            return "https://raw.githubusercontent.com/" + owner + "/" + repo + "/" + branch + "/" + path;
+        }
+    }
+
     /** 构造缓存 key：period + "_" + subject + "_" + level。 */
     public static String makePaperKey(ReleaseAsset ra) {
         return (ra.period == null ? "unknown" : ra.period)
@@ -257,14 +318,20 @@ public class RobotExamUpdater {
         String base = fileName;
         int dot = base.lastIndexOf('.');
         if (dot > 0) base = base.substring(0, dot);
-        // 注意：C++ 中含 "+" 号，不能简单用 "." split 后再还原；故在 split 前先把 "C++" 归一，
-        // 但 "." 编号通过正则逐段解析更稳妥，这里采用「逐个 part 判断」方式：
-        String[] parts = base.split("\\.");
-        if (parts.length == 0) return fileName;
 
         int year = 0, month = 0, level = 0;
         String sysTag = null;    // "CIE"
 
+        // 先用中文年月正则解析（兼容 2024年3月... 这类文件名）。
+        java.util.regex.Matcher cm = java.util.regex.Pattern
+                .compile("(\\d{4})年(\\d{1,2})月").matcher(base);
+        if (cm.find()) {
+            year = Integer.parseInt(cm.group(1));
+            month = Integer.parseInt(cm.group(2));
+        }
+
+        // 再按 "." 分段的英文格式补充解析（处理 2026.6.CIE... 及 CIE 标签）。
+        String[] parts = base.split("\\.");
         for (String p : parts) {
             p = p.trim();
             if (p.isEmpty()) continue;
@@ -305,12 +372,23 @@ public class RobotExamUpdater {
         }
     }
 
-    /** 从文件名解析 period：2026.6.CIE.RLE.1 -> 2026_06 */
+    /** 从文件名解析 period：2026.6.CIE.RLE.1 -> 2026_06；2026年6月... -> 2026_06 */
     public static String parsePeriodFromFileName(String fileName) {
         if (fileName == null) return null;
         String base = fileName;
         int dot = base.lastIndexOf('.');
         if (dot > 0) base = base.substring(0, dot);
+
+        // ① 中文格式：YYYY年M月...
+        java.util.regex.Matcher cm = java.util.regex.Pattern
+                .compile("(\\d{4})年(\\d{1,2})月").matcher(base);
+        if (cm.find()) {
+            int y = Integer.parseInt(cm.group(1));
+            int m = Integer.parseInt(cm.group(2));
+            return String.format("%04d_%02d", y, m);
+        }
+
+        // ② 英文格式：YYYY.M.CIE... 
         String[] parts = base.split("\\.");
         int year = 0, month = 0;
         for (String p : parts) {
@@ -337,11 +415,12 @@ public class RobotExamUpdater {
         if (fileName == null) return "robot";
         String lower = fileName.toLowerCase();
         // 注意：C++ 含 "+"，须在判断 "c" 之前先判断 "c++"，避免误判为 C。
-        if (lower.contains("c++")) return "cpp";
-        if (lower.contains("graphical")) return "gx";
-        if (lower.contains("python")) return "py";
-        if (lower.contains("rle") || lower.contains("robot")) return "robot";
-        if (lower.contains("c语言")) return "c";
+        if (lower.contains("c++") || lower.contains("c＋＋")) return "cpp";
+        if (lower.contains("graphical") || lower.contains("图形化")) return "gx";
+        if (lower.contains("python") || lower.contains("python编程")) return "py";
+        if (lower.contains("rle") || lower.contains("robot")
+                || lower.contains("机器人技术")) return "robot";
+        if (lower.contains("c语言") || lower.contains("c语言编程")) return "c";
         // C 语言：按 "." 切段后精确匹配，避免 ".c." 子串对非标准命名的脆弱依赖。
         String base = fileName;
         int dot = base.lastIndexOf('.');

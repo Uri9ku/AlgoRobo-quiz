@@ -74,10 +74,10 @@ public class ExamListActivity extends AppCompatActivity {
     // 在线导入题库：GitHub 仓库源（release 资产为题库文件）
     private static final String GITHUB_OWNER = "Uri9ku";
     private static final String[] GITHUB_REPOS = {
-        "cie-graphical-exam", // 软件编程图形化
-        "cie-python-exam",    // 软件编程 Python
-        "cie-c-exam",         // 软件编程 C 语言
-        "cie-robot-exam"      // 机器人技术等级考试
+        "CIE-Graphical-Exam", // 软件编程图形化
+        "CIE-Python-Exam",    // 软件编程 Python
+        "CIE-C-Exam",         // 软件编程 C 语言
+        "CIE-Robot-Exam"      // 机器人技术等级考试
     };
 
     @Override
