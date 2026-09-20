@@ -48,8 +48,10 @@ public class MainActivity extends AppCompatActivity {
         // 功能卡片
         findViewById(R.id.cardPractice).setOnClickListener(v ->
             startActivity(new Intent(this, ExamListActivity.class)));
-        findViewById(R.id.modeSequence).setOnClickListener(v -> startQuizBySource("custom"));
-        findViewById(R.id.modeRandom).setOnClickListener(v -> startQuiz(true));
+        findViewById(R.id.modeSequence).setOnClickListener(v ->
+            Toast.makeText(this, "题库练习待完善：用于真题与自定义题目混用刷题", Toast.LENGTH_SHORT).show());
+        findViewById(R.id.modeRandom).setOnClickListener(v ->
+            Toast.makeText(this, "随机练习待完善：选择知识点后随机刷题", Toast.LENGTH_SHORT).show());
 
         findViewById(R.id.cardWrongBook).setOnClickListener(v -> startQuizBySource("wrong"));
         findViewById(R.id.cardFavorite).setOnClickListener(v -> startQuizBySource("favorite"));
@@ -280,6 +282,11 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(this, "知识点：「" + node.title + "」", Toast.LENGTH_SHORT).show();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        bindBadges();
+    }
     private void bindBadges() {
         int wrong = DataStore.getWrongIds(this).size();
         int favorite = DataStore.getFavoriteIds(this).size();

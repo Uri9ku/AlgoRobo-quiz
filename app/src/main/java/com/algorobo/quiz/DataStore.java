@@ -121,13 +121,6 @@ public class DataStore {
     public static void setQuestionFontSp(Context c, float sp) {
         sp(c).edit().putFloat("setting_question_font_sp", sp).apply();
     }
-    // 试卷标题自动滚动（跑马灯），默认开启
-    public static boolean isTitleMarquee(Context c) {
-        return sp(c).getBoolean("setting_title_marquee", true);
-    }
-    public static void setTitleMarquee(Context c, boolean on) {
-        sp(c).edit().putBoolean("setting_title_marquee", on).apply();
-    }
 
     public static Set<String> getCheckinDays(Context c) {
         return new HashSet<>(sp(c).getStringSet("checkin_days", new HashSet<>()));
@@ -159,6 +152,20 @@ public class DataStore {
             p.edit().putInt(tk + "_t", tTotal + 1).apply();
             if (correct) p.edit().putInt(tk + "_r", tRight + 1).apply();
         }
+        // 按题统计（qid 维度）
+        if (qid != null && !qid.isEmpty()) {
+            String qk = "qstat_" + qid;
+            int qTotal = p.getInt(qk + "_t", 0);
+            int qRight = p.getInt(qk + "_r", 0);
+            p.edit().putInt(qk + "_t", qTotal + 1).apply();
+            if (correct) p.edit().putInt(qk + "_r", qRight + 1).apply();
+        }
+    }
+
+    public static int[] getQuestionStat(Context c, String qid) {
+        SharedPreferences p = sp(c);
+        String qk = "qstat_" + qid;
+        return new int[]{ p.getInt(qk + "_t", 0), p.getInt(qk + "_r", 0) };
     }
 
     public static int getTotal(Context c) { return sp(c).getInt("stat_total", 0); }

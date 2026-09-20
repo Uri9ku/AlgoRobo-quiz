@@ -19,7 +19,6 @@ public class SettingsActivity extends AppCompatActivity {
     private SwitchCompat swAutoNext;
     private TextView tvFontSizeValue;
     private SeekBar sbFontSize;
-    private SwitchCompat swTitleMarquee;
     private TextView tvAiModelValue;
     private TextView tvWrongThresholdValue;
     private SeekBar sbWrongThreshold;
@@ -48,7 +47,6 @@ public class SettingsActivity extends AppCompatActivity {
         swAutoNext = findViewById(R.id.swAutoNext);
         tvFontSizeValue = findViewById(R.id.tvFontSizeValue);
         sbFontSize = findViewById(R.id.sbFontSize);
-        swTitleMarquee = findViewById(R.id.swTitleMarquee);
         tvAiModelValue = findViewById(R.id.tvAiModelValue);
         tvWrongThresholdValue = findViewById(R.id.tvWrongThresholdValue);
         sbWrongThreshold = findViewById(R.id.sbWrongThreshold);
@@ -115,12 +113,6 @@ public class SettingsActivity extends AppCompatActivity {
         swAutoNext.setOnCheckedChangeListener((btn, checked) -> {
             DataStore.setAutoNext(this, checked);
             showToast("自动下一题已" + (checked ? "开启" : "关闭"));
-        });
-        // 试卷标题自动滚动（跑马灯）开关
-        swTitleMarquee.setChecked(DataStore.isTitleMarquee(this));
-        swTitleMarquee.setOnCheckedChangeListener((btn, checked) -> {
-            DataStore.setTitleMarquee(this, checked);
-            showToast("试卷标题滚动已" + (checked ? "开启" : "关闭"));
         });
         // 真题字号：SeekBar 范围 14~26sp，步长 1sp
         sbFontSize.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
@@ -334,7 +326,6 @@ public class SettingsActivity extends AppCompatActivity {
         float fontSp = DataStore.getQuestionFontSp(this);
         tvFontSizeValue.setText(((int) fontSp) + " sp");
         sbFontSize.setProgress(Math.max(0, Math.min(12, (int) fontSp - 14)));
-        swTitleMarquee.setChecked(DataStore.isTitleMarquee(this));
     }
 
     private void showAutoAiAnalysisModeDialog() {

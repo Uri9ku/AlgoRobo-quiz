@@ -18,7 +18,11 @@ import android.widget.BaseAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.PopupWindow;
 import android.widget.TextView;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.GradientDrawable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import java.util.ArrayList;
@@ -35,6 +39,7 @@ public class QuizActivity extends AppCompatActivity {
     private String source = "all"; // all / wrong / custom / paper:<key>
 
     private TextView tvQuestionType, tvQuestion, tvKnowledgeTag;
+    private TextView btnStat;
     private ImageView ivStemImage;
     private LinearLayout optionsContainer;
     private LinearLayout actionContainer;
@@ -46,12 +51,11 @@ public class QuizActivity extends AppCompatActivity {
     private ImageView btnToolTime, btnToolWrongbook, btnToolDownload, btnToolSheet, btnToolMore;
 
     private LinearLayout analysisPanel;
-    private TextView tvAnalysisCorrect, tvAnalysisText;
-    private android.widget.Button btnAiAnalysis;
+    private TextView tvResultText, tvAnswerText, tvAnalysisText;
+    private TextView btnAiAnalysis;
     private TextView tvAiAnalysis;
     private MarkdownUtil markdownRenderer;
     private LinearLayout analysisImagesContainer;
-    private TextView tvQuestionTime;
     private TextView tvPaperTitle;
     private LinearLayout indexContainer;
     private android.widget.HorizontalScrollView indexScroll;
@@ -105,6 +109,8 @@ public class QuizActivity extends AppCompatActivity {
         tvQuestionType = findViewById(R.id.tvQuestionType);
         tvQuestion = findViewById(R.id.tvQuestion);
         tvKnowledgeTag = findViewById(R.id.tvKnowledgeTag);
+        btnStat = findViewById(R.id.btnStat);
+        btnStat.setOnClickListener(v -> showQuestionStat());
         ivStemImage = findViewById(R.id.ivStemImage);
         optionsContainer = findViewById(R.id.optionsContainer);
         pbProgress = findViewById(R.id.pbProgress);
@@ -112,7 +118,8 @@ public class QuizActivity extends AppCompatActivity {
         View btnBack = findViewById(R.id.btnBack);
 
         analysisPanel = findViewById(R.id.analysisPanel);
-        tvAnalysisCorrect = findViewById(R.id.tvAnalysisCorrect);
+        tvResultText = findViewById(R.id.tvResultText);
+        tvAnswerText = findViewById(R.id.tvAnswerText);
         tvAnalysisText = findViewById(R.id.tvAnalysisText);
         btnAiAnalysis = findViewById(R.id.btnAiAnalysis);
         tvAiAnalysis = findViewById(R.id.tvAiAnalysis);
@@ -122,7 +129,6 @@ public class QuizActivity extends AppCompatActivity {
 
         analysisImagesContainer = findViewById(R.id.analysisImagesContainer);
 
-        tvQuestionTime = findViewById(R.id.tvQuestionTime);
         tvPaperTitle = findViewById(R.id.tvPaperTitle);
         applyPaperTitle();
         indexContainer = findViewById(R.id.indexContainer);
@@ -225,7 +231,6 @@ public class QuizActivity extends AppCompatActivity {
             else title = "全部真题";
         }
         if (tvPaperTitle != null) tvPaperTitle.setText(title);
-        applyTitleMarquee();
     }
     // 按 uid 快照顺序重排题目（恢复上次进度用）；缺失的题目忽略，未出现在快照中的题追加在末尾
     private List<Question> reorderByUids(List<Question> all, List<String> uids) {
@@ -289,10 +294,8 @@ public class QuizActivity extends AppCompatActivity {
                 highlightOptions(q);
                 showAnalysis(q, isCurrentCorrect());
             }
-            showQuestionTime();
         } else {
             analysisPanel.setVisibility(View.GONE);
-            tvQuestionTime.setVisibility(View.GONE);
         }
 
         updateToolbarIcons();
@@ -475,7 +478,6 @@ public class QuizActivity extends AppCompatActivity {
             highlightOptions(q);
             showAnalysis(q, correct);
         }
-        showQuestionTime();
         if (correct && !brushMode && DataStore.isAutoNext(this) && index < questions.size() - 1) {
             final int curIndex = index;
             handler.postDelayed(() -> {
@@ -516,7 +518,6 @@ public class QuizActivity extends AppCompatActivity {
             highlightOptions(q);
             showAnalysis(q, correct);
         }
-        showQuestionTime();
     }
 
     private void onJudgeClick(int val) {
@@ -719,11 +720,11 @@ public class QuizActivity extends AppCompatActivity {
     private void showAnalysis(Question q, boolean correct) {
         analysisPanel.setVisibility(View.VISIBLE);
         String correctStr = formatCorrectAnswer(q);
-        tvAnalysisCorrect.setText(correct ? "回答正确 ✓  正确答案：" + correctStr
-                : "回答错误 ✗  正确答案：" + correctStr);
-        tvAnalysisCorrect.setTextColor(correct
+        tvResultText.setText(correct ? "回答正确" : "回答错误");
+        tvResultText.setTextColor(correct
                 ? getColor(R.color.answer_correct_text)
                 : getColor(R.color.answer_wrong_text));
+        tvAnswerText.setText("正确答案：" + correctStr);
         tvAnalysisText.setText(markdownRenderer.render(q.analysis == null ? "" : q.analysis));
         renderAnalysisImages(q);
         // AI 解析区：重置 + 缓存优先恢复 + 自动触发判断
@@ -943,6 +944,28 @@ public class QuizActivity extends AppCompatActivity {
         updateToolbarIcons();
     }
 
+    private void showQuestionStat() {
+        Question q = questions.get(index);
+        int[] st = DataStore.getQuestionStat(this, String.valueOf(q.id));
+        int total = st[0], right = st[1], wrong = total - right;
+        TextView tv = new TextView(this);
+        tv.setText("已做 " + total + " 次，答对 " + right + " 次，答错 " + wrong + " 次");
+        tv.setTextSize(13);
+        tv.setTextColor(getColor(R.color.text_main));
+        tv.setGravity(Gravity.CENTER);
+        tv.setPadding(dp(16), dp(10), dp(16), dp(10));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(getColor(R.color.card_bg));
+        bg.setCornerRadius(dp(24));
+        bg.setStroke(dp(1), getColor(R.color.divider));
+        tv.setBackground(bg);
+        PopupWindow pw = new PopupWindow(tv, ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT, true);
+        pw.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        pw.setOutsideTouchable(true);
+        pw.setFocusable(true);
+        pw.showAsDropDown(btnStat, 0, dp(6));
+    }
     private void showDraftPaper() {
         Dialog d = new Dialog(this);
         d.requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -990,9 +1013,10 @@ public class QuizActivity extends AppCompatActivity {
         TextView btnModeBrush = v.findViewById(R.id.btnModeBrush);
         TextView tvTotalTime = v.findViewById(R.id.tvTotalTime);
         TextView btnMoreClose = v.findViewById(R.id.btnMoreClose);
-        btnFontSmall.setOnClickListener(x -> { DataStore.setFontScale(this, 0); applyFontScale(); });
-        btnFontMedium.setOnClickListener(x -> { DataStore.setFontScale(this, 1); applyFontScale(); });
-        btnFontLarge.setOnClickListener(x -> { DataStore.setFontScale(this, 2); applyFontScale(); });
+        btnFontSmall.setOnClickListener(x -> { DataStore.setQuestionFontSp(this, 15f); applyFontScale(); updateFontButtons(btnFontSmall, btnFontMedium, btnFontLarge); });
+        btnFontMedium.setOnClickListener(x -> { DataStore.setQuestionFontSp(this, 18f); applyFontScale(); updateFontButtons(btnFontSmall, btnFontMedium, btnFontLarge); });
+        btnFontLarge.setOnClickListener(x -> { DataStore.setQuestionFontSp(this, 22f); applyFontScale(); updateFontButtons(btnFontSmall, btnFontMedium, btnFontLarge); });
+        updateFontButtons(btnFontSmall, btnFontMedium, btnFontLarge);
         btnThemeDay.setOnClickListener(x -> { DataStore.setDarkMode(this, 1); AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO); });
         btnThemeNight.setOnClickListener(x -> { DataStore.setDarkMode(this, 2); AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES); });
         updateThemeButtons(btnThemeDay, btnThemeNight);
@@ -1038,23 +1062,20 @@ public class QuizActivity extends AppCompatActivity {
         tvQuestion.setTextSize(q);
         tvAnalysisText.setTextSize(a);
     }
-    // 根据设置开关决定试卷标题是否启用跑马灯（自动滚动）
-    private void applyTitleMarquee() {
-        if (tvPaperTitle == null) return;
-        boolean on = DataStore.isTitleMarquee(this);
-        tvPaperTitle.setSingleLine(on);
-        tvPaperTitle.setEllipsize(on ? android.text.TextUtils.TruncateAt.MARQUEE : android.text.TextUtils.TruncateAt.END);
-        tvPaperTitle.setMarqueeRepeatLimit(on ? -1 : 0);
-        tvPaperTitle.setSelected(on);
-        tvPaperTitle.setFocusable(on);
-        tvPaperTitle.setFocusableInTouchMode(on);
-        if (on) tvPaperTitle.requestFocus();
-    }
-
     private void updateThemeButtons(TextView btnThemeDay, TextView btnThemeNight) {
         int mode = DataStore.getDarkMode(this);
         btnThemeDay.setBackgroundResource(mode == 1 ? R.drawable.bg_option_correct : R.drawable.bg_option_normal);
         btnThemeNight.setBackgroundResource(mode == 2 ? R.drawable.bg_option_correct : R.drawable.bg_option_normal);
+    }
+    private void updateFontButtons(TextView btnFontSmall, TextView btnFontMedium, TextView btnFontLarge) {
+        float cur = DataStore.getQuestionFontSp(this);
+        int idx = cur >= 20f ? 2 : (cur >= 16.5f ? 1 : 0);
+        TextView[] arr = {btnFontSmall, btnFontMedium, btnFontLarge};
+        for (int i = 0; i < arr.length; i++) {
+            if (i == idx) arr[i].setBackgroundResource(R.drawable.bg_option_correct);
+            else arr[i].setBackgroundResource(R.drawable.bg_option_normal);
+            arr[i].setTextColor(i == idx ? getColor(android.R.color.white) : getColor(R.color.text_main));
+        }
     }
     private void updateModeButtons(TextView btnModeRecite, TextView btnModeBrush) {
         btnModeRecite.setBackgroundResource(!brushMode ? R.drawable.bg_option_correct : R.drawable.bg_option_normal);
@@ -1082,13 +1103,6 @@ public class QuizActivity extends AppCompatActivity {
         }
     }
 
-    private void showQuestionTime() {
-        long ms = questionDurations[index];
-        long sec = ms / 1000;
-        long m = sec / 60, s = sec % 60;
-        tvQuestionTime.setText("本题用时 " + String.format("%02d:%02d", m, s));
-        tvQuestionTime.setVisibility(View.VISIBLE);
-    }
 
     private void showAnswerSheet() {
         Dialog d = new Dialog(this);
