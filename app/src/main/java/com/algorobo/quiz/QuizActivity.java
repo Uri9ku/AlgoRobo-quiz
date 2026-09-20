@@ -284,6 +284,8 @@ public class QuizActivity extends AppCompatActivity {
 
         if (q.isJudge()) {
             renderJudge(q);
+        } else if (q.isPracticalOnly()) {
+            renderPractical(q);
         } else {
             renderOptions(q);
         }
@@ -450,6 +452,45 @@ public class QuizActivity extends AppCompatActivity {
         actionContainer.addView(row);
     }
 
+    private void renderPractical(Question q) {
+        // 实操题：无客观选项，显示「标记完成」按钮作为作答入口
+        if (answered[index]) return;
+        TextView btnDone = new TextView(this);
+        btnDone.setText("标记完成");
+        btnDone.setTextSize(16);
+        btnDone.setTextColor(getColor(android.R.color.white));
+        btnDone.setGravity(Gravity.CENTER);
+        btnDone.setPadding(0, dp(14), 0, dp(14));
+        btnDone.setBackgroundResource(R.drawable.bg_option_correct);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = dp(16);
+        btnDone.setLayoutParams(lp);
+        btnDone.setOnClickListener(v -> markPracticalDone());
+        actionContainer.addView(btnDone);
+    }
+    private void markPracticalDone() {
+        Question q = questions.get(index);
+        if (answered[index]) return;
+        userAnswers[index] = -1;
+        answered[index] = true;
+        questionDurations[index] = elapsed - questionStartTimes[index];
+        boolean correct = isCurrentCorrect();
+        DataStore.recordAnswer(this, String.valueOf(q.id), correct, q.type);
+        DataStore.setFirstAnswer(this, q.uniqueKey(), -1);
+        if (correct) handleCorrectAnswer(q); else handleWrongAnswer(q);
+        if (brushMode) {
+            highlightChosenOnly(q);
+        } else {
+            showAnalysis(q, correct);
+        }
+        if (correct && !brushMode && DataStore.isAutoNext(this) && index < questions.size() - 1) {
+            final int curIndex = index;
+            handler.postDelayed(() -> {
+                if (index == curIndex && !isFinishing()) { index++; renderWithAnimation(true); }
+            }, Math.max(600, DataStore.getAnimDuration(this) + 400));
+        }
+    }
     private TextView makeJudgeButton(String text, final int val) {
         TextView btn = new TextView(this);
         btn.setText(text);

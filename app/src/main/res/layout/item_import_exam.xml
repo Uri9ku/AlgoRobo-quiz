@@ -37,5 +37,15 @@
             android:textColor="@color/text_sub"
             android:maxLines="1"
             android:ellipsize="end" />
+        <TextView
+            android:id="@+id/tvImportRepo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text=""
+            android:textSize="11sp"
+            android:textColor="@color/text_sub"
+            android:maxLines="1"
+            android:ellipsize="middle" />
     </LinearLayout>
 </LinearLayout>

@@ -84,9 +84,34 @@ public class DocxParser {
         boolean inOptions = false;
         String curStemImg = null;
         StringBuilder curStem = new StringBuilder();
+        // 大题标题行解析出的「当前题型」与「每题分值」。真实 docx 没有逐题元数据行，
+        // 题型与分值信息全部写在大题标题行（如「一、单选题（共30题，共60分）」）中。
+        // sectionScore 为均分后的每题分值，在遇到新大题标题行时更新。
+        String sectionType = null;
+        int sectionScore = 0;
+        // 是否已进入「参考答案」区块：该区块位于 docx 末尾，逐题列出标准答案，
+        // 必须以题号回填到已解析的题目，而不是当作新题触发。
+        boolean inAnswerSection = false;
         for (Para p : paras) {
             String text = p.text.replace('\u00a0', ' ').trim();
             String img = p.firstImageRid();
+            // 「参考答案」标志：进入答案收集模式，后续仍是题号+答案，但不再新建题目。
+            if (text.equals("参考答案") || text.startsWith("参考答案")) {
+                inAnswerSection = true;
+                continue;
+            }
+            // 大题标题行：识别「一、单选题（共N题，共M分）」等，解析题型与均分分值。
+            // 「一、…」「二、…」在答案区块中也重复出现，仅作为分隔标题，不改变 sectionType/sectionScore 也不新建题目。
+            SectionInfo section = parseSectionTitle(text);
+            if (section != null) {
+                if (!inAnswerSection) {
+                    sectionType = section.type;
+                    sectionScore = section.score;
+                }
+                continue;
+            }
+            // 参考答案区块结束：若后续出现非答案内容（理论上题目已全部给出），回退正常解析。
+            // 主要目标是：题干解析阶段不处理答案；若题干末尾没有独立答案区块，则保持原逻辑。
             // 题号行触发新题。真实 docx 中「试题编号：」等元数据位于题目内容（题干+选项）之后，
             // 因此必须以题号行作为新题的唯一触发标志，而非「试题编号：」。
             // 题号有两种格式：
@@ -97,9 +122,17 @@ public class DocxParser {
             // 同样以「N.」开头，但不属于题目，必须排除，否则会多算题数。
             if (stripped != null && isScoringItemText(stripped)) stripped = null;
             if (stripped != null) {
+                if (inAnswerSection) {
+                    // 答案区块内的题号行：剥离题号后即为答案内容，回填到对应题目。
+                    fillAnswer(paper, text, stripped);
+                    continue;
+                }
                 if (cur != null) flush(paper, cur, curStem, curStemImg, curOptions, curOptionImgs);
                 cur = new Question();
                 cur.hasAnswer = true;
+                // 赋值当前大题题型（单选题/多选题/判断题/实操题）
+                if (sectionType != null) cur.type = sectionType;
+                if (sectionScore > 0) cur.score = sectionScore;
                 curStem = new StringBuilder();
                 curOptions = new ArrayList<>();
                 curOptionImgs = new ArrayList<>();
@@ -116,6 +149,7 @@ public class DocxParser {
                 continue;
             }
             if (cur == null) continue;
+            if (inAnswerSection) continue;
             if (text.startsWith("试题编号：")) {
                 // 试题编号只是元数据，仅设置 id，不触发新题。
                 String idStr = text.substring("试题编号：".length()).trim();
@@ -295,6 +329,75 @@ public class DocxParser {
         // 兼容全角顿号「、」以及「第一部分」「单选题」等大题标题行。
         return text.matches("^[一二三四五六七八九十]+[、.]?.*(共\\d+题|共\\d+分).*")
                 || text.matches("^第[一二三四五六七八九十]+部分.*");
+    }
+
+    /**
+     * 解析大题标题行为结构化的题型与每题分值。
+     * 目标格式：「一、单选题（共30题，共60分）」→ type=单选题, score=2；
+     * 「一、模型认知（共4题，共20分）」→ type=多选题, score=5；
+     * 「二、实际操作（共1题，共80分）」→ type=实操题, score=80。
+     * 无法识别为非大题标题行时返回 null。
+     */
+    private static SectionInfo parseSectionTitle(String text) {
+        if (text == null || text.isEmpty()) return null;
+        // 仅匹配「(共N题,共M分)」或「(共N题,共M分)」的大题标题行
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("^[一二三四五六七八九十]+[、.．]?\\s*(.{0,12}?)\\s*[（(]共\\s*(\\d+)\\s*题[，,]共\\s*(\\d+)\\s*分[)）]")
+                .matcher(text);
+        if (!m.matches()) return null;
+        String title = m.group(1).trim();
+        int count = 0, total = 0;
+        try { count = Integer.parseInt(m.group(2)); } catch (Exception ignore) {}
+        try { total = Integer.parseInt(m.group(3)); } catch (Exception ignore) {}
+        String type = null;
+        if (title.contains("单选")) type = Question.TYPE_SINGLE;
+        else if (title.contains("多选")) type = Question.TYPE_MULTI;
+        else if (title.contains("判断")) type = Question.TYPE_JUDGE;
+        else if (title.contains("模型认知")) type = Question.TYPE_MULTI; // 模型认知为多选
+        else if (title.contains("实际操作") || title.contains("操作")
+                || title.contains("搭建") || title.contains("实操")) type = Question.TYPE_PRACTICAL;
+        int perScore = 0;
+        if (count > 0 && total >= count && total % count == 0) {
+            perScore = total / count;
+        } else if (count > 0) {
+            perScore = total / count;
+        }
+        return new SectionInfo(type, perScore);
+    }
+
+    private static class SectionInfo {
+        final String type;
+        final int score;
+        SectionInfo(String type, int score) { this.type = type; this.score = score; }
+    }
+
+    /**
+     * 在「参考答案」区块内，将某题的答案回填到已解析的题目。
+     * text 为原始行（如 "1．D"），stripped 为剥离题号后的内容（如 "D"）。
+     * 按题号匹配 paper.questions 中的题目（题号 = questions 列表索引 + 1）。
+     */
+    private static void fillAnswer(RobotExamBank.Paper paper, String text, String stripped) {
+        if (paper.questions == null || paper.questions.isEmpty()) return;
+        // 从原始行提取题号
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(\\d+)\\s*[\\.．]").matcher(text);
+        if (!m.find()) return;
+        int qid = 0;
+        try { qid = Integer.parseInt(m.group(1)); } catch (Exception ignore) {}
+        if (qid <= 0) return;
+        // 题目列表索引即题号-1（题目题号从 1 开始连续递增）
+        int idx = qid - 1;
+        if (idx < 0 || idx >= paper.questions.size()) return;
+        Question q = paper.questions.get(idx);
+        String ans = stripped == null ? "" : stripped.trim();
+        // 剥离开包裹的括号或「评分项：」等前缀
+        ans = ans.replaceAll("^[（(]", "").replaceAll("[)）]$", "").trim();
+        // 实操题答案 "50．评分项：" 表示该题为实操评分，无客观答案
+        if (ans.startsWith("评分项") || ans.startsWith("搭建") || ans.isEmpty()) {
+            q.hasAnswer = false;
+            return;
+        }
+        q.hasAnswer = true;
+        setAnswer(q, ans);
     }
 
     /**

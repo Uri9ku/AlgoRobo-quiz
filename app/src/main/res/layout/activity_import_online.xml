@@ -31,6 +31,38 @@
                 android:textStyle="bold"
                 android:textColor="@android:color/white" />
         </LinearLayout>
+        <!-- 真题来源仓库（动态） -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:background="@color/card_bg"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="来源仓库"
+                android:textSize="13sp"
+                android:textColor="@color/text_sub" />
+            <HorizontalScrollView
+                android:id="@+id/hsvImportRepos"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="10dp"
+                android:scrollbars="none"
+                android:fillViewport="false">
+                <LinearLayout
+                    android:id="@+id/llImportRepos"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal" />
+            </HorizontalScrollView>
+        </LinearLayout>
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -138,31 +170,32 @@
                     android:paddingEnd="8dp" />
             </LinearLayout>
         </LinearLayout>
-        <TextView
-            android:id="@+id/tvImportSource"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:paddingTop="6dp"
-            android:paddingBottom="4dp"
-            android:text="数据来源（真题仓库）：GitHub\nUri9ku/AlgoRobo-quiz"
-            android:textSize="11sp"
-            android:lineSpacingExtra="2dp"
-            android:textColor="@color/text_sub"
-            android:background="@color/bg_page" />
-        <ListView
-            android:id="@+id/listImportExam"
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
-            android:divider="@android:color/transparent"
-            android:dividerHeight="6dp"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp" />
+            android:layout_weight="1">
+            <ListView
+                android:id="@+id/listImportExam"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:divider="@android:color/transparent"
+                android:dividerHeight="6dp"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp" />
+            <TextView
+                android:id="@+id/tvImportEmpty"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="请选择上方「来源仓库」加载真题"
+                android:textSize="15sp"
+                android:textColor="@color/text_sub"
+                android:gravity="center" />
+        </FrameLayout>
         <LinearLayout
+            android:id="@+id/llImportBottom"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"

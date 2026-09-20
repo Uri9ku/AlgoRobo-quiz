@@ -24,6 +24,24 @@ public class RobotExamUpdater {
     private static final String TAG = "RobotExamUpdater";
     // 缓存文件名
     private static final String CACHE_JSON = "robot_questions_cached.json";
+
+    // ===== 在线导入：GitHub 真题来源仓库（单一数据源） =====
+    public static final String GITHUB_OWNER = "Uri9ku";
+    public static final String[] GITHUB_REPOS = {
+        "CIE-Graphical-Exam", // 软件编程图形化
+        "CIE-Python-Exam",    // 软件编程 Python
+        "CIE-C-Exam",         // 软件编程 C 语言
+        "CIE-Robot-Exam"      // 机器人技术等级考试
+    };
+    /** 仓库名 -> 展示用中文名。 */
+    public static String repoDisplayName(String repo) {
+        if (repo == null) return "真题";
+        if (repo.contains("Graphical")) return "图形化";
+        if (repo.contains("Python")) return "Python";
+        if (repo.contains("C-Exam")) return "C";
+        if (repo.contains("Robot")) return "机器人";
+        return repo;
+    }
     // 网络超时（毫秒）
     private static final int CONNECT_TIMEOUT = 15000;
     private static final int READ_TIMEOUT = 30000;
@@ -191,6 +209,7 @@ public class RobotExamUpdater {
     public static class ReleaseAsset implements java.io.Serializable {
         public String fileName;    // 原始文件名，如 2026.6.CIE.RLE.1.docx
         public String downloadUrl; // 浏览器下载地址
+        public String repo;        // 来源仓库名，如 CIE-Robot-Exam
         public long size;          // 字节大小
         public String title;       // 可读标题
         public String period;      // 2026_06
@@ -231,6 +250,7 @@ public class RobotExamUpdater {
                         if (slash >= 0) name = name.substring(slash + 1);
                         ReleaseAsset ra = new ReleaseAsset();
                         ra.fileName = name;
+                        ra.repo = repo;
                         // 构造 raw 下载地址（路径需 URL 编码，保留 '/' 分隔）
                         ra.downloadUrl = buildRawDownloadUrl(owner, repo, "main", path);
                         ra.size = size;
@@ -269,6 +289,7 @@ public class RobotExamUpdater {
                 if (!name.toLowerCase().endsWith(".docx") && !name.toLowerCase().endsWith(".doc")) continue;
                 ReleaseAsset ra = new ReleaseAsset();
                 ra.fileName = name;
+                ra.repo = repo;
                 ra.downloadUrl = url;
                 ra.size = size;
                 ra.title = formatFileNameToTitle(name);
@@ -318,47 +339,36 @@ public class RobotExamUpdater {
         String base = fileName;
         int dot = base.lastIndexOf('.');
         if (dot > 0) base = base.substring(0, dot);
-
         int year = 0, month = 0, level = 0;
-        String sysTag = null;    // "CIE"
-
-        // 先用中文年月正则解析（兼容 2024年3月... 这类文件名）。
+        // 中文年月解析
         java.util.regex.Matcher cm = java.util.regex.Pattern
                 .compile("(\\d{4})年(\\d{1,2})月").matcher(base);
         if (cm.find()) {
             year = Integer.parseInt(cm.group(1));
             month = Integer.parseInt(cm.group(2));
         }
-
-        // 再按 "." 分段的英文格式补充解析（处理 2026.6.CIE... 及 CIE 标签）。
-        String[] parts = base.split("\\.");
-        for (String p : parts) {
-            p = p.trim();
-            if (p.isEmpty()) continue;
-            if (p.matches("\\d{4}")) {
-                if (year == 0) year = Integer.parseInt(p);
-            } else if (p.matches("\\d{1,2}")) {
-                if (month == 0) month = Integer.parseInt(p);
-                else if (level == 0) level = Integer.parseInt(p);
-            } else if (p.equalsIgnoreCase("cie")) {
-                sysTag = "CIE";
-            }
-        }
-        // 等级也可能作为独立数字段出现在末尾；保险起见再从末尾找一次等级。
         if (level == 0) level = parseLevelFromFileName(fileName);
-
         String subject = parseSubjectFromFileName(fileName);
-        String subjectName = subjectDisplayName(subject);
-
+        String subjectName = subjectShortName(subject);
         StringBuilder sb = new StringBuilder();
-        if (year > 0) sb.append(year).append("年");
+        if (year > 0) sb.append(year % 100).append("年");
         if (month > 0) sb.append(String.format("%02d月", month));
-        if (sysTag != null) sb.append(" ").append(sysTag);
-        sb.append(" ").append(subjectName);
-        if (level > 0) sb.append(" ").append(level).append("级");
+        sb.append("CIE").append(subjectName);
+        if (level > 0) sb.append(level).append("级");
         return sb.toString().trim();
     }
-
+    /** subject 缩写 -> 简洁科目名。 */
+    public static String subjectShortName(String subject) {
+        if (subject == null) return "真题";
+        switch (subject) {
+            case "robot": return "机器人";
+            case "py":    return "Python";
+            case "c":     return "C";
+            case "cpp":   return "C++";
+            case "gx":    return "图形化";
+            default:      return "真题";
+        }
+    }
     /** subject 缩写 -> 中文科目名（含考试类别前缀）。 */
     public static String subjectDisplayName(String subject) {
         if (subject == null) return "真题";
@@ -438,20 +448,14 @@ public class RobotExamUpdater {
      */
     public static int parseLevelFromFileName(String fileName) {
         if (fileName == null) return 0;
-        // 去掉扩展名
         String s = fileName;
         int dot = s.lastIndexOf('.');
         if (dot > 0) s = s.substring(0, dot);
-        // 末尾是否为数字段（可能是 "1"、"3" 等）——直接取末尾连着的数字。
-        int i = s.length() - 1;
-        while (i >= 0 && Character.isDigit(s.charAt(i))) i--;
-        if (i < s.length() - 1) {
-            String num = s.substring(i + 1);
-            try {
-                return Integer.parseInt(num);
-            } catch (Exception e) {
-                return 0;
-            }
+        // 支持两种结尾："...N" 或 "...N级"（N为连续数字）。
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("(\\d+)(?:级)?$").matcher(s);
+        if (m.find()) {
+            try { return Integer.parseInt(m.group(1)); } catch (Exception e) { return 0; }
         }
         return 0;
     }

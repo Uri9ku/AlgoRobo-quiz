@@ -71,14 +71,6 @@ public class ExamListActivity extends AppCompatActivity {
     private String filterSubject = null;
     private int filterLevel = -1;
 
-    // 在线导入题库：GitHub 仓库源（release 资产为题库文件）
-    private static final String GITHUB_OWNER = "Uri9ku";
-    private static final String[] GITHUB_REPOS = {
-        "CIE-Graphical-Exam", // 软件编程图形化
-        "CIE-Python-Exam",    // 软件编程 Python
-        "CIE-C-Exam",         // 软件编程 C 语言
-        "CIE-Robot-Exam"      // 机器人技术等级考试
-    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -319,49 +311,10 @@ public class ExamListActivity extends AppCompatActivity {
     }
 
     // ============ 在线导入真题 ============
-    /** 从 GitHub release 抓取可导入真题列表，用户勾选后下载解析并入本地缓存。 */
+    /** 进入在线导入真题页面（不再预加载，仓库数据由页面内按需懒加载）。 */
     private void importOnlineExams() {
-        Toast.makeText(this, "正在获取在线真题列表…", Toast.LENGTH_SHORT).show();
-        final java.util.Map<String, RobotExamBank.Paper> existing =
-                RobotExamUpdater.loadCache(this);
-        new Thread(() -> {
-            final java.util.List<RobotExamUpdater.ReleaseAsset> assets = new ArrayList<>();
-            try {
-                // 依次抓取多个科目仓库的 release 资产并合并，任一仓库失败仅跳过该仓库。
-                for (String repo : GITHUB_REPOS) {
-                    try {
-                        java.util.List<RobotExamUpdater.ReleaseAsset> list =
-                                RobotExamUpdater.fetchGitHubReleases(this, GITHUB_OWNER, repo);
-                        if (list != null) assets.addAll(list);
-                    } catch (Exception e) {
-                        android.util.Log.w("ExamListActivity", "抓取仓库 " + repo + " 失败：" + e.getMessage());
-                    }
-                }
-            } catch (Exception e) {
-                runOnUiThread(() ->
-                        Toast.makeText(this, "获取在线列表失败：" + e.getMessage(), Toast.LENGTH_LONG).show());
-                return;
-            }
-            runOnUiThread(() -> {
-                if (assets == null || assets.isEmpty()) {
-                    Toast.makeText(this, "暂无可导入的在线真题", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                // 过滤掉已存在本地缓存的真题
-                final java.util.List<RobotExamUpdater.ReleaseAsset> candidates = new ArrayList<>();
-                for (RobotExamUpdater.ReleaseAsset ra : assets) {
-                    if (existing != null && existing.containsKey(ra.key)) continue;
-                    candidates.add(ra);
-                }
-                if (candidates.isEmpty()) {
-                    Toast.makeText(this, "所有在线真题均已在本地缓存", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                android.content.Intent it = new android.content.Intent(this, ImportOnlineActivity.class);
-                it.putExtra("candidates", (java.io.Serializable) candidates);
-                startActivityForResult(it, 1001);
-            });
-        }).start();
+        android.content.Intent it = new android.content.Intent(this, ImportOnlineActivity.class);
+        startActivityForResult(it, 1001);
     }
 
     @Override
@@ -485,8 +438,8 @@ public class ExamListActivity extends AppCompatActivity {
         if (years.isEmpty()) { Toast.makeText(this, "暂无年份数据", Toast.LENGTH_SHORT).show(); return; }
         final Integer[] ys = years.toArray(new Integer[0]);
         final String[] labels = new String[ys.length + 1];
-        labels[0] = "全部年份";
-        for (int i = 0; i < ys.length; i++) labels[i + 1] = ys[i] + "年";
+        labels[0] = "全部";
+        for (int i = 0; i < ys.length; i++) labels[i + 1] = String.valueOf(ys[i]);
         showDropdown(btnFilterYear, labels, choice -> {
             filterYear = choice == 0 ? -1 : ys[choice - 1];
             refreshFilterButtonLabels();
@@ -494,7 +447,7 @@ public class ExamListActivity extends AppCompatActivity {
         });
     }
     private void showMonthPicker() {
-        final String[] labels = {"全部月份", "3月", "6月", "9月", "12月", "1月", "2月", "4月", "5月", "7月", "8月", "10月", "11月"};
+        final String[] labels = {"全部", "3", "6", "9", "12", "1", "2", "4", "5", "7", "8", "10", "11"};
         final int[] months = {-1, 3, 6, 9, 12, 1, 2, 4, 5, 7, 8, 10, 11};
         showDropdown(btnFilterMonth, labels, choice -> {
             filterMonth = months[choice];
@@ -504,7 +457,7 @@ public class ExamListActivity extends AppCompatActivity {
     }
     private void showSubjectPicker() {
         final String[] codes = {null, "robot", "py", "c", "cpp", "gx"};
-        final String[] labels = {"全部科目", "机器人等级考试", "软件编程 Python", "软件编程 C语言", "软件编程 C++", "图形化 Scratch"};
+        final String[] labels = {"全部", "机器人", "Python", "C", "C++", "图形化"};
         showDropdown(btnFilterSubject, labels, choice -> {
             filterSubject = codes[choice];
             refreshFilterButtonLabels();
@@ -512,7 +465,7 @@ public class ExamListActivity extends AppCompatActivity {
         });
     }
     private void showLevelPicker() {
-        final String[] labels = {"全部等级", "一级", "二级", "三级", "四级", "五级", "六级", "七级", "八级"};
+        final String[] labels = {"全部", "1", "2", "3", "4", "5", "6", "7", "8"};
         final int[] levels = {-1, 1, 2, 3, 4, 5, 6, 7, 8};
         showDropdown(btnFilterLevel, labels, choice -> {
             filterLevel = levels[choice];
@@ -565,7 +518,7 @@ public class ExamListActivity extends AppCompatActivity {
         }
         int padW = (int) (32 * getResources().getDisplayMetrics().density + 0.5f);
         int contentW = maxTextW + padW;
-        int width = Math.max(contentW, anchor.getWidth());
+        int width = anchor.getWidth();
 
         dropdownPopup = new PopupWindow(lv, width, height, true);
         lv.setBackgroundResource(R.drawable.bg_popup_menu);
@@ -574,18 +527,18 @@ public class ExamListActivity extends AppCompatActivity {
         dropdownPopup.showAsDropDown(anchor, 0, 4);
     }
     private void refreshFilterButtonLabels() {
-        btnFilterYear.setText(filterYear >= 0 ? filterYear + "年" : "年份");
-        btnFilterMonth.setText(filterMonth >= 0 ? filterMonth + "月" : "月份");
+        btnFilterYear.setText(filterYear >= 0 ? String.valueOf(filterYear) : "年份");
+        btnFilterMonth.setText(filterMonth >= 0 ? String.valueOf(filterMonth) : "月份");
         btnFilterSubject.setText(filterSubject != null ? subjectDisplayName(filterSubject) : "科目");
-        btnFilterLevel.setText(filterLevel >= 0 ? filterLevel + "级" : "等级");
+        btnFilterLevel.setText(filterLevel >= 0 ? String.valueOf(filterLevel) : "等级");
     }
 
     private String subjectDisplayName(String subject) {
         if (subject == null) return "科目";
         if (subject.equals("py")) return "Python";
         if (subject.equals("cpp")) return "C++";
-        if (subject.equals("c")) return "C语言";
-        if (subject.equals("gx")) return "Scratch";
+        if (subject.equals("c")) return "C";
+        if (subject.equals("gx")) return "图形化";
         if (subject.equals("robot")) return "机器人";
         return "科目";
     }
