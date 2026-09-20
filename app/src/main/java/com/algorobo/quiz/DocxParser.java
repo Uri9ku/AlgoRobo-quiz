@@ -47,7 +47,7 @@ public class DocxParser {
         ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(docx));
         ZipEntry entry;
         while ((entry = zis.getNextEntry()) != null) {
-            String name = entry.getName();
+            String name = entry.getName().replace('\\', '/');
             if (entry.isDirectory()) { zis.closeEntry(); continue; }
             byte[] data = readAll(zis);
             if ("word/document.xml".equals(name)) {
