@@ -14,7 +14,7 @@
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:padding="16dp"
-            android:background="@color/primary">
+            android:background="@drawable/bg_result_header_chalk">
             <TextView
                 android:id="@+id/btnImportBack"
                 android:layout_width="wrap_content"

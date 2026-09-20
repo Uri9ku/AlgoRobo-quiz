@@ -5,7 +5,7 @@
 
     <LinearLayout android:id="@+id/topBar" android:layout_width="match_parent" android:layout_height="wrap_content"
         android:orientation="horizontal" android:gravity="center_vertical"
-        android:padding="16dp" android:background="@color/primary">
+        android:padding="16dp" android:background="@drawable/bg_result_header_chalk">
         <TextView android:id="@+id/btnAnalysisBack" android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:text="‹ 返回" android:textSize="16sp" android:textColor="@android:color/white" android:padding="4dp" />
         <TextView android:id="@+id/tvAnalysisTitle" android:layout_width="0dp" android:layout_height="wrap_content"

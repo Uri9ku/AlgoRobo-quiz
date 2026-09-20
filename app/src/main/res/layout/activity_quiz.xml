@@ -2,7 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:background="@color/bg_page">
 
     <!-- 顶部工具栏 -->
-    <LinearLayout android:id="@+id/topBar" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@color/primary">
+    <LinearLayout android:id="@+id/topBar" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/bg_result_header_chalk">
         <LinearLayout android:id="@+id/topBarInner" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:orientation="horizontal" android:gravity="center_vertical" android:padding="12dp">
             <TextView android:id="@+id/btnBack" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="‹ 返回" android:textSize="16sp" android:textColor="@android:color/white" android:padding="4dp"/>
             <TextView android:id="@+id/tvCountdown" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="00:00" android:textSize="18sp" android:textStyle="bold" android:letterSpacing="0.08" android:textColor="@android:color/white" android:fontFamily="sans-serif-medium"/>
@@ -35,7 +35,7 @@
             <ImageView android:id="@+id/ivStemImage" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:adjustViewBounds="true" android:maxHeight="240dp" android:scaleType="fitCenter" android:visibility="gone" android:contentDescription="题干图片"/>
             <LinearLayout android:id="@+id/optionsContainer" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:orientation="vertical"/>
 
-            <LinearLayout android:id="@+id/analysisPanel" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:orientation="vertical" android:padding="16dp" android:background="@color/card_bg" android:visibility="gone">
+            <LinearLayout android:id="@+id/analysisPanel" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:orientation="vertical" android:padding="16dp" android:background="@drawable/bg_card_chalk" android:visibility="gone">
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
                     <TextView android:id="@+id/tvAnalysisCorrect" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="正确答案：A" android:textSize="16sp" android:textStyle="bold" android:textColor="@color/answer_correct_text"/>
                     <TextView android:id="@+id/tvQuestionTime" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textSize="13sp" android:textColor="@color/text_sub"/>
