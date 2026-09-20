@@ -52,8 +52,7 @@ public class QuizActivity extends AppCompatActivity {
     private MarkdownUtil markdownRenderer;
     private LinearLayout analysisImagesContainer;
     private TextView tvQuestionTime;
-    private TextView tvCountdown;
-    private TextView tvQuestionIndex;
+    private TextView tvPaperTitle;
     private LinearLayout indexContainer;
     private android.widget.HorizontalScrollView indexScroll;
     private long perQuestionStart;
@@ -74,7 +73,6 @@ public class QuizActivity extends AppCompatActivity {
         setContentView(R.layout.activity_quiz);
         ThemeManager.applyStatusBar(this);
         ThemeManager.applyTopBarColor(this, R.id.topBar);
-        ThemeManager.applyTopInset(this, R.id.topBarInner);
 
         random = getIntent().getBooleanExtra("random", false);
         source = getIntent().getStringExtra("source");
@@ -125,8 +123,8 @@ public class QuizActivity extends AppCompatActivity {
         analysisImagesContainer = findViewById(R.id.analysisImagesContainer);
 
         tvQuestionTime = findViewById(R.id.tvQuestionTime);
-        tvCountdown = findViewById(R.id.tvCountdown);
-        tvQuestionIndex = findViewById(R.id.tvQuestionIndex);
+        tvPaperTitle = findViewById(R.id.tvPaperTitle);
+        applyPaperTitle();
         indexContainer = findViewById(R.id.indexContainer);
         indexScroll = findViewById(R.id.indexScroll);
         btnToolTime = findViewById(R.id.btnToolTime);
@@ -205,6 +203,29 @@ public class QuizActivity extends AppCompatActivity {
         }
         return new ArrayList<>(all);
     }
+
+    // 根据来源设置顶栏标题（试卷名 / 错题本 / 收藏 / 自定义 / 全部）
+    private void applyPaperTitle() {
+        String title = null;
+        if (source != null && source.startsWith("paper:")) {
+            String key = source.substring("paper:".length());
+            title = getIntent().getStringExtra("paperTitle");
+            if (title == null || title.isEmpty()) {
+                title = RobotExamBank.getCustomTitle(this, key);
+            }
+            if (title == null || title.isEmpty()) {
+                RobotExamBank.Paper p = RobotExamBank.getPaper(this, key);
+                if (p != null) title = p.title;
+            }
+        }
+        if (title == null || title.isEmpty()) {
+            if ("wrong".equals(source)) title = "错题本";
+            else if ("favorite".equals(source)) title = "收藏夹";
+            else if ("custom".equals(source)) title = "自定义题库";
+            else title = "全部真题";
+        }
+        if (tvPaperTitle != null) tvPaperTitle.setText(title);
+    }
     // 按 uid 快照顺序重排题目（恢复上次进度用）；缺失的题目忽略，未出现在快照中的题追加在末尾
     private List<Question> reorderByUids(List<Question> all, List<String> uids) {
         java.util.Map<String, Question> byUid = new java.util.HashMap<>();
@@ -230,9 +251,6 @@ public class QuizActivity extends AppCompatActivity {
         timerRunnable = new Runnable() {
             @Override public void run() {
                 elapsed = SystemClock.elapsedRealtime() - startTime;
-                long sec = elapsed / 1000;
-                long m = sec / 60, s = sec % 60;
-                tvCountdown.setText(String.format("%02d:%02d", m, s));
                 handler.postDelayed(this, 500);
             }
         };
@@ -247,7 +265,6 @@ public class QuizActivity extends AppCompatActivity {
         }
         Question q = questions.get(index);
         pbProgress.setProgress(index + 1);
-        tvQuestionIndex.setText((index + 1) + "/" + questions.size());
         renderIndexBar();
         tvQuestionType.setText(q.type);
         renderKnowledgeTag(q);
