@@ -50,7 +50,8 @@ public class ImportOnlineActivity extends AppCompatActivity {
     private LinearLayout llRepos;
     private LinearLayout llImportBottom;
     private final List<TextView> repoTabViews = new ArrayList<>();
-    private String currentRepo = null;   // 当前选中的仓库名，null 表示尚未加载
+    private String currentRepo = null;   // 当前选中的具体仓库名，null 表示尚未选择任何仓库
+    private boolean isAllMode = false;     // 是否处于「全部」模式（点击了「全部」Tab）
     private boolean loading = false;     // 是否正在加载某个仓库
     private int filterYear = -1;
     private int filterMonth = -1;
@@ -100,14 +101,12 @@ public class ImportOnlineActivity extends AppCompatActivity {
                 TextView tvSub = convertView.findViewById(R.id.tvImportSub);
                 TextView tvRepo = convertView.findViewById(R.id.tvImportRepo);
                 CheckBox cb = convertView.findViewById(R.id.cbImportSelect);
-                // 无真题时隐藏勾选框（需求3）
-                cb.setVisibility(all.isEmpty() ? View.GONE : View.VISIBLE);
+                // 需求5/6：默认隐藏勾选框，仅当该条被选中时显示
+                cb.setVisibility(c.selected ? View.VISIBLE : View.GONE);
                 tvTitle.setText(ra.title != null ? ra.title : ra.fileName);
                 String sub = ra.fileName;
                 tvSub.setText(sub != null ? sub : "");
-                tvRepo.setText(ra.repo != null
-                        ? "https://github.com/Uri9ku/" + ra.repo
-                        : "");
+                tvRepo.setText(ra.repo != null ? ra.repo : "");
                 // 先解绑旧 listener，防止 ListView 复用 convertView 时，
                 // 上一个 item 的 OnCheckedChangeListener 仍绑定在本 CheckBox 上，
                 // 导致 setChecked 触发旧 listener 串改上一个 Cand 的 selected 状态（勾选丢失）。
@@ -224,7 +223,7 @@ public class ImportOnlineActivity extends AppCompatActivity {
         for (int i = 0; i < repoTabViews.size(); i++) {
             boolean selected;
             if (i == 0) {
-                selected = (currentRepo == null && all.isEmpty());
+                selected = isAllMode;
             } else {
                 String repo = RobotExamUpdater.GITHUB_REPOS[i - 1];
                 selected = repo.equals(currentRepo);
@@ -240,6 +239,9 @@ public class ImportOnlineActivity extends AppCompatActivity {
     /** 点击「全部」后一次性加载所有仓库的 release 列表并合并展示。 */
     private void loadAllRepos() {
         if (loading) return;
+        isAllMode = true;
+        currentRepo = null;
+        updateRepoSelection();
         loading = true;
         showLoadingHint("正在加载全部仓库…");
         new Thread(() -> {
@@ -289,6 +291,7 @@ public class ImportOnlineActivity extends AppCompatActivity {
         // 若已加载过同一仓库，则仅切换选中态，不重复抓取
         if (repo.equals(currentRepo)) return;
         currentRepo = repo;
+        isAllMode = false;
         updateRepoSelection();
         loading = true;
         showLoadingHint("正在加载「" + RobotExamUpdater.repoDisplayName(repo) + "」仓库…");
@@ -355,9 +358,9 @@ public class ImportOnlineActivity extends AppCompatActivity {
             shown.add(c);
         }
         adapter.notifyDataSetChanged();
-        // 无真题时隐藏底栏（需求3）
+        // 需求5/6：仅当存在选中项时显示底栏
         if (llImportBottom != null) {
-            llImportBottom.setVisibility(all.isEmpty() ? View.GONE : View.VISIBLE);
+            llImportBottom.setVisibility(hasAnySelected() ? View.VISIBLE : View.GONE);
         }
         updateCount();
     }
@@ -367,6 +370,15 @@ public class ImportOnlineActivity extends AppCompatActivity {
         for (Cand c : all) if (c.selected) sel++;
         tvCount.setText("共 " + shown.size() + " 套，已选 " + sel + " 套");
         updateSelectAllState();
+        // 需求5/6：选中状态变化时刷新底栏可见性
+        if (llImportBottom != null) {
+            llImportBottom.setVisibility(sel > 0 ? View.VISIBLE : View.GONE);
+        }
+    }
+    /** 是否存在至少一条被选中的真题（需求5/6）。 */
+    private boolean hasAnySelected() {
+        for (Cand c : all) if (c.selected) return true;
+        return false;
     }
 
     private void updateSelectAllState() {
