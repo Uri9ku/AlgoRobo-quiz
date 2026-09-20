@@ -6,10 +6,10 @@
         android:background="@color/primary" android:orientation="horizontal"
         android:gravity="center_vertical" android:paddingHorizontal="12dp">
         <TextView android:id="@+id/btnBack" android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="←" android:textColor="#FFFFFF" android:textSize="22sp" android:padding="8dp"/>
+            android:text="←" android:textColor="@color/text_on_primary" android:textSize="22sp" android:padding="8dp"/>
         <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-            android:gravity="center" android:text="打卡日历" android:textColor="#FFFFFF" android:textSize="18sp"/>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="#FFFFFF"/>
+            android:gravity="center" android:text="打卡日历" android:textColor="@color/text_on_primary" android:textSize="18sp"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="@color/text_on_primary"/>
     </LinearLayout>
     <LinearLayout android:layout_width="match_parent" android:layout_height="48dp"
         android:background="@color/card_bg" android:orientation="horizontal"

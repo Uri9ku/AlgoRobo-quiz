@@ -3,6 +3,12 @@
     <color name="primary">#5B5FEF</color>
     <color name="primary_dark">#4A4ED6</color>
     <color name="primary_light">#EEF0FF</color>
+    <color name="primary_gradient_end">#7C6FF0</color>
+
+    <!-- 通用 -->
+    <color name="white">#FFFFFF</color>
+    <color name="text_on_primary">#FFFFFF</color>
+    <color name="text_on_primary_70">#CCFFFFFF</color>
 
     <!-- 强调/语义色 -->
     <color name="success">#22C55E</color>

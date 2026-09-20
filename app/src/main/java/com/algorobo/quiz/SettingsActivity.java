@@ -139,6 +139,19 @@ public class SettingsActivity extends AppCompatActivity {
         // AI 自动解析模式选择
         findViewById(R.id.btnAutoAiAnalysisMode).setOnClickListener(v -> showAutoAiAnalysisModeDialog());
 
+        // 下载目录标题点击折叠/展开按钮区
+        final android.widget.LinearLayout examDirButtons = findViewById(R.id.examDirButtons);
+        final TextView ivExamDirArrow = findViewById(R.id.ivExamDirArrow);
+        findViewById(R.id.cardExamDirHeader).setOnClickListener(v -> {
+            if (examDirButtons.getVisibility() == android.view.View.GONE) {
+                examDirButtons.setVisibility(android.view.View.VISIBLE);
+                ivExamDirArrow.setText(" ˯");
+            } else {
+                examDirButtons.setVisibility(android.view.View.GONE);
+                ivExamDirArrow.setText(" ›");
+            }
+        });
+
         // 更改题库下载目录
         findViewById(R.id.btnChangeExamDir).setOnClickListener(v -> onChangeExamDir());
 

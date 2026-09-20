@@ -62,8 +62,10 @@
                     android:layout_columnWeight="1" android:orientation="vertical" android:gravity="center"
                     android:paddingTop="6dp" android:paddingBottom="6dp">
                     <FrameLayout android:layout_width="52dp" android:layout_height="52dp">
-                        <TextView android:layout_width="52dp" android:layout_height="52dp" android:gravity="center"
-                            android:text="📄" android:textSize="26sp" android:background="@drawable/bg_grid_icon" />
+                        <ImageView android:layout_width="52dp" android:layout_height="52dp"
+                            android:src="@drawable/ic_grid_exam"
+                            android:padding="12dp" android:background="@drawable/bg_grid_icon"
+                            android:contentDescription="真题练习" />
                     </FrameLayout>
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:layout_marginTop="6dp" android:text="真题练习" android:textSize="12sp" android:textColor="@color/text_main" />
@@ -73,8 +75,10 @@
                 <LinearLayout android:id="@+id/modeSequence" android:layout_width="0dp" android:layout_height="wrap_content"
                     android:layout_columnWeight="1" android:orientation="vertical" android:gravity="center"
                     android:paddingTop="6dp" android:paddingBottom="6dp">
-                    <TextView android:layout_width="52dp" android:layout_height="52dp" android:gravity="center"
-                        android:text="📝" android:textSize="26sp" android:background="@drawable/bg_grid_icon" />
+                    <ImageView android:layout_width="52dp" android:layout_height="52dp"
+                        android:src="@drawable/ic_grid_sequence"
+                        android:padding="12dp" android:background="@drawable/bg_grid_icon"
+                        android:contentDescription="题库练习" />
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:layout_marginTop="6dp" android:text="题库练习" android:textSize="12sp" android:textColor="@color/text_main" />
                 </LinearLayout>
@@ -83,8 +87,10 @@
                 <LinearLayout android:id="@+id/modeRandom" android:layout_width="0dp" android:layout_height="wrap_content"
                     android:layout_columnWeight="1" android:orientation="vertical" android:gravity="center"
                     android:paddingTop="6dp" android:paddingBottom="6dp">
-                    <TextView android:layout_width="52dp" android:layout_height="52dp" android:gravity="center"
-                        android:text="🎲" android:textSize="26sp" android:background="@drawable/bg_grid_icon" />
+                    <ImageView android:layout_width="52dp" android:layout_height="52dp"
+                        android:src="@drawable/ic_grid_random"
+                        android:padding="12dp" android:background="@drawable/bg_grid_icon"
+                        android:contentDescription="随机练习" />
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:layout_marginTop="6dp" android:text="随机练习" android:textSize="12sp" android:textColor="@color/text_main" />
                 </LinearLayout>
@@ -94,8 +100,10 @@
                     android:layout_columnWeight="1" android:layout_gravity="top">
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                         android:orientation="vertical" android:gravity="center" android:paddingTop="6dp" android:paddingBottom="6dp">
-                        <TextView android:layout_width="52dp" android:layout_height="52dp" android:gravity="center"
-                            android:text="📕" android:textSize="26sp" android:background="@drawable/bg_grid_icon" />
+                        <ImageView android:layout_width="52dp" android:layout_height="52dp"
+                            android:src="@drawable/ic_grid_wrongbook"
+                            android:padding="12dp" android:background="@drawable/bg_grid_icon"
+                            android:contentDescription="错题本" />
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                             android:layout_marginTop="6dp" android:text="错题本" android:textSize="12sp" android:textColor="@color/text_main" />
                     </LinearLayout>
@@ -111,8 +119,10 @@
                     android:layout_columnWeight="1" android:layout_gravity="top">
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                         android:orientation="vertical" android:gravity="center" android:paddingTop="6dp" android:paddingBottom="6dp">
-                        <TextView android:layout_width="52dp" android:layout_height="52dp" android:gravity="center"
-                            android:text="⭐" android:textSize="26sp" android:background="@drawable/bg_grid_icon" />
+                        <ImageView android:layout_width="52dp" android:layout_height="52dp"
+                            android:src="@drawable/ic_grid_favorite"
+                            android:padding="12dp" android:background="@drawable/bg_grid_icon"
+                            android:contentDescription="收藏题" />
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                             android:layout_marginTop="6dp" android:text="收藏题" android:textSize="12sp" android:textColor="@color/text_main" />
                     </LinearLayout>
@@ -127,8 +137,10 @@
                 <LinearLayout android:id="@+id/cardStatistics" android:layout_width="0dp" android:layout_height="wrap_content"
                     android:layout_columnWeight="1" android:orientation="vertical" android:gravity="center"
                     android:paddingTop="6dp" android:paddingBottom="6dp">
-                    <TextView android:layout_width="52dp" android:layout_height="52dp" android:gravity="center"
-                        android:text="📊" android:textSize="26sp" android:background="@drawable/bg_grid_icon" />
+                    <ImageView android:layout_width="52dp" android:layout_height="52dp"
+                        android:src="@drawable/ic_grid_stats"
+                        android:padding="12dp" android:background="@drawable/bg_grid_icon"
+                        android:contentDescription="学习统计" />
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:layout_marginTop="6dp" android:text="学习统计" android:textSize="12sp" android:textColor="@color/text_main" />
                 </LinearLayout>
@@ -137,8 +149,10 @@
                 <LinearLayout android:id="@+id/cardCalendar" android:layout_width="0dp" android:layout_height="wrap_content"
                     android:layout_columnWeight="1" android:orientation="vertical" android:gravity="center"
                     android:paddingTop="6dp" android:paddingBottom="6dp">
-                    <TextView android:layout_width="52dp" android:layout_height="52dp" android:gravity="center"
-                        android:text="🗓️" android:textSize="26sp" android:background="@drawable/bg_grid_icon" />
+                    <ImageView android:layout_width="52dp" android:layout_height="52dp"
+                        android:src="@drawable/ic_grid_calendar"
+                        android:padding="12dp" android:background="@drawable/bg_grid_icon"
+                        android:contentDescription="打卡日历" />
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:layout_marginTop="6dp" android:text="打卡日历" android:textSize="12sp" android:textColor="@color/text_main" />
                 </LinearLayout>
@@ -147,8 +161,10 @@
                 <LinearLayout android:id="@+id/cardCustomBank" android:layout_width="0dp" android:layout_height="wrap_content"
                     android:layout_columnWeight="1" android:orientation="vertical" android:gravity="center"
                     android:paddingTop="6dp" android:paddingBottom="6dp">
-                    <TextView android:layout_width="52dp" android:layout_height="52dp" android:gravity="center"
-                        android:text="🧩" android:textSize="26sp" android:background="@drawable/bg_grid_icon" />
+                    <ImageView android:layout_width="52dp" android:layout_height="52dp"
+                        android:src="@drawable/ic_grid_puzzle"
+                        android:padding="12dp" android:background="@drawable/bg_grid_icon"
+                        android:contentDescription="自定义题库" />
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:layout_marginTop="6dp" android:text="自定义题库" android:textSize="12sp" android:textColor="@color/text_main" />
                 </LinearLayout>
@@ -157,8 +173,10 @@
                 <LinearLayout android:id="@+id/cardKnowledge" android:layout_width="0dp" android:layout_height="wrap_content"
                     android:layout_columnWeight="1" android:orientation="vertical" android:gravity="center"
                     android:paddingTop="6dp" android:paddingBottom="6dp">
-                    <TextView android:layout_width="52dp" android:layout_height="52dp" android:gravity="center"
-                        android:text="🧭" android:textSize="26sp" android:background="@drawable/bg_grid_icon" />
+                    <ImageView android:layout_width="52dp" android:layout_height="52dp"
+                        android:src="@drawable/ic_grid_knowledge"
+                        android:padding="12dp" android:background="@drawable/bg_grid_icon"
+                        android:contentDescription="知识点专题" />
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:layout_marginTop="6dp" android:text="知识点专题" android:textSize="12sp" android:textColor="@color/text_main" />
                 </LinearLayout>

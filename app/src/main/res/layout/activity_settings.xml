@@ -20,10 +20,10 @@
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="vertical" android:padding="16dp">
 
-            <!-- 分组：显示 -->
+            <!-- 分组：常规 -->
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="常规" android:textSize="13sp" android:textColor="@color/text_sub"
-                android:layout_marginBottom="8dp"/>
+                android:text="常规" android:textSize="14sp" android:textStyle="bold"
+                android:textColor="@color/text_main" android:layout_marginBottom="8dp"/>
 
             <!-- 深色模式 -->
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -153,8 +153,8 @@
 
             <!-- 分组：错题本 -->
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginTop="20dp" android:text="错题本" android:textSize="13sp"
-                android:textColor="@color/text_sub" android:layout_marginBottom="8dp"/>
+                android:layout_marginTop="20dp" android:text="错题本" android:textSize="14sp"
+                android:textStyle="bold" android:textColor="@color/text_main" android:layout_marginBottom="8dp"/>
 
             <!-- 做对次数阈值 -->
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -275,40 +275,50 @@
 
             <!-- 分组：题库下载目录 -->
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginTop="20dp" android:text="题库下载目录" android:textSize="13sp"
-                android:textColor="@color/text_sub" android:layout_marginBottom="8dp"/>
+                android:layout_marginTop="20dp" android:text="题库下载目录" android:textSize="14sp"
+                android:textStyle="bold" android:textColor="@color/text_main" android:layout_marginBottom="8dp"/>
 
             <!-- 当前目录 + 操作 -->
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:orientation="vertical" android:padding="16dp" android:background="@drawable/bg_card">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:text="下载目录" android:textSize="16sp" android:textColor="@color/text_main"/>
+                <LinearLayout android:id="@+id/cardExamDirHeader" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:orientation="horizontal"
+                    android:gravity="center_vertical" android:clickable="true" android:focusable="true">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="下载目录" android:textSize="16sp" android:textColor="@color/text_main"/>
+                    <TextView android:id="@+id/ivExamDirArrow" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text=" ›" android:textSize="18sp"
+                        android:textColor="@color/text_sub" android:layout_marginStart="4dp"/>
+                </LinearLayout>
                 <TextView android:id="@+id/tvExamDir" android:layout_width="match_parent"
                     android:layout_height="wrap_content" android:layout_marginTop="6dp"
                     android:text="" android:textSize="12sp" android:textColor="@color/text_sub"
                     android:textIsSelectable="true"/>
-                <HorizontalScrollView android:layout_width="match_parent"
-                    android:layout_height="wrap_content" android:layout_marginTop="12dp"
-                    android:scrollbars="none">
-                    <LinearLayout android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" android:orientation="horizontal">
-                        <TextView android:id="@+id/btnChangeExamDir" android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" android:paddingVertical="10dp" android:paddingHorizontal="18dp"
-                            android:text="更改目录" android:textSize="14sp" android:textColor="@android:color/white"
-                            android:background="@drawable/bg_btn_primary"/>
-                        <TextView android:id="@+id/btnOpenExamDir" android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" android:paddingVertical="10dp" android:paddingHorizontal="18dp"
-                            android:layout_marginStart="12dp" android:text="打开目录"
-                            android:textSize="14sp" android:textColor="@android:color/white"
-                            android:background="@drawable/bg_btn_primary"/>
-                    </LinearLayout>
-                </HorizontalScrollView>
+                <LinearLayout android:id="@+id/examDirButtons" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+                    <HorizontalScrollView android:layout_width="match_parent"
+                        android:layout_height="wrap_content" android:layout_marginTop="12dp"
+                        android:scrollbars="none">
+                        <LinearLayout android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" android:orientation="horizontal">
+                            <TextView android:id="@+id/btnChangeExamDir" android:layout_width="wrap_content"
+                                android:layout_height="wrap_content" android:paddingVertical="10dp" android:paddingHorizontal="18dp"
+                                android:text="更改目录" android:textSize="14sp" android:textColor="@android:color/white"
+                                android:background="@drawable/bg_btn_primary"/>
+                            <TextView android:id="@+id/btnOpenExamDir" android:layout_width="wrap_content"
+                                android:layout_height="wrap_content" android:paddingVertical="10dp" android:paddingHorizontal="18dp"
+                                android:layout_marginStart="12dp" android:text="打开目录"
+                                android:textSize="14sp" android:textColor="@android:color/white"
+                                android:background="@drawable/bg_btn_primary"/>
+                        </LinearLayout>
+                    </HorizontalScrollView>
+                </LinearLayout>
             </LinearLayout>
 
             <!-- 分组：更多 -->
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginTop="20dp" android:text="更多" android:textSize="13sp"
-                android:textColor="@color/text_sub" android:layout_marginBottom="8dp"/>
+                android:layout_marginTop="20dp" android:text="更多" android:textSize="14sp"
+                android:textStyle="bold" android:textColor="@color/text_main" android:layout_marginBottom="8dp"/>
 
             <!-- 自动翻页 -->
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"

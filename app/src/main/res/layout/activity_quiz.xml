@@ -35,7 +35,7 @@
                     <TextView android:id="@+id/tvQuestionTime" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textSize="13sp" android:textColor="@color/text_sub"/>
                 </LinearLayout>
                 <TextView android:id="@+id/tvAnalysisText" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="" android:textSize="14sp" android:lineSpacingExtra="4dp" android:textColor="@color/text_main"/>
-                                <Button android:id="@+id/btnAiAnalysis" android:layout_width="wrap_content" android:layout_height="40dp" android:layout_marginTop="12dp" android:text="AI 解析" android:textSize="14sp" android:textColor="#FFFFFF" android:background="@drawable/bg_btn_primary" android:paddingLeft="24dp" android:paddingRight="24dp"/>
+                                <Button android:id="@+id/btnAiAnalysis" android:layout_width="wrap_content" android:layout_height="40dp" android:layout_marginTop="12dp" android:text="AI 解析" android:textSize="14sp" android:textColor="@color/text_on_primary" android:background="@drawable/bg_btn_primary" android:paddingLeft="24dp" android:paddingRight="24dp"/>
                 <TextView android:id="@+id/tvAiAnalysis" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="" android:textSize="14sp" android:lineSpacingExtra="4dp" android:textColor="@color/text_main" android:visibility="gone"/>
 <LinearLayout android:id="@+id/analysisImagesContainer" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:orientation="vertical" android:visibility="gone"/>
             </LinearLayout>
