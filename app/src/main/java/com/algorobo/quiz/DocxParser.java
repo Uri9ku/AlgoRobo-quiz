@@ -292,7 +292,9 @@ public class DocxParser {
     }
 
     private static boolean isSectionTitle(String text) {
-        return text.matches("^[一二三四五六七八九十]+、.*(共\\d+题|共\\d+分).*");
+        // 兼容全角顿号「、」以及「第一部分」「单选题」等大题标题行。
+        return text.matches("^[一二三四五六七八九十]+[、.]?.*(共\\d+题|共\\d+分).*")
+                || text.matches("^第[一二三四五六七八九十]+部分.*");
     }
 
     /**
@@ -306,13 +308,14 @@ public class DocxParser {
     /**
      * 判断一行是否为「题号行」并返回剥离题号前缀后的剩余文本。
      * 兼容两种格式：
-     *  - "1."         -> 返回 ""（题号单独成段，题干在后续段落）
-     *  - "1.下列选项…" -> 返回 "下列选项…"（题号与题干合并成段）
+     *  - "1." / "1．"         -> 返回 ""（题号单独成段，题干在后续段落）
+     *  - "1.下列选项…" / "1．下列选项…" -> 返回 "下列选项…"（题号与题干合并成段）
+     * 题号后的分隔符兼容半角点 "1." 与全角句号 "1．"（U+FF0E）。
      * 无法匹配题号格式时返回 null，表示不是题号行。
      */
     private static String stripQuestionNumberPrefix(String text) {
-        if (text.matches("^\\d+\\.$")) return "";
-        java.util.regex.Pattern ptn = java.util.regex.Pattern.compile("^(\\d+)\\.\\s*(.+)$");
+        if (text.matches("^\\d+[\\.．]$")) return "";
+        java.util.regex.Pattern ptn = java.util.regex.Pattern.compile("^(\\d+)[\\.．]\\s*(.+)$");
         java.util.regex.Matcher m = ptn.matcher(text);
         if (m.matches()) return m.group(2).trim();
         return null;
@@ -328,14 +331,15 @@ public class DocxParser {
         return stripped.matches(".*（\\d+分）\\s*");
     }
     private static boolean isOptionStart(String text) {
-        if (text.matches("^[A-D]\\..*")) return true;
+        // 兼容半角 "A." 与全角 "A．"（U+FF0E）。
+        if (text.matches("^[A-D][\\.．].*")) return true;
         if (text.matches("^[A-D]$")) return true;
         if (text.equals("正确") || text.equals("错误")) return true;
         return false;
     }
 
     private static String stripOptionPrefix(String text) {
-        if (text.matches("^[A-D]\\..*")) return text.replaceFirst("^[A-D]\\.", "").trim();
+        if (text.matches("^[A-D][\\.．].*")) return text.replaceFirst("^[A-D][\\.．]", "").trim();
         if (text.matches("^[A-D]$")) return "";
         return text;
     }
