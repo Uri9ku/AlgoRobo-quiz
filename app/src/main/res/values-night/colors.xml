@@ -1,45 +1,58 @@
 <resources>
-    <!-- 深色模式颜色覆盖 -->
-    <color name="primary">#6C70F0</color>
-    <color name="primary_dark">#5B5FEF</color>
-    <color name="primary_light">#2A2D4E</color>
+    <!-- 深色模式颜色覆盖：macOS Vibrancy 三级深度灰阶 -->
+    <color name="primary">#0A84FF</color>
+    <color name="primary_dark">#0A84FF</color>
+    <color name="primary_light">#2C2C2E</color>
+    <color name="primary_gradient_end">#0A84FF</color>
 
-    <color name="success">#34D399</color>
-    <color name="success_light">#0F2E22</color>
-    <color name="danger">#F87171</color>
-    <color name="danger_light">#2E1313</color>
-    <color name="warning">#FBBF24</color>
+    <color name="success">#30D158</color>
+    <color name="success_light">#1C2B1E</color>
+    <color name="danger">#FF453A</color>
+    <color name="danger_light">#2E1E1E</color>
+    <color name="warning">#FFD60A</color>
 
-    <!-- 强调蓝（图标/日历选中/图表） -->
-    <color name="accent">#6C70F0</color>
-    <!-- 禁用按钮背景 -->
-    <color name="btn_disabled_bg">#3A3D46</color>
+    <!-- 强调蓝（macOS 系统强调色） -->
+    <color name="accent">#0A84FF</color>
+    <!-- 禁用按钮背景（最深） -->
+    <color name="btn_disabled_bg">#2C2C2E</color>
 
-    <color name="bg_page">#12141A</color>
-    <color name="text_main">#E8EAF0</color>
-    <color name="text_sub">#8A8F9C</color>
-    <color name="divider">#2A2D38</color>
+    <color name="bg_page">#1C1C1E</color>
+    <color name="text_main">#F2F2F2</color>
+    <color name="text_sub">#B3B3B3</color>
+    <color name="divider">#3A3A3C</color>
 
-    <color name="card_bg">#1E2128</color>
+    <color name="card_bg">#2C2C2E</color>
+
+    <!-- 通用 -->
+    <color name="white">#FFFFFF</color>
+    <color name="text_on_primary">#FFFFFF</color>
+    <color name="text_on_primary_70">#CCFFFFFF</color>
+
+    <!-- 首页三区框架配色 -->
+    <color name="frame_blue">#0A84FF</color>
+    <color name="frame_blue_bg">#2C2C2E</color>
+    <color name="frame_yellow">#FFD60A</color>
+    <color name="frame_yellow_bg">#2C2C2E</color>
+    <color name="frame_green">#30D158</color>
+    <color name="frame_green_bg">#2C2C2E</color>
 
     <!-- 答题卡格子 -->
-    <color name="sheet_blank_bg">#2A2D38</color>
+    <color name="sheet_blank_bg">#2C2C2E</color>
     <color name="sheet_marked_bg">#3A2E14</color>
-    <color name="sheet_marked_stroke">#FBBF24</color>
+    <color name="sheet_marked_stroke">#FFD60A</color>
 
     <!-- 答题卡格子文字（未答/已答） -->
     <color name="sheet_cell_text_done">#FFFFFF</color>
-    <color name="sheet_cell_text_blank">#E8EAF0</color>
-
+    <color name="sheet_cell_text_blank">#B3B3B3</color>
     <!-- 答题选项/解析语义色 -->
-    <color name="answer_correct">#34D399</color>
-    <color name="answer_correct_text">#34D399</color>
-    <color name="answer_wrong">#F87171</color>
-    <color name="answer_wrong_text">#F87171</color>
+    <color name="answer_correct">#30D158</color>
+    <color name="answer_correct_text">#30D158</color>
+    <color name="answer_wrong">#FF453A</color>
+    <color name="answer_wrong_text">#FF453A</color>
 
     <!-- 图表颜色 -->
-    <color name="chart_line">#6C70F0</color>
-    <color name="chart_text">#8A8F9C</color>
-    <color name="chart_grid">#2A2D38</color>
-    <color name="chart_percent_text">#E8EAF0</color>
+    <color name="chart_line">#0A84FF</color>
+    <color name="chart_text">#B3B3B3</color>
+    <color name="chart_grid">#3A3A3C</color>
+    <color name="chart_percent_text">#F2F2F2</color>
 </resources>

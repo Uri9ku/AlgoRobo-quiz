@@ -1,9 +1,10 @@
 <resources>
-    <!-- 主色调：现代蓝紫系 -->
-    <color name="primary">#5B5FEF</color>
-    <color name="primary_dark">#4A4ED6</color>
-    <color name="primary_light">#EEF0FF</color>
-    <color name="primary_gradient_end">#7C6FF0</color>
+    <!-- macOS Vibrancy 暗色毛玻璃体系：三级深度灰阶 -->
+    <!-- 强调色：macOS 系统蓝 -->
+    <color name="primary">#0A84FF</color>
+    <color name="primary_dark">#0A84FF</color>
+    <color name="primary_light">#2C2C2E</color>
+    <color name="primary_gradient_end">#0A84FF</color>
 
     <!-- 通用 -->
     <color name="white">#FFFFFF</color>
@@ -11,59 +12,59 @@
     <color name="text_on_primary_70">#CCFFFFFF</color>
 
     <!-- 强调/语义色 -->
-    <color name="success">#22C55E</color>
-    <color name="success_light">#ECFDF5</color>
-    <color name="danger">#EF4444</color>
-    <color name="danger_light">#FEF2F2</color>
-    <color name="warning">#F59E0B</color>
+    <color name="success">#30D158</color>
+    <color name="success_light">#1C2B1E</color>
+    <color name="danger">#FF453A</color>
+    <color name="danger_light">#2E1E1E</color>
+    <color name="warning">#FFD60A</color>
 
-    <!-- 强调蓝（图标/日历选中/图表） -->
-    <color name="accent">#4A6CF7</color>
-    <!-- 禁用按钮背景 -->
-    <color name="btn_disabled_bg">#CCCCCC</color>
+    <!-- 强调蓝（macOS 系统强调色） -->
+    <color name="accent">#0A84FF</color>
+    <!-- 禁用按钮背景（次深） -->
+    <color name="btn_disabled_bg">#2C2C2E</color>
 
     <!-- 背景与文字 -->
-    <color name="bg_page">#F6F7FB</color>
-    <color name="text_main">#1F2430</color>
-    <color name="text_sub">#8A8F9C</color>
-    <color name="divider">#EDEFF3</color>
+    <color name="bg_page">#1C1C1E</color>
+    <color name="text_main">#F2F2F2</color>
+    <color name="text_sub">#B3B3B3</color>
+    <color name="divider">#3A3A3C</color>
 
     <!-- 卡片 -->
-    <color name="card_bg">#FFFFFF</color>
+    <color name="card_bg">#2C2C2E</color>
 
     <!-- 答题卡格子 -->
-    <color name="sheet_blank_bg">#F0F0F0</color>
-    <color name="sheet_marked_bg">#FFF8E1</color>
-    <color name="sheet_marked_stroke">#FF9800</color>
+    <color name="sheet_blank_bg">#2C2C2E</color>
+    <color name="sheet_marked_bg">#3A2E14</color>
+    <color name="sheet_marked_stroke">#FFD60A</color>
 
     <!-- 答题卡格子文字（未答/已答） -->
     <color name="sheet_cell_text_done">#FFFFFF</color>
-    <color name="sheet_cell_text_blank">#333333</color>
+    <color name="sheet_cell_text_blank">#B3B3B3</color>
 
     <!-- 答题选项/解析语义色 -->
-    <color name="answer_correct">#16A34A</color>
-    <color name="answer_correct_text">#16A34A</color>
-    <color name="answer_wrong">#DC2626</color>
-    <color name="answer_wrong_text">#DC2626</color>
+    <color name="answer_correct">#30D158</color>
+    <color name="answer_correct_text">#30D158</color>
+    <color name="answer_wrong">#FF453A</color>
+    <color name="answer_wrong_text">#FF453A</color>
 
     <!-- 图表颜色 -->
-    <color name="chart_line">#4A6CF7</color>
-    <color name="chart_text">#999999</color>
-    <color name="chart_grid">#EEEEEE</color>
-    <color name="chart_percent_text">#333333</color>
+    <color name="chart_line">#0A84FF</color>
+    <color name="chart_text">#B3B3B3</color>
+    <color name="chart_grid">#3A3A3C</color>
+    <color name="chart_percent_text">#F2F2F2</color>
 
     <!-- 首页三区框架配色 -->
-    <color name="frame_blue">#4A6CF7</color>
-    <color name="frame_blue_bg">#F1F5FF</color>
-    <color name="frame_yellow">#F59E0B</color>
-    <color name="frame_yellow_bg">#FFFBEB</color>
-    <color name="frame_green">#22C55E</color>
-    <color name="frame_green_bg">#ECFDF5</color>
+    <color name="frame_blue">#0A84FF</color>
+    <color name="frame_blue_bg">#2C2C2E</color>
+    <color name="frame_yellow">#FFD60A</color>
+    <color name="frame_yellow_bg">#2C2C2E</color>
+    <color name="frame_green">#30D158</color>
+    <color name="frame_green_bg">#2C2C2E</color>
 
-    <!-- 夜间模式配色 -->
-    <color name="bg_page_dark">#12141A</color>
-    <color name="card_bg_dark">#1E2129</color>
+    <!-- 夜间模式配色（统一为 macOS 暗色） -->
+    <color name="bg_page_dark">#1C1C1E</color>
+    <color name="card_bg_dark">#2C2C2E</color>
     <color name="text_main_dark">#E5E7EB</color>
-    <color name="text_sub_dark">#9CA3AF</color>
-    <color name="divider_dark">#2A2E39</color>
+    <color name="text_sub_dark">#B3B3B3</color>
+    <color name="divider_dark">#3A3A3C</color>
 </resources>
