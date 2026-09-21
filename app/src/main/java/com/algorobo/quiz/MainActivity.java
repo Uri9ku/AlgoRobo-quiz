@@ -45,29 +45,34 @@ public class MainActivity extends AppCompatActivity {
         // 考试类型下拉选择
         findViewById(R.id.rowExamType).setOnClickListener(v -> showExamTypePopup());
 
-        // 功能卡片
+        // 功能卡片：进入页面的标题与该入口控件的名称保持一致（PageTitle 动态传递）
         findViewById(R.id.cardPractice).setOnClickListener(v ->
-            startActivity(new Intent(this, ExamListActivity.class)));
+            openPage(ExamListActivity.class, R.id.labelPractice));
         findViewById(R.id.modeSequence).setOnClickListener(v ->
             Toast.makeText(this, "题库练习待完善：用于真题与自定义题目混用刷题", Toast.LENGTH_SHORT).show());
         findViewById(R.id.modeRandom).setOnClickListener(v ->
             Toast.makeText(this, "随机练习待完善：选择知识点后随机刷题", Toast.LENGTH_SHORT).show());
 
-        findViewById(R.id.cardWrongBook).setOnClickListener(v -> startQuizBySource("wrong"));
-        findViewById(R.id.cardFavorite).setOnClickListener(v -> startQuizBySource("favorite"));
+        findViewById(R.id.cardWrongBook).setOnClickListener(v ->
+            startQuizBySource("wrong", R.id.labelWrongBook));
+        findViewById(R.id.cardFavorite).setOnClickListener(v ->
+            startQuizBySource("favorite", R.id.labelFavorite));
         findViewById(R.id.cardStatistics).setOnClickListener(v ->
-            startActivity(new Intent(this, StatisticsActivity.class)));
+            openPage(StatisticsActivity.class, R.id.labelStatistics));
         findViewById(R.id.cardCalendar).setOnClickListener(v ->
-            startActivity(new Intent(this, CalendarActivity.class)));
+            openPage(CalendarActivity.class, R.id.labelCalendar));
 
         findViewById(R.id.cardCustomBank).setOnClickListener(v ->
-            startActivity(new Intent(this, CustomBankActivity.class)));
+            openPage(CustomBankActivity.class, R.id.labelCustomBank));
 
         findViewById(R.id.cardKnowledge).setOnClickListener(v ->
-            startActivity(new Intent(this, KnowledgeActivity.class)));
+            openPage(KnowledgeActivity.class, R.id.labelKnowledge));
 
-        findViewById(R.id.fabSettings).setOnClickListener(v ->
-            startActivity(new Intent(this, SettingsActivity.class)));
+        findViewById(R.id.fabSettings).setOnClickListener(v -> {
+            Intent i = new Intent(this, SettingsActivity.class);
+            PageTitle.put(i, v.getContentDescription());
+            startActivity(i);
+        });
 
         bindBadges();
         bindResume();
@@ -323,10 +328,17 @@ public class MainActivity extends AppCompatActivity {
         startActivity(i);
     }
 
-    private void startQuizBySource(String source) {
+    /** 打开子页面，并以入口控件的名称作为子页面标题。 */
+    private void openPage(Class<?> target, int labelViewId) {
+        TextView label = findViewById(labelViewId);
+        startActivity(PageTitle.intent(this, target, label));
+    }
+
+    private void startQuizBySource(String source, int labelViewId) {
         Intent i = new Intent(this, QuizActivity.class);
         i.putExtra("source", source);
         i.putExtra("random", false);
+        PageTitle.put(i, (TextView) findViewById(labelViewId));
         startActivity(i);
     }
 

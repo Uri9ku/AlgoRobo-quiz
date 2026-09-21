@@ -10,11 +10,38 @@ public class Question implements Serializable {
     public static final String TYPE_SHORT = "简答题";
     public static final String TYPE_ATTACH = "附件题";
 
+    /**
+     * 题干内容块：按 docx 中文字/图片出现的先后顺序保存，用于「文字 + 多图」混排展示。
+     * 兼容旧缓存：stemBlocks 为空时回退到 stem + stemImg 的单图排版。
+     */
+    public static class StemBlock implements Serializable {
+        public static final int KIND_TEXT = 0;
+        public static final int KIND_IMAGE = 1;
+        public int kind;
+        /** kind=KIND_TEXT 时的文字内容。 */
+        public String text;
+        /** kind=KIND_IMAGE 时的图片文件名（已由 rId 解析为本地文件名）。 */
+        public String image;
+
+        public StemBlock() {
+        }
+
+        public StemBlock(int kind, String value) {
+            this.kind = kind;
+            if (kind == KIND_TEXT) this.text = value;
+            else this.image = value;
+        }
+    }
+
     public int id;
     /** 全局唯一标识：来源作用域 + "#" + 试卷内题号。用于错题本/收藏/做对次数等持久化 key，避免不同题库间 id 冲突。 */
     public String uid;
     public String type;
+    /** docx 中的原始题型名称（如「编程题」），仅用于展示；作答逻辑仍以 {@link #type} 为准。 */
+    public String typeLabel;
     public String stem;
+    /** 题干混排块（文字/图片按原顺序），为空表示旧数据（使用 stem + stemImg）。 */
+    public java.util.List<StemBlock> stemBlocks;
     public String[] options;
     public int answerIndex;
     public String analysis;

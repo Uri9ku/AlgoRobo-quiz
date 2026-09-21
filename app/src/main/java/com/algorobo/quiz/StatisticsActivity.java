@@ -11,6 +11,7 @@ public class StatisticsActivity extends AppCompatActivity {
         setContentView(R.layout.activity_statistics);
         ThemeManager.applyStatusBar(this);
         ThemeManager.applyTopBarColor(this, R.id.topBar);
+        PageTitle.apply(this, R.id.tvPageTitle);
 
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());
 

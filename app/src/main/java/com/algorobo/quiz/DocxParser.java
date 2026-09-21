@@ -84,10 +84,13 @@ public class DocxParser {
         boolean inOptions = false;
         String curStemImg = null;
         StringBuilder curStem = new StringBuilder();
+        // 题干混排块：按 docx 中文字/图片出现顺序记录，保证「文字 + 多图」的排版与原文一致。
+        List<Question.StemBlock> curStemBlocks = new ArrayList<>();
         // 大题标题行解析出的「当前题型」与「每题分值」。真实 docx 没有逐题元数据行，
         // 题型与分值信息全部写在大题标题行（如「一、单选题（共30题，共60分）」）中。
         // sectionScore 为均分后的每题分值，在遇到新大题标题行时更新。
         String sectionType = null;
+        String sectionTypeLabel = null;
         int sectionScore = 0;
         // 是否已进入「参考答案」区块：该区块位于 docx 末尾，逐题列出标准答案，
         // 必须以题号回填到已解析的题目，而不是当作新题触发。
@@ -106,6 +109,7 @@ public class DocxParser {
             if (section != null) {
                 if (!inAnswerSection) {
                     sectionType = section.type;
+                    sectionTypeLabel = section.label;
                     sectionScore = section.score;
                 }
                 continue;
@@ -127,13 +131,15 @@ public class DocxParser {
                     fillAnswer(paper, text, stripped);
                     continue;
                 }
-                if (cur != null) flush(paper, cur, curStem, curStemImg, curOptions, curOptionImgs);
+                if (cur != null) flush(paper, cur, curStem, curStemImg, curStemBlocks, curOptions, curOptionImgs);
                 cur = new Question();
                 cur.hasAnswer = true;
-                // 赋值当前大题题型（单选题/多选题/判断题/实操题）
+                // 赋值当前大题题型（单选题/多选题/判断题/实操题），并保留 docx 原始题型名称用于展示
                 if (sectionType != null) cur.type = sectionType;
+                cur.typeLabel = sectionTypeLabel;
                 if (sectionScore > 0) cur.score = sectionScore;
                 curStem = new StringBuilder();
+                curStemBlocks = new ArrayList<>();
                 curOptions = new ArrayList<>();
                 curOptionImgs = new ArrayList<>();
                 curStemImg = null;
@@ -142,10 +148,12 @@ public class DocxParser {
                 // 若题干末尾附带分值后缀「（N分）」，则剥离并填充分值。
                 if (stripped.length() > 0) {
                     ScoreStripped ss = stripTrailingScore(stripped);
-                    curStem.append(ss.text);
+                    appendLine(curStem, ss.text);
+                    addStemText(curStemBlocks, ss.text);
                     if (ss.score > 0) cur.score = ss.score;
                 }
                 if (img != null) curStemImg = img;
+                addStemImages(curStemBlocks, p.imageRids);
                 continue;
             }
             if (cur == null) continue;
@@ -157,7 +165,10 @@ public class DocxParser {
                 continue;
             }
             if (text.startsWith("试题类型：")) {
-                cur.type = text.substring("试题类型：".length()).trim();
+                String raw = text.substring("试题类型：".length()).trim();
+                cur.typeLabel = raw;
+                String normalized = normalizeType(raw);
+                if (normalized != null) cur.type = normalized;
                 continue;
             }
             if (text.startsWith("标准答案：")) {
@@ -191,18 +202,23 @@ public class DocxParser {
             }
             if (!inOptions) {
                 // 题干及其续行（含题干图片）。若末段文本附带分值后缀「（N分）」，则剥离并填充分值。
+                // 各段落之间保留换行，使实操题/编程题等分点描述的格式与 docx 保持一致。
                 if (text.length() > 0) {
                     ScoreStripped ss = stripTrailingScore(text);
-                    curStem.append(ss.text);
+                    appendLine(curStem, ss.text);
+                    addStemText(curStemBlocks, ss.text);
                     if (ss.score > 0) cur.score = ss.score;
                 }
                 if (img != null && curStemImg == null) curStemImg = img;
+                // 同一题干的文字与多张图片都按出现顺序入块，渲染时逐块还原 docx 排版
+                addStemImages(curStemBlocks, p.imageRids);
             } else {
                 // 选项文本续行：真实 docx 中选项文字出现在选项字母（A.）的下一行，
-                // 需拼接到最后一个选项上；若为图片则附加到对应选项。
+                // 需拼接到最后一个选项上（保留换行）；若为图片则附加到对应选项。
                 if (text.length() > 0 && curOptions.size() > 0) {
                     int last = curOptions.size() - 1;
-                    curOptions.set(last, curOptions.get(last) + text);
+                    String prev = curOptions.get(last);
+                    curOptions.set(last, prev.isEmpty() ? text : prev + "\n" + text);
                 }
                 if (img != null && curOptions.size() > 0) {
                     int last = curOptions.size() - 1;
@@ -210,7 +226,7 @@ public class DocxParser {
                 }
             }
         }
-        flush(paper, cur, curStem, curStemImg, curOptions, curOptionImgs);
+        flush(paper, cur, curStem, curStemImg, curStemBlocks, curOptions, curOptionImgs);
 
         if (mediaDir != null && !mediaImages.isEmpty()) {
             mediaDir.mkdirs();
@@ -230,10 +246,14 @@ public class DocxParser {
 
     private static void flush(RobotExamBank.Paper paper, Question cur,
                               StringBuilder stem, String stemImg,
+                              List<Question.StemBlock> stemBlocks,
                               List<String> options, List<String> optionImgs) {
         if (cur == null) return;
         cur.stem = stem.toString().trim();
         if (stemImg != null) cur.stemImg = stemImg;
+        if (stemBlocks != null && !stemBlocks.isEmpty()) {
+            cur.stemBlocks = stemBlocks;
+        }
         if (!options.isEmpty()) {
             cur.options = options.toArray(new String[0]);
             boolean hasImg = false;
@@ -243,6 +263,11 @@ public class DocxParser {
                 for (int i = 0; i < options.size(); i++) arr[i] = optionImgs.get(i);
                 cur.optionImgs = arr;
             }
+        }
+        // 题型兜底：未能从大题标题识别题型时，有选项按选择题、无选项按实操题处理，
+        // 保证仍能渲染作答控件（未知题型名仍由 typeLabel 展示）。
+        if (cur.type == null) {
+            cur.type = options.isEmpty() ? Question.TYPE_PRACTICAL : Question.TYPE_SINGLE;
         }
         paper.questions.add(cur);
     }
@@ -349,26 +374,67 @@ public class DocxParser {
         int count = 0, total = 0;
         try { count = Integer.parseInt(m.group(2)); } catch (Exception ignore) {}
         try { total = Integer.parseInt(m.group(3)); } catch (Exception ignore) {}
-        String type = null;
-        if (title.contains("单选")) type = Question.TYPE_SINGLE;
-        else if (title.contains("多选")) type = Question.TYPE_MULTI;
-        else if (title.contains("判断")) type = Question.TYPE_JUDGE;
-        else if (title.contains("模型认知")) type = Question.TYPE_MULTI; // 模型认知为多选
-        else if (title.contains("实际操作") || title.contains("操作")
-                || title.contains("搭建") || title.contains("实操")) type = Question.TYPE_PRACTICAL;
+        // 题型归一化为内部逻辑类型；docx 原始名称（如「编程题」）单独作为展示用 label 保留
+        String type = normalizeType(title);
         int perScore = 0;
         if (count > 0 && total >= count && total % count == 0) {
             perScore = total / count;
         } else if (count > 0) {
             perScore = total / count;
         }
-        return new SectionInfo(type, perScore);
+        return new SectionInfo(type, title, perScore);
+    }
+
+    /**
+     * 将 docx 中的题型名称归一化为内部题型（决定作答交互），未知时返回 null。
+     * docx 中的原始名称由调用方单独保存用于展示，例如「编程题」按实操题处理但标签仍显示「编程题」。
+     */
+    private static String normalizeType(String raw) {
+        if (raw == null) return null;
+        String t = raw.trim();
+        if (t.isEmpty()) return null;
+        if (t.contains("单选")) return Question.TYPE_SINGLE;
+        if (t.contains("多选") || t.contains("模型认知")) return Question.TYPE_MULTI;
+        if (t.contains("判断")) return Question.TYPE_JUDGE;
+        if (t.contains("简答")) return Question.TYPE_SHORT;
+        if (t.contains("附件")) return Question.TYPE_ATTACH;
+        if (t.contains("实操") || t.contains("操作") || t.contains("搭建") || t.contains("编程")
+                || t.contains("设计") || t.contains("作图") || t.contains("编写")
+                || t.contains("实训") || t.contains("任务")) return Question.TYPE_PRACTICAL;
+        return null;
+    }
+
+    /** 追加一行文本：非空行之间以换行分隔，保持与 docx 一致的段落/分点换行格式。 */
+    private static void appendLine(StringBuilder sb, String line) {
+        if (sb == null || line == null || line.isEmpty()) return;
+        if (sb.length() > 0) sb.append('\n');
+        sb.append(line);
+    }
+
+    /** 题干文本块入队（空文本忽略）。 */
+    private static void addStemText(List<Question.StemBlock> blocks, String text) {
+        if (blocks == null || text == null || text.isEmpty()) return;
+        blocks.add(new Question.StemBlock(Question.StemBlock.KIND_TEXT, text));
+    }
+
+    /** 题干图片块入队：一个段落中的多张图片全部按顺序加入，实现「多图就多图」。 */
+    private static void addStemImages(List<Question.StemBlock> blocks, List<String> rids) {
+        if (blocks == null || rids == null || rids.isEmpty()) return;
+        for (String rid : rids) {
+            if (rid == null || rid.isEmpty()) continue;
+            blocks.add(new Question.StemBlock(Question.StemBlock.KIND_IMAGE, rid));
+        }
     }
 
     private static class SectionInfo {
         final String type;
+        final String label;
         final int score;
-        SectionInfo(String type, int score) { this.type = type; this.score = score; }
+        SectionInfo(String type, String label, int score) {
+            this.type = type;
+            this.label = label;
+            this.score = score;
+        }
     }
 
     /**
@@ -453,6 +519,13 @@ public class DocxParser {
             if (q.optionImgs != null) {
                 for (int i = 0; i < q.optionImgs.length; i++) {
                     q.optionImgs[i] = toFileName(q.optionImgs[i], relMap);
+                }
+            }
+            if (q.stemBlocks != null) {
+                for (Question.StemBlock b : q.stemBlocks) {
+                    if (b != null && b.kind == Question.StemBlock.KIND_IMAGE) {
+                        b.image = toFileName(b.image, relMap);
+                    }
                 }
             }
         }

@@ -1,30 +1,32 @@
 # Gradle
 .gradle/
 build/
-app/build/
+*/build/
 
-# Android
+# 历史构建产物目录（保留在本地，不纳入版本库）
+app/build_old/
+
+# 本地环境配置（包含本机 SDK 绝对路径）
 local.properties
-*.apk
-*.aab
-
-# Python 临时脚本
-*.py
-
-# 临时图片/文件
-*.jpg
-*.jpeg
-*.png
 
 # IDE
 .idea/
 *.iml
-.DS_Store
-
-# 环境
+*.ipr
+*.iws
 captures/
 
-# 上一轮 mv build build_old 产生的隔离目录
-build_old/
-app/build_old/
+# 构建产物
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+
+# 临时脚本
+*.py
+
+# 系统 / 临时文件
+.DS_Store
+Thumbs.db
 *.log

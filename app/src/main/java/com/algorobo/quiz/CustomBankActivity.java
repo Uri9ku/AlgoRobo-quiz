@@ -34,6 +34,7 @@ public class CustomBankActivity extends AppCompatActivity {
         setContentView(R.layout.activity_custom_bank);
         ThemeManager.applyStatusBar(this);
         ThemeManager.applyTopBarColor(this, R.id.topBar);
+        PageTitle.apply(this, R.id.tvPageTitle);
 
         tvCustomBankCount = findViewById(R.id.tvCustomBankCount);
         etStem = findViewById(R.id.etStem);

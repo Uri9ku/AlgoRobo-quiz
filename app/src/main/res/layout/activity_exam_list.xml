@@ -25,10 +25,11 @@
                 android:textSize="18sp"
                 android:textColor="@android:color/white" />
             <TextView
+                android:id="@+id/tvPageTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
-                android:text="编程题库"
+                android:text="真题练习"
                 android:textSize="18sp"
                 android:textStyle="bold"
                 android:textColor="@android:color/white" />

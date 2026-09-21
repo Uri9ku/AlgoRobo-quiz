@@ -121,6 +121,13 @@ public class DataStore {
     public static void setQuestionFontSp(Context c, float sp) {
         sp(c).edit().putFloat("setting_question_font_sp", sp).apply();
     }
+    // 草稿纸底色不透明度（0~100，默认 80）
+    public static int getDraftAlpha(Context c) {
+        return sp(c).getInt("setting_draft_alpha", 80);
+    }
+    public static void setDraftAlpha(Context c, int alpha) {
+        sp(c).edit().putInt("setting_draft_alpha", alpha).apply();
+    }
 
     public static Set<String> getCheckinDays(Context c) {
         return new HashSet<>(sp(c).getStringSet("checkin_days", new HashSet<>()));

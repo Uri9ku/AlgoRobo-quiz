@@ -25,6 +25,7 @@ public class KnowledgeActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_knowledge);
+        PageTitle.apply(this, R.id.tvPageTitle);
         findViewById(R.id.btnKnowledgeBack).setOnClickListener(v -> finish());
         findViewById(R.id.btnKnowledgeAdd).setOnClickListener(v -> showAddDialog());
 

@@ -22,11 +22,12 @@
             android:textColor="@color/text_on_primary" />
 
         <TextView
+            android:id="@+id/tvPageTitle"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center"
-            android:text="知识点库"
+            android:text="知识点专题"
             android:textSize="18sp"
             android:textStyle="bold"
             android:textColor="@color/text_on_primary" />

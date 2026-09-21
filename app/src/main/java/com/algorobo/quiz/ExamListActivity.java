@@ -78,6 +78,7 @@ public class ExamListActivity extends AppCompatActivity {
         setContentView(R.layout.activity_exam_list);
         ThemeManager.applyStatusBar(this);
         ThemeManager.applyTopBarColor(this, R.id.topBar);
+        PageTitle.apply(this, R.id.tvPageTitle);
 
         lvExams = findViewById(R.id.listExam);
         etSearch = findViewById(R.id.etExamSearch);
@@ -245,11 +246,12 @@ public class ExamListActivity extends AppCompatActivity {
             tv.setText(label);
             tv.setOnClickListener(v -> {
                 closeFabMenu();
-                if (label.equals("在线导入真题")) {
-                    importOnlineExams();
-                } else if (label.equals("打开真题下载目录")) {
+                String name = ((TextView) v).getText().toString();
+                if (name.equals("在线导入真题")) {
+                    importOnlineExams(name);
+                } else if (name.equals("打开真题下载目录")) {
                     openExamDir();
-                } else if (label.equals("清除全部真题")) {
+                } else if (name.equals("清除全部真题")) {
                     onClearExams();
                 }
             });
@@ -312,8 +314,9 @@ public class ExamListActivity extends AppCompatActivity {
 
     // ============ 在线导入真题 ============
     /** 进入在线导入真题页面（不再预加载，仓库数据由页面内按需懒加载）。 */
-    private void importOnlineExams() {
+    private void importOnlineExams(String pageTitle) {
         android.content.Intent it = new android.content.Intent(this, ImportOnlineActivity.class);
+        PageTitle.put(it, pageTitle);
         startActivityForResult(it, 1001);
     }
 

@@ -7,7 +7,7 @@
         android:strokeColor="#FFFFFF" android:strokeWidth="1.5"
         android:strokeLineJoin="round" android:strokeLineCap="round"
         android:pathData="M6,2.75H20V21.25H6Z M9.5,2.75V21.25" />
-    <!-- 加号：加入错题本 -->
+    <!-- 减号：从错题本移除 -->
     <path android:fillColor="#FFFFFF"
-        android:pathData="M11.75,11.25H18.25V12.75H11.75Z M14.25,8.75H15.75V15.25H14.25Z" />
+        android:pathData="M11.75,11.25H18.25V12.75H11.75Z" />
 </vector>

@@ -19,6 +19,7 @@ import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
@@ -41,11 +42,20 @@ public class QuizActivity extends AppCompatActivity {
     private TextView tvQuestionType, tvQuestion, tvKnowledgeTag, tvScore;
     private TextView btnStat;
     private ImageView ivStemImage;
+    /** 题干混排容器（文字/图片按 docx 顺序）。 */
+    private LinearLayout stemContainer;
+    /** 混排容器中动态创建的文字块，随字号设置同步缩放。 */
+    private final List<TextView> stemTextViews = new ArrayList<>();
     private LinearLayout optionsContainer;
     private LinearLayout actionContainer;
     private android.widget.ProgressBar pbProgress;
     private android.widget.ScrollView scrollQuestion;
     private GestureDetector gestureDetector;
+    /** 上次返回键/返回按钮的时间，用于「再按一次返回」的二次确认。 */
+    private long lastBackPressedTime;
+    private static final long BACK_CONFIRM_INTERVAL = 2000L;
+    /** 本次触摸起始于可横向滚动区域，需保留其自身滚动，不判为切题滑动。 */
+    private boolean swipeGestureBlocked;
     private LinearLayout questionContent;
 
     private ImageView btnToolTime, btnToolWrongbook, btnToolDownload, btnToolSheet, btnToolMore;
@@ -113,6 +123,7 @@ public class QuizActivity extends AppCompatActivity {
         btnStat = findViewById(R.id.btnStat);
         btnStat.setOnClickListener(v -> showQuestionStat());
         ivStemImage = findViewById(R.id.ivStemImage);
+        stemContainer = findViewById(R.id.stemContainer);
         optionsContainer = findViewById(R.id.optionsContainer);
         pbProgress = findViewById(R.id.pbProgress);
         questionContent = findViewById(R.id.questionContent);
@@ -149,7 +160,7 @@ public class QuizActivity extends AppCompatActivity {
 
         pbProgress.setMax(questions.size());
 
-        btnBack.setOnClickListener(v -> finish());
+        btnBack.setOnClickListener(v -> onBackPressed());
         btnToolTime.setOnClickListener(v -> toggleFavorite());
         btnToolWrongbook.setOnClickListener(v -> addToWrongBook());
         btnToolDownload.setOnClickListener(v -> showDraftPaper());
@@ -175,14 +186,60 @@ public class QuizActivity extends AppCompatActivity {
                 return false;
             }
         });
-        scrollQuestion.setOnTouchListener((v, event) -> {
-            gestureDetector.onTouchEvent(event);
-            return false;
-        });
 
         startTimer();
         applyFontScale();
         render();
+    }
+
+    /**
+     * 在 Activity 层统一接收触摸事件并交给手势识别：
+     * 图片、选项行、按钮等可点击子控件会独占触摸目标，导致原先挂在 ScrollView 上的
+     * 手势监听收不到事件——在图片上左右滑动因此无效（还会被识别成轻点放大）。
+     * 改为在此处统一分发，无论手指落在哪里都能识别左右滑动切题，
+     * 同时轻点图片仍走原有点击逻辑放大查看。
+     */
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        if (gestureDetector != null) {
+            final int action = ev.getActionMasked();
+            if (action == MotionEvent.ACTION_DOWN) {
+                swipeGestureBlocked = isInHorizontalScroller(ev);
+            }
+            if (!swipeGestureBlocked) {
+                boolean swiped = gestureDetector.onTouchEvent(ev);
+                if (swiped && action == MotionEvent.ACTION_UP) {
+                    // 已判定为左右滑动切题：吞掉抬起事件并给子控件补发取消，
+                    // 避免图片等子控件同时触发“点击放大”的误触。
+                    cancelChildGesture(ev);
+                    return true;
+                }
+            }
+        }
+        return super.dispatchTouchEvent(ev);
+    }
+
+    /** 滑动切题生效时，向被打断的子控件补发 ACTION_CANCEL，清除其按压状态。 */
+    private void cancelChildGesture(MotionEvent up) {
+        MotionEvent cancel = MotionEvent.obtain(up);
+        cancel.setAction(MotionEvent.ACTION_CANCEL);
+        super.dispatchTouchEvent(cancel);
+        cancel.recycle();
+    }
+
+    /** 判断触点是否落在题号索引条等横向滚动区域内（该区域保留自身横向滚动）。 */
+    private boolean isInHorizontalScroller(MotionEvent ev) {
+        android.view.View bar = findViewById(R.id.indexScroll);
+        if (bar == null || bar.getVisibility() != android.view.View.VISIBLE) {
+            return false;
+        }
+        android.graphics.Rect rect = new android.graphics.Rect();
+        if (!bar.getGlobalVisibleRect(rect)) {
+            return false;
+        }
+        float x = ev.getRawX();
+        float y = ev.getRawY();
+        return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
     }
 
     private List<Question> loadQuestions(String src) {
@@ -226,8 +283,12 @@ public class QuizActivity extends AppCompatActivity {
             }
         }
         if (title == null || title.isEmpty()) {
+            // 来源入口控件名称优先（由上游页面通过 PageTitle 传入）
+            title = getIntent().getStringExtra(PageTitle.EXTRA);
+        }
+        if (title == null || title.isEmpty()) {
             if ("wrong".equals(source)) title = "错题本";
-            else if ("favorite".equals(source)) title = "收藏夹";
+            else if ("favorite".equals(source)) title = "收藏题";
             else if ("custom".equals(source)) title = "自定义题库";
             else title = "全部真题";
         }
@@ -273,11 +334,13 @@ public class QuizActivity extends AppCompatActivity {
         Question q = questions.get(index);
         pbProgress.setProgress(index + 1);
         renderIndexBar();
-        tvQuestionType.setText(q.type);
+        // 题型标签：优先显示 docx 中的原始题型名称（如「编程题」），否则回退到内部题型
+        tvQuestionType.setText(q.typeLabel != null && !q.typeLabel.isEmpty() ? q.typeLabel : q.type);
         renderKnowledgeTag(q);
         renderScore(q);
         tvQuestion.setText((index + 1) + ". " + q.stem);
         renderStemImage(q);
+        renderStemBlocks(q);
 
         optionsContainer.removeAllViews();
         actionContainer.removeAllViews();
@@ -374,7 +437,7 @@ public class QuizActivity extends AppCompatActivity {
     // 展示题目分值：score > 0 时显示"分值：N分"，否则隐藏
     private void renderScore(Question q) {
         if (q.score > 0) {
-            tvScore.setText("分值：" + q.score + "分");
+            tvScore.setText(q.score + "分");
             tvScore.setVisibility(View.VISIBLE);
         } else {
             tvScore.setVisibility(View.GONE);
@@ -1027,6 +1090,22 @@ public class QuizActivity extends AppCompatActivity {
         TextView btnDraftClear = v.findViewById(R.id.btnDraftClear);
         TextView btnDraftSave = v.findViewById(R.id.btnDraftSave);
         TextView btnDraftClose = v.findViewById(R.id.btnDraftClose);
+        View draftRoot = v.findViewById(R.id.draftRoot);
+        SeekBar sbDraftAlpha = v.findViewById(R.id.sbDraftAlpha);
+        TextView tvDraftAlphaValue = v.findViewById(R.id.tvDraftAlphaValue);
+        // 打开时恢复上次设置的草稿纸透明度
+        final int[] alphaPercent = {DataStore.getDraftAlpha(this)};
+        applyDraftAlpha(draftRoot, tvDraftAlphaValue, sbDraftAlpha, alphaPercent[0]);
+        sbDraftAlpha.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                alphaPercent[0] = progress;
+                applyDraftAlpha(draftRoot, tvDraftAlphaValue, seekBar, progress);
+            }
+            @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+            @Override public void onStopTrackingTouch(SeekBar seekBar) {
+                DataStore.setDraftAlpha(QuizActivity.this, seekBar.getProgress());
+            }
+        });
         // 打开时恢复本题已有草稿
         ArrayList<DrawPadView.StrokeData> saved = draftByQuestion.get(index);
         if (saved != null) {
@@ -1040,6 +1119,7 @@ public class QuizActivity extends AppCompatActivity {
         btnDraftClose.setOnClickListener(x -> {
             // 关闭时自动保存本题草稿
             draftByQuestion.put(index, drawPad.getStrokeData());
+            DataStore.setDraftAlpha(this, alphaPercent[0]);
             d.dismiss();
         });
         Window w = d.getWindow();
@@ -1049,6 +1129,34 @@ public class QuizActivity extends AppCompatActivity {
             w.setBackgroundDrawableResource(android.R.color.transparent);
         }
         d.show();
+    }
+
+    /** 按百分比设置草稿纸底色不透明度：0% 完全透明（只看笔迹），100% 完全不透明。 */
+    private void applyDraftAlpha(View draftRoot, TextView valueView, SeekBar seekBar, int percent) {
+        if (percent < 0) percent = 0;
+        if (percent > 100) percent = 100;
+        int alpha = Math.round(percent * 255f / 100f);
+        if (draftRoot != null) {
+            draftRoot.setBackgroundColor(android.graphics.Color.argb(alpha, 255, 255, 255));
+        }
+        if (valueView != null) {
+            valueView.setText(percent + "%");
+        }
+        if (seekBar != null && seekBar.getProgress() != percent) {
+            seekBar.setProgress(percent);
+        }
+    }
+
+    /** 返回上一页需要二次确认：首次返回给出 toast 提示，2 秒内再次返回才真正退出。 */
+    @Override
+    public void onBackPressed() {
+        long now = System.currentTimeMillis();
+        if (now - lastBackPressedTime > BACK_CONFIRM_INTERVAL) {
+            lastBackPressedTime = now;
+            showToast("再按一次返回上一页");
+            return;
+        }
+        super.onBackPressed();
     }
     private void showMorePanel() {
         Dialog d = new Dialog(this);
@@ -1103,8 +1211,9 @@ public class QuizActivity extends AppCompatActivity {
         btnToolTime.setImageResource(DataStore.isFavorite(this, q.uniqueKey())
                 ? R.drawable.ic_tool_favorite_filled : R.drawable.ic_tool_favorite);
         boolean inWrong = DataStore.getWrongIds(this).contains(q.uniqueKey());
+        // 未加入时显示「加入错题本」图标，已加入时显示「移出错题本」图标，与点击后的行为一致
         btnToolWrongbook.setImageResource(inWrong
-                ? R.drawable.ic_tool_wrongbook_filled : R.drawable.ic_tool_wrongbook);
+                ? R.drawable.ic_tool_wrongbook_remove : R.drawable.ic_tool_wrongbook);
     }
 
     private void applyFontScale() {
@@ -1113,6 +1222,9 @@ public class QuizActivity extends AppCompatActivity {
         if (a < 11f) a = 11f;
         tvQuestion.setTextSize(q);
         tvAnalysisText.setTextSize(a);
+        for (TextView t : stemTextViews) {
+            t.setTextSize(q);
+        }
     }
     private void updateThemeButtons(TextView btnThemeDay, TextView btnThemeNight) {
         int mode = DataStore.getDarkMode(this);
@@ -1274,6 +1386,88 @@ public class QuizActivity extends AppCompatActivity {
         } else {
             ivStemImage.setVisibility(View.GONE);
         }
+    }
+
+    /**
+     * 按 docx 原始顺序渲染题干：文字块用 TextView、图片块用 ImageView，支持「一段文字 + 多张图片」混排。
+     * 有 stemBlocks 时接管题干展示（隐藏 tvQuestion/ivStemImage），否则保持旧版「文字 + 单图」排版。
+     */
+    private void renderStemBlocks(Question q) {
+        if (stemContainer == null) return;
+        stemContainer.removeAllViews();
+        stemTextViews.clear();
+        List<Question.StemBlock> blocks = q.stemBlocks;
+        if (blocks == null || blocks.isEmpty()) {
+            stemContainer.setVisibility(View.GONE);
+            // 恢复旧版「整段文字 + 单图」展示
+            tvQuestion.setVisibility(View.VISIBLE);
+            return;
+        }
+        stemContainer.setVisibility(View.VISIBLE);
+        // 题干已由块容器接管，隐藏旧版的整段文本与单张图片
+        tvQuestion.setVisibility(View.GONE);
+        ivStemImage.setVisibility(View.GONE);
+
+        boolean numbered = false;
+        StringBuilder pending = new StringBuilder();
+        for (Question.StemBlock b : blocks) {
+            if (b == null) continue;
+            if (b.kind == Question.StemBlock.KIND_TEXT) {
+                if (b.text == null || b.text.isEmpty()) continue;
+                // 连续的文字段落合并为一个 TextView（内部换行），保持 docx 的紧凑排版
+                if (pending.length() > 0) pending.append('\n');
+                pending.append(b.text);
+                continue;
+            }
+            // 遇到图片：先输出前面累积的文字，再按原顺序插入图片
+            numbered = flushStemText(pending, numbered);
+            addStemImageBlock(b);
+        }
+        numbered = flushStemText(pending, numbered);
+        // 全部块都无内容（如图片加载失败）时回退到纯文本展示，避免题干丢失
+        if (stemContainer.getChildCount() == 0) {
+            stemContainer.setVisibility(View.GONE);
+            tvQuestion.setVisibility(View.VISIBLE);
+            tvQuestion.setText((index + 1) + ". " + q.stem);
+        }
+    }
+
+    /** 把累积的题干文字输出为一个 TextView（首个文字块带题号），返回是否已输出题号。 */
+    private boolean flushStemText(StringBuilder pending, boolean numbered) {
+        if (pending.length() == 0) return numbered;
+        TextView tv = new TextView(this);
+        tv.setTextSize(DataStore.getQuestionFontSp(this));
+        tv.setTextColor(getColor(R.color.text_main));
+        tv.setLineSpacing(dp(4), 1f);
+        tv.setText(numbered ? pending.toString() : (index + 1) + ". " + pending);
+        if (stemContainer.getChildCount() > 0) {
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            lp.topMargin = dp(8);
+            tv.setLayoutParams(lp);
+        }
+        stemTextViews.add(tv);
+        stemContainer.addView(tv);
+        pending.setLength(0);
+        return true;
+    }
+
+    /** 追加一个题干图片块（点击可放大查看）。 */
+    private void addStemImageBlock(Question.StemBlock b) {
+        final android.graphics.Bitmap bmp = loadMediaBitmap(b.image);
+        if (bmp == null) return;
+        ImageView iv = new ImageView(this);
+        iv.setImageBitmap(bmp);
+        iv.setAdjustViewBounds(true);
+        iv.setMaxHeight(dp(240));
+        iv.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        iv.setContentDescription("题干图片");
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = dp(8);
+        iv.setLayoutParams(lp);
+        iv.setOnClickListener(v -> showImageDialog(bmp));
+        stemContainer.addView(iv);
     }
     private void showImageDialog(android.graphics.Bitmap bmp) {
         if (bmp == null) return;

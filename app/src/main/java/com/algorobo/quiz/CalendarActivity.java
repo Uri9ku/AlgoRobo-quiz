@@ -23,6 +23,7 @@ public class CalendarActivity extends AppCompatActivity {
         setContentView(R.layout.activity_calendar);
         ThemeManager.applyStatusBar(this);
         ThemeManager.applyTopBarColor(this, R.id.topBar);
+        PageTitle.apply(this, R.id.tvPageTitle);
 
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());
         tvMonth = findViewById(R.id.tvMonth);

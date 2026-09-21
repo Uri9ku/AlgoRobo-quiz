@@ -26,6 +26,7 @@ public class AllAnalysisActivity extends AppCompatActivity {
         setContentView(R.layout.activity_analysis);
         ThemeManager.applyStatusBar(this);
         ThemeManager.applyTopBarColor(this, R.id.topBar);
+        PageTitle.apply(this, R.id.tvAnalysisTitle);
 
         java.io.Serializable data = getIntent().getSerializableExtra("records");
         if (data instanceof List) {

@@ -39,6 +39,7 @@ public class SettingsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
         ThemeManager.applyStatusBar(this);
+        PageTitle.apply(this, R.id.tvPageTitle);
         tvToastValue = findViewById(R.id.tvToastValue);
         tvAnimValue = findViewById(R.id.tvAnimValue);
         tvDarkModeValue = findViewById(R.id.tvDarkModeValue);
@@ -460,7 +461,9 @@ public class SettingsActivity extends AppCompatActivity {
 
     private void initAiConfig() {
         findViewById(R.id.btnAiModelConfig).setOnClickListener(v -> {
-            startActivity(new Intent(this, AiConfigActivity.class));
+            Intent i = new Intent(this, AiConfigActivity.class);
+            PageTitle.put(i, (TextView) findViewById(R.id.labelAiModelConfig));
+            startActivity(i);
         });
     }
 
