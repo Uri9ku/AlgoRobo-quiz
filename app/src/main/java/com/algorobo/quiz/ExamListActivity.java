@@ -634,17 +634,64 @@ public class ExamListActivity extends AppCompatActivity {
             return;
         }
         if (item.downloaded) {
-            new androidx.appcompat.app.AlertDialog.Builder(this)
-                    .setTitle("该真题已下载过")
-                    .setMessage("原文件已保存到下载目录：\n" + RobotExamBank.examDirPath(this)
-                            + "\n\n是否打开该目录，或再次下载？")
-                    .setPositiveButton("打开目录", (d, w) -> DataStore.openExamDir(this, this))
-                    .setNeutralButton("再次下载", (d, w) -> doDownload(item))
-                    .setNegativeButton("取消", null)
-                    .show();
+            // 自定义弹窗：AlertDialog 同时用 setItems + setMessage 会导致列表项被消息覆盖
+            LinearLayout box = new LinearLayout(this);
+            box.setOrientation(LinearLayout.VERTICAL);
+            box.setPadding(dp(20), dp(4), dp(20), dp(4));
+            TextView info = new TextView(this);
+            info.setText("原文件已保存到：\n" + RobotExamBank.examDirPath(this));
+            info.setTextSize(13);
+            info.setTextColor(getColor(R.color.text_sub));
+            box.addView(info);
+            final String[] actions = {"打开目录", "再次下载", "同步知识点"};
+            final androidx.appcompat.app.AlertDialog dialog =
+                    new androidx.appcompat.app.AlertDialog.Builder(this)
+                            .setTitle("该真题已下载过")
+                            .setView(box)
+                            .setNegativeButton("取消", null)
+                            .create();
+            for (int i = 0; i < actions.length; i++) {
+                final int which = i;
+                TextView row = new TextView(this);
+                row.setText(actions[i]);
+                row.setTextSize(16);
+                row.setTextColor(getColor(i == 2 ? R.color.primary : R.color.text_main));
+                row.setPadding(0, dp(14), 0, dp(14));
+                row.setOnClickListener(v -> {
+                    dialog.dismiss();
+                    if (which == 0) DataStore.openExamDir(this, this);
+                    else if (which == 1) doDownload(item);
+                    else syncKnowledge(item);
+                });
+                box.addView(row);
+            }
+            dialog.show();
             return;
         }
         doDownload(item);
+    }
+
+    /** dp → px（弹窗内边距用）。 */
+    private int dp(int v) {
+        return Math.round(v * getResources().getDisplayMetrics().density);
+    }
+
+    /** 从仓库 _meta/knowledge_map 同步该卷知识点（回填题目 + 写入本地缓存）。 */
+    private void syncKnowledge(final Item item) {
+        if (item.key == null) return;
+        Toast.makeText(this, "正在同步知识点…", Toast.LENGTH_SHORT).show();
+        new Thread(() -> {
+            final int n = RobotExamBank.applyKnowledgeMap(this, item.key);
+            runOnUiThread(() -> {
+                if (n > 0) {
+                    Toast.makeText(this, "已同步 " + n + " 题的知识点", Toast.LENGTH_LONG).show();
+                } else if (n == 0) {
+                    Toast.makeText(this, "该卷知识点映射为空", Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(this, "同步失败：无网络，或该卷尚未收录知识点映射", Toast.LENGTH_LONG).show();
+                }
+            });
+        }).start();
     }
     /**
      * 自动补齐尚未下载的真题：导入后回到本页即自动抓取 GitHub 原卷并解析入库。

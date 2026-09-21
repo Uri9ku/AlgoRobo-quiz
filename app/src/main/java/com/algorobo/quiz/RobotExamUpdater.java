@@ -113,6 +113,23 @@ public class RobotExamUpdater {
         return httpGetBytes(url);
     }
 
+    /** 知识点映射文件地址：仓库 _meta/knowledge_map/<paperKey>.json */
+    private static final String KNOWLEDGE_MAP_BASE =
+            "https://raw.githubusercontent.com/Uri9ku/CIE-Robot-Exam/main/_meta/knowledge_map/";
+
+    /** 拉取某套真题的知识点映射 JSON 文本；失败（无网/未收录）返回 null。 */
+    public static String fetchKnowledgeMap(Context ctx, String paperKey) {
+        if (paperKey == null || paperKey.isEmpty()) return null;
+        try {
+            byte[] data = httpGetBytes(KNOWLEDGE_MAP_BASE + paperKey + ".json");
+            if (data == null || data.length == 0) return null;
+            return new String(data, "UTF-8");
+        } catch (Exception e) {
+            Log.w(TAG, "拉取知识点映射失败: " + paperKey, e);
+            return null;
+        }
+    }
+
     /** 将 docx 字节写入当前下载目录（默认系统 Download，可在设置更改），返回绝对路径。 */
     public static String saveDocxToExamDir(Context ctx, String fileName, byte[] data)
             throws Exception {

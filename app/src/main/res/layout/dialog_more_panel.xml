@@ -59,6 +59,16 @@
             android:text="刷题模式" android:textSize="15sp" android:textColor="@color/text_main"
             android:background="@drawable/bg_option_normal"/>
     </LinearLayout>
+    <!-- 知识点标签显示/隐藏 -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginTop="16dp" android:orientation="horizontal" android:gravity="center_vertical">
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:text="显示知识点标签" android:textSize="14sp"
+            android:textColor="@color/text_sub"/>
+        <androidx.appcompat.widget.SwitchCompat android:id="@+id/swKnowledgeTag"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+    </LinearLayout>
+
     <!-- 做题用时（本卷总用时） -->
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_marginTop="16dp" android:orientation="horizontal" android:gravity="center_vertical">

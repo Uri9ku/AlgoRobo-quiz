@@ -62,6 +62,7 @@ public class QuizActivity extends AppCompatActivity {
 
     private LinearLayout analysisPanel;
     private TextView tvResultText, tvAnswerText, tvAnalysisText;
+    private TextView btnShowAnalysis;
     private TextView btnAiAnalysis;
     private TextView tvAiAnalysis;
     private MarkdownUtil markdownRenderer;
@@ -107,6 +108,7 @@ public class QuizActivity extends AppCompatActivity {
             finish();
             return;
         }
+        maybeSyncKnowledge();
         if (random) Collections.shuffle(questions);
         if (resume && resumeIndex >= 0 && resumeIndex < questions.size()) {
             index = resumeIndex;
@@ -135,6 +137,7 @@ public class QuizActivity extends AppCompatActivity {
         tvResultText = findViewById(R.id.tvResultText);
         tvAnswerText = findViewById(R.id.tvAnswerText);
         tvAnalysisText = findViewById(R.id.tvAnalysisText);
+        btnShowAnalysis = findViewById(R.id.btnShowAnalysis);
         btnAiAnalysis = findViewById(R.id.btnAiAnalysis);
         tvAiAnalysis = findViewById(R.id.tvAiAnalysis);
         markdownRenderer = new MarkdownUtil(
@@ -242,6 +245,44 @@ public class QuizActivity extends AppCompatActivity {
         float x = ev.getRawX();
         float y = ev.getRawY();
         return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+    }
+
+    /**
+     * 纸卷若尚无知识点，后台从仓库 _meta/knowledge_map 同步一次，成功后只刷新当前题的标签
+     * （不动题目列表与作答状态，避免索引错位）。
+     */
+    private void maybeSyncKnowledge() {
+        if (source == null || !source.startsWith("paper:")) return;
+        for (Question q : questions) {
+            if (q.knowledgePoints != null && q.knowledgePoints.length > 0) return;
+        }
+        final String key = source.substring("paper:".length());
+        new Thread(() -> {
+            final int n = RobotExamBank.applyKnowledgeMap(this, key);
+            if (n <= 0 || isFinishing()) return;
+            runOnUiThread(() -> {
+                java.util.List<Question> fresh = RobotExamBank.getQuestions(this, key);
+                java.util.Map<String, String[]> byUid = new java.util.HashMap<>();
+                for (Question q : fresh) {
+                    if (q.knowledgePoints != null && q.knowledgePoints.length > 0) {
+                        byUid.put(q.uniqueKey(), q.knowledgePoints);
+                    }
+                }
+                if (byUid.isEmpty()) return;
+                boolean touched = false;
+                for (Question q : questions) {
+                    String[] kps = byUid.get(q.uniqueKey());
+                    if (kps != null) {
+                        q.knowledgePoints = kps;
+                        touched = true;
+                    }
+                }
+                if (touched && index >= 0 && index < questions.size()) {
+                    renderKnowledgeTag(questions.get(index));
+                    showToast("已同步本题知识点");
+                }
+            });
+        }).start();
     }
 
     private List<Question> loadQuestions(String src) {
@@ -418,23 +459,38 @@ public class QuizActivity extends AppCompatActivity {
     }
     // 展示题目知识点标签：多知识点用「/」连接；无知识点则隐藏
     private void renderKnowledgeTag(Question q) {
+        if (!DataStore.isKnowledgeTagVisible(this)) {
+            tvKnowledgeTag.setVisibility(View.GONE);
+            return;
+        }
         String[] kps = q.knowledgePoints;
         if (kps == null || kps.length == 0) {
             tvKnowledgeTag.setVisibility(View.GONE);
             return;
         }
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < kps.length; i++) {
-            if (kps[i] == null || kps[i].trim().isEmpty()) continue;
-            if (sb.length() > 0) sb.append(" / ");
-            sb.append(kps[i].trim());
+        // 注意：知识点名本身可能含「/」（如「简单机械原理 / 杠杆」），
+        // 因此数量按数组计，不能用字符串拆分统计。
+        java.util.List<String> list = new java.util.ArrayList<>();
+        for (String s : kps) {
+            if (s != null && !s.trim().isEmpty()) list.add(s.trim());
         }
-        if (sb.length() == 0) {
+        if (list.isEmpty()) {
             tvKnowledgeTag.setVisibility(View.GONE);
             return;
         }
-        tvKnowledgeTag.setText(sb.toString());
+        // 分值旁只显示首要知识点（取叶子名，避免「父 / 子」长串被截断），点击查看全部
+        String first = list.get(0);
+        int slash = first.lastIndexOf(" / ");
+        tvKnowledgeTag.setText(slash >= 0 ? first.substring(slash + 3) : first);
         tvKnowledgeTag.setVisibility(View.VISIBLE);
+        final String all = list.size() == 1 ? list.get(0)
+                : android.text.TextUtils.join("\n· ", list);
+        tvKnowledgeTag.setOnClickListener(v ->
+                new androidx.appcompat.app.AlertDialog.Builder(this)
+                        .setTitle("本题知识点")
+                        .setMessage(all.startsWith("·") || !all.contains("\n") ? all : "· " + all)
+                        .setPositiveButton("知道了", null)
+                        .show());
     }
     // 展示题目分值：score > 0 时显示"分值：N分"，否则隐藏
     private void renderScore(Question q) {
@@ -842,8 +898,26 @@ public class QuizActivity extends AppCompatActivity {
                 ? getColor(R.color.answer_correct_text)
                 : getColor(R.color.answer_wrong_text));
         tvAnswerText.setText("正确答案：" + correctStr);
-        tvAnalysisText.setText(markdownRenderer.render(q.analysis == null ? "" : q.analysis));
-        renderAnalysisImages(q);
+        // 解析文本默认折叠：显示「解析」按钮，点击展开/收起
+        final String analysisText = q.analysis == null ? "" : q.analysis.trim();
+        tvAnalysisText.setText(markdownRenderer.render(analysisText));
+        tvAnalysisText.setVisibility(View.GONE);
+        if (analysisText.isEmpty()) {
+            btnShowAnalysis.setVisibility(View.GONE);
+        } else {
+            btnShowAnalysis.setVisibility(View.VISIBLE);
+            btnShowAnalysis.setText("解析");
+            btnShowAnalysis.setOnClickListener(v -> {
+                boolean show = tvAnalysisText.getVisibility() != View.VISIBLE;
+                tvAnalysisText.setVisibility(show ? View.VISIBLE : View.GONE);
+                btnShowAnalysis.setText(show ? "收起解析" : "解析");
+            });
+        }
+        // 答题框内不再重复展示题目图片（图片只在题干区显示一次）
+        if (analysisImagesContainer != null) {
+            analysisImagesContainer.removeAllViews();
+            analysisImagesContainer.setVisibility(View.GONE);
+        }
         // AI 解析区：重置 + 缓存优先恢复 + 自动触发判断
         resetAiAnalysis();
         if (hasAiAnalysisCached(q)) {
@@ -1185,6 +1259,14 @@ public class QuizActivity extends AppCompatActivity {
         btnModeRecite.setOnClickListener(x -> { brushMode = false; updateModeButtons(btnModeRecite, btnModeBrush); showToast("已切换为背题模式，点击选项后立即显示答案"); render(); });
         btnModeBrush.setOnClickListener(x -> { brushMode = true; updateModeButtons(btnModeRecite, btnModeBrush); showToast("已切换为刷题模式，交卷前不显示答案"); render(); });
         updateModeButtons(btnModeRecite, btnModeBrush);
+        // 知识点标签显示/隐藏
+        androidx.appcompat.widget.SwitchCompat swKnowledgeTag = v.findViewById(R.id.swKnowledgeTag);
+        swKnowledgeTag.setChecked(DataStore.isKnowledgeTagVisible(this));
+        swKnowledgeTag.setOnCheckedChangeListener((b, checked) -> {
+            DataStore.setKnowledgeTagVisible(this, checked);
+            renderKnowledgeTag(questions.get(index));
+            showToast(checked ? "已显示知识点标签" : "已隐藏知识点标签");
+        });
         // 做题用时实时刷新
         if (moreTimeRunnable != null) handler.removeCallbacks(moreTimeRunnable);
         moreTimeRunnable = new Runnable() {

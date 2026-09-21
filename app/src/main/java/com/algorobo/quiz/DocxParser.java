@@ -101,6 +101,8 @@ public class DocxParser {
         // 是否已进入「参考答案」区块：该区块位于 docx 末尾，逐题列出标准答案，
         // 必须以题号回填到已解析的题目，而不是当作新题触发。
         boolean inAnswerSection = false;
+        // 答案区块当前回填到第几题（-1 表示尚未定位）：用于把该题的 试题解析/难度 等元数据回填
+        int answerQIdx = -1;
         for (Para p : paras) {
             String text = p.text.replace('\u00a0', ' ').trim();
             String img = p.firstImageRid();
@@ -147,7 +149,7 @@ public class DocxParser {
             if (stripped != null) {
                 if (inAnswerSection) {
                     // 答案区块内的题号行：剥离题号后即为答案内容，回填到对应题目。
-                    fillAnswer(paper, text, stripped);
+                    answerQIdx = fillAnswer(paper, text, stripped);
                     continue;
                 }
                 if (cur != null) flush(paper, cur, curStem, curStemImg, curStemBlocks, curOptions, curOptionImgs);
@@ -180,7 +182,42 @@ public class DocxParser {
                 continue;
             }
             if (cur == null) continue;
-            if (inAnswerSection) continue;
+            if (inAnswerSection) {
+                // 答案区块里除题号行外，还有逐题的元数据（试题编号/类型/标准答案/分值/难度/解析）。
+                // 之前一律跳过，导致「试题解析」丢失；这里回填到当前答案题。
+                if (answerQIdx >= 0 && answerQIdx < paper.questions.size()) {
+                    Question aq = paper.questions.get(answerQIdx);
+                    if (text.startsWith("试题解析：")) {
+                        aq.analysis = text.substring("试题解析：".length()).trim();
+                        continue;
+                    }
+                    if (text.startsWith("试题难度：")) {
+                        aq.difficulty = text.substring("试题难度：".length()).trim();
+                        continue;
+                    }
+                    if (text.startsWith("标准答案：")) {
+                        setAnswer(aq, text.substring("标准答案：".length()).trim());
+                        continue;
+                    }
+                    if (text.startsWith("试题分值：") || text.startsWith("分值：")) {
+                        String pfx = text.startsWith("试题分值：") ? "试题分值：" : "分值：";
+                        int sc = parseScore(text.substring(pfx.length()).trim());
+                        if (sc > 0) aq.score = sc;
+                        continue;
+                    }
+                    if (text.startsWith("试题编号：") || text.startsWith("试题类型：")
+                            || text.startsWith("考生答案：") || text.startsWith("考生得分：")
+                            || text.startsWith("是否评分：") || text.startsWith("评价描述：")) {
+                        continue;
+                    }
+                    if (isSectionTitle(text)) continue;
+                    // 其余为解析/评分标准等续行：追加到解析
+                    if (aq.analysis != null && !aq.analysis.isEmpty()) {
+                        aq.analysis = aq.analysis + "\n" + text;
+                    }
+                }
+                continue;
+            }
             if (text.startsWith("试题编号：")) {
                 // 试题编号只是元数据，仅设置 id，不触发新题。
                 String idStr = text.substring("试题编号：".length()).trim();
@@ -256,16 +293,19 @@ public class DocxParser {
         flush(paper, cur, curStem, curStemImg, curStemBlocks, curOptions, curOptionImgs);
 
         if (mediaDir != null && !mediaImages.isEmpty()) {
-            mediaDir.mkdirs();
+            // 按试卷 key 分目录存放：不同 docx 内部图片都叫 imageN，平铺会互相覆盖，
+            // 导致刷题时出现「不同题目的图片混杂在一起」。
+            File subDir = (key == null || key.isEmpty()) ? mediaDir : new File(mediaDir, key);
+            subDir.mkdirs();
             for (Map.Entry<String, byte[]> e : mediaImages.entrySet()) {
                 String relTarget = e.getKey();
                 String fileName = relTarget.substring("media/".length());
-                File out = new File(mediaDir, fileName);
+                File out = new File(subDir, fileName);
                 FileOutputStream fos = new FileOutputStream(out);
                 fos.write(e.getValue());
                 fos.close();
             }
-            resolveImageRefs(paper, relMap);
+            resolveImageRefs(paper, relMap, key);
         }
 
         return paper;
@@ -475,17 +515,17 @@ public class DocxParser {
      * text 为原始行（如 "1．D"），stripped 为剥离题号后的内容（如 "D"）。
      * 按题号匹配 paper.questions 中的题目（题号 = questions 列表索引 + 1）。
      */
-    private static void fillAnswer(RobotExamBank.Paper paper, String text, String stripped) {
-        if (paper.questions == null || paper.questions.isEmpty()) return;
+    private static int fillAnswer(RobotExamBank.Paper paper, String text, String stripped) {
+        if (paper.questions == null || paper.questions.isEmpty()) return -1;
         // 从原始行提取题号
         java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(\\d+)\\s*[\\.．]").matcher(text);
-        if (!m.find()) return;
+        if (!m.find()) return -1;
         int qid = 0;
         try { qid = Integer.parseInt(m.group(1)); } catch (Exception ignore) {}
-        if (qid <= 0) return;
+        if (qid <= 0) return -1;
         // 题目列表索引即题号-1（题目题号从 1 开始连续递增）
         int idx = qid - 1;
-        if (idx < 0 || idx >= paper.questions.size()) return;
+        if (idx < 0 || idx >= paper.questions.size()) return -1;
         Question q = paper.questions.get(idx);
         String ans = stripped == null ? "" : stripped.trim();
         // 剥离开包裹的括号或「评分项：」等前缀
@@ -493,10 +533,11 @@ public class DocxParser {
         // 实操题答案 "50．评分项：" 表示该题为实操评分，无客观答案
         if (ans.startsWith("评分项") || ans.startsWith("搭建") || ans.isEmpty()) {
             q.hasAnswer = false;
-            return;
+            return idx;
         }
         q.hasAnswer = true;
         setAnswer(q, ans);
+        return idx;
     }
 
     /**
@@ -594,25 +635,25 @@ public class DocxParser {
         return text;
     }
 
-    private static void resolveImageRefs(RobotExamBank.Paper paper, Map<String, String> relMap) {
+    private static void resolveImageRefs(RobotExamBank.Paper paper, Map<String, String> relMap, String key) {
         for (Question q : paper.questions) {
-            q.stemImg = toFileName(q.stemImg, relMap);
+            q.stemImg = toFileName(q.stemImg, relMap, key);
             if (q.optionImgs != null) {
                 for (int i = 0; i < q.optionImgs.length; i++) {
-                    q.optionImgs[i] = toFileName(q.optionImgs[i], relMap);
+                    q.optionImgs[i] = toFileName(q.optionImgs[i], relMap, key);
                 }
             }
             if (q.stemBlocks != null) {
                 for (Question.StemBlock b : q.stemBlocks) {
                     if (b != null && b.kind == Question.StemBlock.KIND_IMAGE) {
-                        b.image = toFileName(b.image, relMap);
+                        b.image = toFileName(b.image, relMap, key);
                     }
                 }
             }
         }
     }
 
-    private static String toFileName(String rid, Map<String, String> relMap) {
+    private static String toFileName(String rid, Map<String, String> relMap, String key) {
         if (rid == null || rid.isEmpty()) return rid;
         // 兼容多值/脏数据引用（如 "rId4|rId5"）：取第一个能解析到的 rId，避免图片无法显示
         if (rid.indexOf('|') >= 0) {
@@ -620,15 +661,18 @@ public class DocxParser {
                 String p = part.trim();
                 if (p.isEmpty()) continue;
                 String mapped = relMap.get(p);
-                if (mapped != null) {
-                    return mapped.startsWith("media/") ? mapped.substring("media/".length()) : mapped;
-                }
+                if (mapped != null) return withKey(mapped, key);
             }
         }
         String target = relMap.get(rid);
         if (target == null) return rid;
-        if (target.startsWith("media/")) return target.substring("media/".length());
-        return target;
+        return withKey(target, key);
+    }
+
+    /** 把 rels 里的 media/imageN 映射为「按试卷分目录」的相对路径：<key>/imageN。 */
+    private static String withKey(String target, String key) {
+        String name = target.startsWith("media/") ? target.substring("media/".length()) : target;
+        return (key == null || key.isEmpty()) ? name : (key + "/" + name);
     }
 
     private static class Para {

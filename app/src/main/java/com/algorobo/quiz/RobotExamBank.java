@@ -110,6 +110,9 @@ public class RobotExamBank {
         });
         if (data == null || data.length == 0) throw new Exception("下载失败");
 
+        // 重新解析前先快照旧知识点：网络异常导致映射同步失败时，不至于把已有知识点清空
+        Map<String, String[]> kpBefore = snapshotKnowledge(old);
+
         String saveName = (preferredName == null || preferredName.isEmpty())
                 ? old.sourceName : preferredName;
         String savedPath = RobotExamUpdater.saveDocxToExamDir(ctx, saveName, data);
@@ -117,6 +120,7 @@ public class RobotExamBank {
         if (cb != null) cb.onParsing();
         Paper parsed = DocxParser.parse(data, paperKey, ctx.getFilesDir());
         if (parsed == null) throw new Exception("解析 docx 失败");
+        restoreKnowledge(parsed, kpBefore);
         parsed.key = paperKey;
         parsed.title = old.title;
         parsed.period = old.period;
@@ -129,6 +133,8 @@ public class RobotExamBank {
 
         map.put(paperKey, parsed);
         RobotExamUpdater.saveCachePublic(ctx, map);
+        // 顺带回填知识点（仓库 _meta/knowledge_map），失败不影响刷题
+        applyKnowledgeMap(ctx, paperKey);
         return parsed.questions == null ? 0 : parsed.questions.size();
     }
 
@@ -153,6 +159,10 @@ public class RobotExamBank {
         });
         if (data == null || data.length == 0) throw new Exception("下载失败");
 
+        Map<String, Paper> map0 = RobotExamUpdater.loadCache(ctx);
+        Paper prev0 = map0 == null ? null : map0.get(ra.key);
+        Map<String, String[]> kpBefore = snapshotKnowledge(prev0);
+
         String savedPath = null;
         if (saveDocx) {
             String saveName = (preferredName == null || preferredName.isEmpty())
@@ -163,6 +173,7 @@ public class RobotExamBank {
         if (cb != null) cb.onParsing();
         Paper parsed = DocxParser.parse(data, ra.key, ctx.getFilesDir());
         if (parsed == null) throw new Exception("解析 docx 失败");
+        restoreKnowledge(parsed, kpBefore);
         parsed.key = ra.key;
         parsed.title = ra.title;
         parsed.period = ra.period;
@@ -182,12 +193,80 @@ public class RobotExamBank {
 
         map.put(ra.key, parsed);
         RobotExamUpdater.saveCachePublic(ctx, map);
+        // 顺带回填知识点（仓库 _meta/knowledge_map），失败不影响刷题
+        applyKnowledgeMap(ctx, ra.key);
         return parsed;
     }
 
     /** 下载目录路径（供提示文案使用）。 */
     public static String examDirPath(Context ctx) {
         return DataStore.getExamDir(ctx);
+    }
+
+    /** 快照一套卷已有知识点（uid → 知识点），用于重新解析后回填。 */
+    private static Map<String, String[]> snapshotKnowledge(Paper p) {
+        Map<String, String[]> out = new java.util.HashMap<>();
+        if (p == null || p.questions == null) return out;
+        for (Question q : p.questions) {
+            if (q != null && q.knowledgePoints != null && q.knowledgePoints.length > 0) {
+                out.put(q.uniqueKey(), q.knowledgePoints);
+            }
+        }
+        return out;
+    }
+
+    /** 把快照里的知识点回填到新解析结果（仅补空缺，不覆盖已有）。 */
+    private static void restoreKnowledge(Paper parsed, Map<String, String[]> snapshot) {
+        if (parsed == null || parsed.questions == null || snapshot == null || snapshot.isEmpty()) return;
+        for (Question q : parsed.questions) {
+            if (q == null) continue;
+            if (q.knowledgePoints != null && q.knowledgePoints.length > 0) continue;
+            String[] kp = snapshot.get(q.uniqueKey());
+            if (kp != null) q.knowledgePoints = kp;
+        }
+    }
+
+    /**
+     * 用仓库 _meta/knowledge_map/&lt;paperKey&gt;.json 回填该卷每道题的知识点（按卷内题号对应），
+     * 并写入本地缓存，之后刷题页即可离线显示知识点标签。
+     * @return 回填成功的题目数；-1 表示拉取或解析失败（无网 / 尚未收录该卷）
+     */
+    public static int applyKnowledgeMap(Context ctx, String paperKey) {
+        String json = RobotExamUpdater.fetchKnowledgeMap(ctx, paperKey);
+        if (json == null || json.isEmpty()) return -1;
+        try {
+            com.google.gson.JsonObject root =
+                    com.google.gson.JsonParser.parseString(json).getAsJsonObject();
+            if (root == null || !root.has("points")) return -1;
+            com.google.gson.JsonObject points = root.getAsJsonObject("points");
+            Map<String, Paper> map = RobotExamUpdater.loadCache(ctx);
+            if (map == null) return -1;
+            Paper p = map.get(paperKey);
+            if (p == null || p.questions == null) return -1;
+            int applied = 0;
+            for (Question q : p.questions) {
+                if (q == null || q.uid == null) continue;
+                int hash = q.uid.lastIndexOf('#');
+                if (hash < 0) continue;
+                String idx = q.uid.substring(hash + 1);
+                if (!points.has(idx) || points.get(idx).isJsonNull()) continue;
+                com.google.gson.JsonArray arr = points.getAsJsonArray(idx);
+                java.util.List<String> list = new java.util.ArrayList<>();
+                for (com.google.gson.JsonElement el : arr) {
+                    if (el == null || el.isJsonNull()) continue;
+                    String s = el.getAsString();
+                    if (s != null && !s.trim().isEmpty()) list.add(s.trim());
+                }
+                if (list.isEmpty()) continue;
+                q.knowledgePoints = list.toArray(new String[0]);
+                applied++;
+            }
+            if (applied > 0) RobotExamUpdater.saveCachePublic(ctx, map);
+            return applied;
+        } catch (Exception e) {
+            Log.w(TAG, "解析知识点映射失败: " + paperKey, e);
+            return -1;
+        }
     }
 
     public static List<Question> getQuestions(Context ctx, String paperKey) {

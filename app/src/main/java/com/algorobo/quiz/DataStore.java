@@ -480,7 +480,6 @@ public class DataStore {
     public static boolean isBadgeVisible(Context c) {
         return sp(c).getBoolean("setting_badge_visible", true);
     }
-
     public static void setBadgeVisible(Context c, boolean on) {
         sp(c).edit().putBoolean("setting_badge_visible", on).apply();
     }
@@ -492,6 +491,15 @@ public class DataStore {
 
     public static void setBadgeAnimDuration(Context c, int ms) {
         sp(c).edit().putInt("setting_badge_anim_ms", ms).apply();
+    }
+
+    /** 刷题页是否显示「知识点」标签（分值右侧），默认显示。 */
+    public static boolean isKnowledgeTagVisible(Context c) {
+        return sp(c).getBoolean("setting_knowledge_tag_visible", true);
+    }
+
+    public static void setKnowledgeTagVisible(Context c, boolean on) {
+        sp(c).edit().putBoolean("setting_knowledge_tag_visible", on).apply();
     }
 
     // 知识点缓存：key 为题目唯一标识，value 为识别出的知识点文本
