@@ -363,38 +363,9 @@ public class MainActivity extends AppCompatActivity {
             tv.setText(String.valueOf(newCount));
             return;
         }
-        final int h = box.getHeight();
-        final boolean increase = newCount > oldCount;
-        // 1) 复制一份「旧数字」用于滑出（动画结束移除）
-        if (oldCount > 0) {
-            TextView outgoing = makeBadgeNumber(tv, oldCount, h);
-            box.addView(outgoing);
-            outgoing.animate().translationY(increase ? h : -h)
-                    .setDuration(animDuration())
-                    .withEndAction(() -> box.removeView(outgoing))
-                    .start();
-        }
-        // 2) 常驻 TextView 换成新数字，从对侧滑入到原位
-        tv.setText(String.valueOf(newCount));
-        tv.setTranslationY(increase ? -h : h);
-        tv.animate().translationY(0f).setDuration(animDuration()).start();
-    }
-
-    /** 克隆角标数字样式，用于动画中的临时视图。 */
-    private TextView makeBadgeNumber(TextView src, int value, int heightPx) {
-        TextView v = new TextView(this);
-        v.setText(String.valueOf(value));
-        v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, src.getTextSize());
-        v.setTextColor(src.getCurrentTextColor());
-        v.setTypeface(src.getTypeface());
-        v.setGravity(Gravity.CENTER);
-        v.setIncludeFontPadding(false);
-        v.setPadding(src.getPaddingLeft(), 0, src.getPaddingRight(), 0);
-        android.widget.FrameLayout.LayoutParams lp = new android.widget.FrameLayout.LayoutParams(
-                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT, heightPx);
-        lp.gravity = Gravity.CENTER;
-        v.setLayoutParams(lp);
-        return v;
+        // 复用统一的数字滑动动画（新值滑入、旧值滑出）
+        String oldText = oldCount > 0 ? String.valueOf(oldCount) : "";
+        CountSlideAnim.play(box, tv, oldText, String.valueOf(newCount), animDuration());
     }
 
     /** 角标动画时长：跟随设置里的「角标数字变化速度」。 */

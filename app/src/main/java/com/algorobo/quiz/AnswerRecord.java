@@ -17,6 +17,10 @@ public class AnswerRecord implements Serializable {
     public boolean hasAnswer;
     public String difficulty;
     public int[] userAnswerIndexes;
+    /** 题目唯一键：用于复用 AI 解析缓存（与刷题页一致）。 */
+    public String uid;
+    /** 知识点：全部解析页复用刷题页的知识点标签。 */
+    public String[] knowledgePoints;
 
     public AnswerRecord(Question q, int userAnswer) {
         this.id = q.id;
@@ -32,6 +36,8 @@ public class AnswerRecord implements Serializable {
         this.judgeAnswer = q.judgeAnswer;
         this.hasAnswer = q.hasAnswer;
         this.difficulty = q.difficulty;
+        this.uid = q.uniqueKey();
+        this.knowledgePoints = q.knowledgePoints;
     }
 
     public boolean isAnswered() {

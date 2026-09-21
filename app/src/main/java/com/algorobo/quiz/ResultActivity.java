@@ -42,7 +42,6 @@ public class ResultActivity extends AppCompatActivity {
         CheckBox cbHidePractical = findViewById(R.id.cbHidePractical);
         cbHidePractical.setOnCheckedChangeListener((btn, checked) -> render(checked));
         render(false);
-
         findViewById(R.id.btnResultHome).setOnClickListener(v -> finish());
         findViewById(R.id.btnResultAgain).setOnClickListener(v -> {
             android.content.Intent intent = new android.content.Intent(this, AllAnalysisActivity.class);
@@ -52,7 +51,8 @@ public class ResultActivity extends AppCompatActivity {
     }
 
     /**
-     * 渲染统计。hidePractical=true 时剔除主观题（实操题/编程题/搭建题/简答题/附件题）后重新统计。
+     * 渲染统计。hidePractical=true 时剔除主观题（实操题/编程题/搭建题/简答题/附件题）后重新统计；
+     * 数值变化使用与首页角标一致的滑动动画。
      */
     private void render(boolean hidePractical) {
         int total = totalOriginal;
@@ -66,12 +66,17 @@ public class ResultActivity extends AppCompatActivity {
                 if (r.isCorrect()) correct++;
             }
         }
-        int wrong = total - correct;
+        int wrong = Math.max(0, total - correct);
         int score = total > 0 ? (int) Math.round(correct * 100.0 / total) : 0;
-        tvScore.setText(String.valueOf(score));
-        tvCorrect.setText("答对 " + correct);
-        tvWrong.setText("答错 " + wrong);
-        tvAccuracy.setText(score + "%");
+
+        android.widget.FrameLayout scoreBox = findViewById(R.id.scoreBox);
+        android.widget.FrameLayout correctBox = findViewById(R.id.correctBox);
+        android.widget.FrameLayout wrongBox = findViewById(R.id.wrongBox);
+        android.widget.FrameLayout accuracyBox = findViewById(R.id.accuracyBox);
+        CountSlideAnim.play(scoreBox, tvScore, tvScore.getText().toString(), String.valueOf(score));
+        CountSlideAnim.play(correctBox, tvCorrect, tvCorrect.getText().toString(), "答对 " + correct);
+        CountSlideAnim.play(wrongBox, tvWrong, tvWrong.getText().toString(), "答错 " + wrong);
+        CountSlideAnim.play(accuracyBox, tvAccuracy, tvAccuracy.getText().toString(), score + "%");
     }
 
     /** 主观题判定：实操题/简答题/附件题（含解析得到的“编程题/搭建题”等均归入实操题）。 */

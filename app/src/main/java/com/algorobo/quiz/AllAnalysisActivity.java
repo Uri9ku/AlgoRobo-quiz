@@ -19,6 +19,8 @@ import java.util.List;
 
 public class AllAnalysisActivity extends AppCompatActivity {
     private List<AnswerRecord> records = new ArrayList<>();
+    /** Markdown 渲染（AI 解析文本复用刷题页的渲染方式）。 */
+    private MarkdownUtil markdownRenderer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,6 +29,7 @@ public class AllAnalysisActivity extends AppCompatActivity {
         ThemeManager.applyStatusBar(this);
         ThemeManager.applyTopBarColor(this, R.id.topBar);
         PageTitle.apply(this, R.id.tvAnalysisTitle);
+        markdownRenderer = new MarkdownUtil(getColor(R.color.text_main), getColor(R.color.accent));
 
         java.io.Serializable data = getIntent().getSerializableExtra("records");
         if (data instanceof List) {
@@ -79,13 +82,116 @@ public class AllAnalysisActivity extends AppCompatActivity {
                 h.result.setText("实务题（人工评分）");
                 h.result.setTextColor(getColor(R.color.text_sub));
             } else {
-                h.result.setText(correct ? "✓ 正确" : "✗ 错误");
+                h.result.setText(correct ? "回答正确" : "回答错误");
                 h.result.setTextColor(getColor(correct
                         ? R.color.answer_correct_text
                         : R.color.answer_wrong_text));
             }
             h.detail.setText(r.analysis == null || r.analysis.isEmpty() ? "（暂无解析）" : r.analysis);
+            bindKnowledge(h, r);
+            bindAnalysisToggle(h);
+            bindAiAnalysis(h, r);
             renderRecordImages(h, r);
+        }
+
+        /** 题型右侧显示知识点（复用刷题页逻辑：显示首要知识点的叶子名，点击看全部）。 */
+        private void bindKnowledge(Holder h, AnswerRecord r) {
+            java.util.List<String> list = new java.util.ArrayList<>();
+            if (r.knowledgePoints != null) {
+                for (String s : r.knowledgePoints) {
+                    if (s != null && !s.trim().isEmpty()) list.add(s.trim());
+                }
+            }
+            if (list.isEmpty()) {
+                h.knowledge.setVisibility(View.GONE);
+                return;
+            }
+            String first = list.get(0);
+            int slash = first.lastIndexOf(" / ");
+            h.knowledge.setText(slash >= 0 ? first.substring(slash + 3) : first);
+            h.knowledge.setVisibility(View.VISIBLE);
+            final String all = list.size() == 1 ? first : android.text.TextUtils.join("\n· ", list);
+            h.knowledge.setOnClickListener(v -> new androidx.appcompat.app.AlertDialog.Builder(AllAnalysisActivity.this)
+                    .setTitle("本题知识点")
+                    .setMessage(all.contains("\n") ? "· " + all : all)
+                    .setPositiveButton("知道了", null)
+                    .show());
+        }
+
+        /** 解析的收起/展开控件（默认展开）。 */
+        private void bindAnalysisToggle(Holder h) {
+            h.detail.setVisibility(View.VISIBLE);
+            h.btnToggle.setText("收起");
+            h.btnToggle.setOnClickListener(v -> {
+                boolean show = h.detail.getVisibility() != View.VISIBLE;
+                h.detail.setVisibility(show ? View.VISIBLE : View.GONE);
+                h.btnToggle.setText(show ? "收起" : "展开");
+            });
+        }
+
+        /** AI 解析：优先用缓存，点击按钮按需生成（与刷题页同一套缓存与接口）。 */
+        private void bindAiAnalysis(Holder h, final AnswerRecord r) {
+            String cached = r.uid == null ? null : DataStore.getAiAnalysis(AllAnalysisActivity.this, r.uid);
+            if (cached != null && !cached.trim().isEmpty()) {
+                h.aiDetail.setText(markdownRenderer.render("AI 解析，酌情参考：\n" + cached.trim()));
+                h.aiDetail.setVisibility(View.VISIBLE);
+            } else {
+                h.aiDetail.setVisibility(View.GONE);
+            }
+            h.btnAi.setOnClickListener(v -> triggerAi(h, r));
+        }
+
+        private void triggerAi(final Holder h, final AnswerRecord r) {
+            if (r.uid != null) {
+                String cached = DataStore.getAiAnalysis(AllAnalysisActivity.this, r.uid);
+                if (cached != null && !cached.trim().isEmpty()) {
+                    h.aiDetail.setText(markdownRenderer.render("AI 解析，酌情参考：\n" + cached.trim()));
+                    h.aiDetail.setVisibility(View.VISIBLE);
+                    return;
+                }
+            }
+            AiApi.Config cfg = DataStore.getCurrentAiConfig(AllAnalysisActivity.this);
+            if (cfg == null || !cfg.isComplete()) {
+                android.widget.Toast.makeText(AllAnalysisActivity.this,
+                        "请先在「AI 模型配置」里配置模型和 API Key", android.widget.Toast.LENGTH_LONG).show();
+                return;
+            }
+            final Question q = toQuestion(r);
+            final String userAnswerText = formatUserAnswer(r);
+            h.aiDetail.setVisibility(View.VISIBLE);
+            h.aiDetail.setText("AI 正在解析中…");
+            new Thread(() -> {
+                final AiApi.Result res = AiApi.analyzeQuestion(AllAnalysisActivity.this, cfg, q, userAnswerText, r.isCorrect());
+                runOnUiThread(() -> {
+                    if (res != null && res.ok) {
+                        if (r.uid != null) DataStore.setAiAnalysis(AllAnalysisActivity.this, r.uid, res.text);
+                        h.aiDetail.setText(markdownRenderer.render("AI 解析，酌情参考：\n" + res.text));
+                    } else {
+                        h.aiDetail.setText("AI 解析失败：" + (res == null ? "未知错误" : res.text));
+                    }
+                    h.aiDetail.setVisibility(View.VISIBLE);
+                });
+            }).start();
+        }
+
+        /** 由答题记录还原 Question（复用刷题页的 AI 解析与知识点逻辑）。 */
+        private Question toQuestion(AnswerRecord r) {
+            Question q = new Question();
+            q.id = r.id;
+            q.type = r.type;
+            q.stem = r.stem;
+            q.options = r.options;
+            q.answerIndex = r.answerIndex;
+            q.analysis = r.analysis;
+            q.stemImg = r.stemImg;
+            q.optionImgs = r.optionImgs;
+            q.answerIndexes = r.answerIndexes;
+            q.judgeAnswer = r.judgeAnswer;
+            q.hasAnswer = r.hasAnswer;
+            q.difficulty = r.difficulty;
+            q.uid = r.uid;
+            q.knowledgePoints = r.knowledgePoints;
+            return q;
         }
         private void renderRecordImages(Holder h, AnswerRecord r) {
             // 题干图片
@@ -243,6 +349,7 @@ public class AllAnalysisActivity extends AppCompatActivity {
 
         class Holder extends RecyclerView.ViewHolder {
             TextView index, type, stem, options, user, correctAns, result, detail;
+            TextView knowledge, btnAi, btnToggle, aiDetail;
             ImageView ivStemImage;
             LinearLayout analysisOptionImages;
             Holder(View v) {
@@ -255,6 +362,10 @@ public class AllAnalysisActivity extends AppCompatActivity {
                 correctAns = v.findViewById(R.id.tvAnalysisCorrectAns);
                 result = v.findViewById(R.id.tvAnalysisResult);
                 detail = v.findViewById(R.id.tvAnalysisDetail);
+                knowledge = v.findViewById(R.id.tvAnalysisKnowledge);
+                btnAi = v.findViewById(R.id.btnAnalysisAi);
+                btnToggle = v.findViewById(R.id.btnAnalysisToggle);
+                aiDetail = v.findViewById(R.id.tvAnalysisAiDetail);
                 ivStemImage = v.findViewById(R.id.ivAnalysisStemImage);
                 analysisOptionImages = v.findViewById(R.id.analysisOptionImages);
             }
