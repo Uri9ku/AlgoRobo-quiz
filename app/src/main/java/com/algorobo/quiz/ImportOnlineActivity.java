@@ -46,6 +46,8 @@ public class ImportOnlineActivity extends AppCompatActivity {
         boolean active;        // 是否为当前正在下载的那一条
     }
     private final List<Cand> all = new ArrayList<>();
+    /** 候选条目缓存（key -> Cand）：切换来源仓库/全部分类时保留下载进度、解析状态与勾选态。 */
+    private final java.util.Map<String, Cand> candCache = new java.util.HashMap<>();
     private final List<Cand> shown = new ArrayList<>();
     private ListView lv;
     private BaseAdapter adapter;
@@ -110,7 +112,7 @@ public class ImportOnlineActivity extends AppCompatActivity {
                 TextView tvSub = convertView.findViewById(R.id.tvImportSub);
                 TextView tvRepo = convertView.findViewById(R.id.tvImportRepo);
                 CheckBox cb = convertView.findViewById(R.id.cbImportSelect);
-                // 勾选框可见性由选择模式驱动：选择模式下可见，取消后隐藏
+                // 勾选框可见性由选择模式驱动：导入过程中也允许继续勾选（只是隐藏底部工具栏）
                 cb.setVisibility(selectMode ? View.VISIBLE : View.GONE);
                 tvTitle.setText(ra.title != null ? ra.title : ra.fileName);
                 String sub = ra.fileName;
@@ -154,7 +156,6 @@ public class ImportOnlineActivity extends AppCompatActivity {
         };
         lv.setAdapter(adapter);
         lv.setOnItemClickListener((parent, view, position, id) -> {
-            if (importing) return;  // 导入过程中不接受勾选操作
             Cand c = shown.get(position);
             c.selected = !c.selected;
             selectMode = true; // 条目点击勾选即进入选择模式
@@ -305,11 +306,7 @@ public class ImportOnlineActivity extends AppCompatActivity {
                 all.clear();
                 for (RobotExamUpdater.ReleaseAsset ra : allAssets) {
                     if (existing != null && existing.containsKey(ra.key)) continue;
-                    Cand c = new Cand();
-                    c.asset = ra;
-                    c.year = parseYearFromPeriod(ra.period);
-                    c.month = parseMonthFromPeriod(ra.period);
-                    all.add(c);
+                    all.add(candFor(ra));
                 }
                 if (all.isEmpty()) {
                     showLoadingHint("所有在线真题均已在本地缓存");
@@ -319,6 +316,20 @@ public class ImportOnlineActivity extends AppCompatActivity {
                 apply();
             });
         }).start();
+    }
+
+    /** 取得（或复用）候选条目：切换仓库/全部分类时保留下载进度、解析状态与勾选态。 */
+    private Cand candFor(RobotExamUpdater.ReleaseAsset ra) {
+        String key = ra.key != null ? ra.key : ra.fileName;
+        Cand c = candCache.get(key);
+        if (c == null) {
+            c = new Cand();
+            candCache.put(key, c);
+        }
+        c.asset = ra;
+        c.year = parseYearFromPeriod(ra.period);
+        c.month = parseMonthFromPeriod(ra.period);
+        return c;
     }
 
     /** 点击仓库后异步抓取该仓库的 release 列表并展示。 */
@@ -355,11 +366,7 @@ public class ImportOnlineActivity extends AppCompatActivity {
                 all.clear();
                 for (RobotExamUpdater.ReleaseAsset ra : assets) {
                     if (existing != null && existing.containsKey(ra.key)) continue;
-                    Cand c = new Cand();
-                    c.asset = ra;
-                    c.year = parseYearFromPeriod(ra.period);
-                    c.month = parseMonthFromPeriod(ra.period);
-                    all.add(c);
+                    all.add(candFor(ra));
                 }
                 if (all.isEmpty()) {
                     showLoadingHint("该仓库所有在线真题均已在本地缓存");
@@ -423,9 +430,8 @@ public class ImportOnlineActivity extends AppCompatActivity {
             Toast.makeText(this, "请先勾选要导入的真题", Toast.LENGTH_SHORT).show();
             return;
         }
-        // 导入期间：隐藏勾选框与底部工具栏，逐条在右下角显示「下载进度 → 解析中 → 解析完成」
+        // 导入期间：底部工具栏隐藏（避免重复触发导入），但列表仍可勾选（可先选好下一批）
         importing = true;
-        selectMode = false;
         for (Cand c : chosen) {
             // 立即置为 0%，让列表控件在点击「导入」后马上显示状态（等待中/0%→100%）
             c.percent = 0;
