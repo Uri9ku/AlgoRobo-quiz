@@ -29,6 +29,9 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvExamTypeName;
     private LinearLayout llCategories;
     private LinearLayout llGreenContainer;
+    /** 角标上次显示的数量（-1 表示尚未初始化）：用于判断变大/变小以播放滑动动画。 */
+    private int lastWrongCount = -1;
+    private int lastFavoriteCount = -1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -295,12 +298,108 @@ public class MainActivity extends AppCompatActivity {
     private void bindBadges() {
         int wrong = DataStore.getWrongIds(this).size();
         int favorite = DataStore.getFavoriteIds(this).size();
-        TextView badgeWrong = findViewById(R.id.badgeWrong);
-        TextView badgeFavorite = findViewById(R.id.badgeFavorite);
-        if (wrong > 0) { badgeWrong.setVisibility(View.VISIBLE); badgeWrong.setText(String.valueOf(wrong)); }
-        else badgeWrong.setVisibility(View.GONE);
-        if (favorite > 0) { badgeFavorite.setVisibility(View.VISIBLE); badgeFavorite.setText(String.valueOf(favorite)); }
-        else badgeFavorite.setVisibility(View.GONE);
+        android.widget.FrameLayout wrongBox = findViewById(R.id.badgeWrongBox);
+        android.widget.FrameLayout favBox = findViewById(R.id.badgeFavoriteBox);
+        TextView wrongTv = findViewById(R.id.badgeWrong);
+        TextView favTv = findViewById(R.id.badgeFavorite);
+        if (!DataStore.isBadgeVisible(this)) {
+            hideBadge(wrongBox, wrongTv);
+            hideBadge(favBox, favTv);
+            lastWrongCount = wrong;
+            lastFavoriteCount = favorite;
+            return;
+        }
+        updateBadge(wrongBox, wrongTv, lastWrongCount, wrong);
+        updateBadge(favBox, favTv, lastFavoriteCount, favorite);
+        lastWrongCount = wrong;
+        lastFavoriteCount = favorite;
+    }
+
+    /** 设置中关闭「显示数量角标」时：隐藏并清理动画残留。 */
+    private void hideBadge(android.widget.FrameLayout box, TextView tv) {
+        if (box == null || tv == null) return;
+        for (int i = box.getChildCount() - 1; i >= 0; i--) {
+            android.view.View child = box.getChildAt(i);
+            if (child != tv) box.removeView(child);
+        }
+        tv.animate().cancel();
+        tv.setTranslationY(0f);
+        tv.setText("0");
+        box.setVisibility(View.GONE);
+    }
+
+    /**
+     * 更新数量角标，并在数量变化时播放「上下滑动顶替」动画：
+     * 变大 → 新数字从上方滑入、旧数字向下滑出；变小 → 新数字从下方滑入、旧数字向上滑出。
+     */
+    private void updateBadge(final android.widget.FrameLayout box, final TextView tv,
+                             int oldCount, final int newCount) {
+        if (box == null || tv == null) return;
+        // 清掉上一次动画遗留的临时视图
+        for (int i = box.getChildCount() - 1; i >= 0; i--) {
+            android.view.View child = box.getChildAt(i);
+            if (child != tv) box.removeView(child);
+        }
+        if (newCount <= 0) {
+            if (oldCount > 0 && box.getVisibility() == View.VISIBLE && box.getHeight() > 0) {
+                // 归零：旧数字向上滑出后隐藏
+                tv.animate().translationY(-box.getHeight()).setDuration(animDuration())
+                        .withEndAction(() -> {
+                            tv.setTranslationY(0f);
+                            tv.setText("0");
+                            box.setVisibility(View.GONE);
+                        }).start();
+            } else {
+                tv.setTranslationY(0f);
+                tv.setText("0");
+                box.setVisibility(View.GONE);
+            }
+            return;
+        }
+        box.setVisibility(View.VISIBLE);
+        // 首次显示 / 数字未变 / 尚未布局完成：直接赋值，不做动画
+        if (oldCount < 0 || oldCount == newCount || box.getHeight() <= 0) {
+            tv.setTranslationY(0f);
+            tv.setText(String.valueOf(newCount));
+            return;
+        }
+        final int h = box.getHeight();
+        final boolean increase = newCount > oldCount;
+        // 1) 复制一份「旧数字」用于滑出（动画结束移除）
+        if (oldCount > 0) {
+            TextView outgoing = makeBadgeNumber(tv, oldCount, h);
+            box.addView(outgoing);
+            outgoing.animate().translationY(increase ? h : -h)
+                    .setDuration(animDuration())
+                    .withEndAction(() -> box.removeView(outgoing))
+                    .start();
+        }
+        // 2) 常驻 TextView 换成新数字，从对侧滑入到原位
+        tv.setText(String.valueOf(newCount));
+        tv.setTranslationY(increase ? -h : h);
+        tv.animate().translationY(0f).setDuration(animDuration()).start();
+    }
+
+    /** 克隆角标数字样式，用于动画中的临时视图。 */
+    private TextView makeBadgeNumber(TextView src, int value, int heightPx) {
+        TextView v = new TextView(this);
+        v.setText(String.valueOf(value));
+        v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, src.getTextSize());
+        v.setTextColor(src.getCurrentTextColor());
+        v.setTypeface(src.getTypeface());
+        v.setGravity(Gravity.CENTER);
+        v.setIncludeFontPadding(false);
+        v.setPadding(src.getPaddingLeft(), 0, src.getPaddingRight(), 0);
+        android.widget.FrameLayout.LayoutParams lp = new android.widget.FrameLayout.LayoutParams(
+                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT, heightPx);
+        lp.gravity = Gravity.CENTER;
+        v.setLayoutParams(lp);
+        return v;
+    }
+
+    /** 角标动画时长：跟随设置里的「角标数字变化速度」。 */
+    private int animDuration() {
+        return Math.max(80, DataStore.getBadgeAnimDuration(this));
     }
 
     private void bindResume() {

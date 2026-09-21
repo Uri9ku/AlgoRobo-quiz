@@ -101,7 +101,9 @@ public class QuizActivity extends AppCompatActivity {
             random = false; // 恢复时沿用快照顺序，不再重新随机
         }
         if (questions.isEmpty()) {
-            showToast("暂无题目");
+            // 区分「某套真题没解析到题目」与「当前没有可练的题」，便于用户重新导入
+            showToast(source != null && source.startsWith("paper:")
+                    ? "该套真题没有可用题目，请重新导入" : "暂无题目");
             finish();
             return;
         }
@@ -539,7 +541,7 @@ public class QuizActivity extends AppCompatActivity {
         answered[index] = true;
         questionDurations[index] = elapsed - questionStartTimes[index];
         boolean correct = isCurrentCorrect();
-        DataStore.recordAnswer(this, String.valueOf(q.id), correct, q.type);
+        DataStore.recordAnswer(this, q.uniqueKey(), correct, q.type);
         DataStore.setFirstAnswer(this, q.uniqueKey(), -1);
         if (correct) handleCorrectAnswer(q); else handleWrongAnswer(q);
         if (brushMode) {
@@ -584,7 +586,7 @@ public class QuizActivity extends AppCompatActivity {
         answered[index] = true;
         questionDurations[index] = elapsed - questionStartTimes[index];
         boolean correct = isCurrentCorrect();
-        DataStore.recordAnswer(this, String.valueOf(q.id), correct, q.type);
+        DataStore.recordAnswer(this, q.uniqueKey(), correct, q.type);
         DataStore.setFirstAnswer(this, q.uniqueKey(), opt);
         if (correct) handleCorrectAnswer(q); else handleWrongAnswer(q);
         if (brushMode) {
@@ -625,7 +627,7 @@ public class QuizActivity extends AppCompatActivity {
         answered[index] = true;
         questionDurations[index] = elapsed - questionStartTimes[index];
         boolean correct = isCurrentCorrect();
-        DataStore.recordAnswer(this, String.valueOf(q.id), correct, q.type);
+        DataStore.recordAnswer(this, q.uniqueKey(), correct, q.type);
         if (correct) handleCorrectAnswer(q); else handleWrongAnswer(q);
         if (brushMode) {
             highlightChosenOnly(q);
@@ -642,7 +644,7 @@ public class QuizActivity extends AppCompatActivity {
         answered[index] = true;
         questionDurations[index] = elapsed - questionStartTimes[index];
         boolean correct = isCurrentCorrect();
-        DataStore.recordAnswer(this, String.valueOf(q.id), correct, q.type);
+        DataStore.recordAnswer(this, q.uniqueKey(), correct, q.type);
         DataStore.setFirstAnswer(this, q.uniqueKey(), val);
         if (correct) handleCorrectAnswer(q); else handleWrongAnswer(q);
         if (brushMode) {
@@ -1061,7 +1063,7 @@ public class QuizActivity extends AppCompatActivity {
 
     private void showQuestionStat() {
         Question q = questions.get(index);
-        int[] st = DataStore.getQuestionStat(this, String.valueOf(q.id));
+        int[] st = DataStore.getQuestionStat(this, q.uniqueKey());
         int total = st[0], right = st[1], wrong = total - right;
         TextView tv = new TextView(this);
         tv.setText("已做 " + total + " 次，答对 " + right + " 次，答错 " + wrong + " 次");

@@ -92,6 +92,12 @@ public class DocxParser {
         String sectionType = null;
         String sectionTypeLabel = null;
         int sectionScore = 0;
+        // 大题内的题数（来自标题「共N题」）与已建题数：用于防止大题正文里的分点被拆成新题。
+        int sectionQuota = 0;
+        int sectionStarted = 0;
+        // 题号连续性判断：大题首题接受任意题号，其余必须等于期望题号（上一题号+1）。
+        boolean sectionFresh = true;
+        int expectedQNum = 0;
         // 是否已进入「参考答案」区块：该区块位于 docx 末尾，逐题列出标准答案，
         // 必须以题号回填到已解析的题目，而不是当作新题触发。
         boolean inAnswerSection = false;
@@ -111,6 +117,11 @@ public class DocxParser {
                     sectionType = section.type;
                     sectionTypeLabel = section.label;
                     sectionScore = section.score;
+                    // 新大题开始：重置题号连续性判断与配额
+                    sectionQuota = section.count;
+                    sectionStarted = 0;
+                    sectionFresh = true;
+                    expectedQNum = 0;
                 }
                 continue;
             }
@@ -125,6 +136,14 @@ public class DocxParser {
             // 实操卷的评分项编号（如 "1.器件及器件连接（20分）"、"3.功能实现（60分）"）
             // 同样以「N.」开头，但不属于题目，必须排除，否则会多算题数。
             if (stripped != null && isScoringItemText(stripped)) stripped = null;
+            // 大题正文里的分点（如编程题的「1.准备工作」「2.功能实现」）同样以「N.」开头，
+            // 但不是新题：只有题号接得上（大题首题除外）且不是分点标题时才拆新题。
+            int qnum = questionNumber(text);
+            if (stripped != null && !inAnswerSection
+                    && !isNewQuestionStart(qnum, stripped, expectedQNum,
+                            sectionFresh, sectionQuota, sectionStarted)) {
+                stripped = null;
+            }
             if (stripped != null) {
                 if (inAnswerSection) {
                     // 答案区块内的题号行：剥离题号后即为答案内容，回填到对应题目。
@@ -134,6 +153,10 @@ public class DocxParser {
                 if (cur != null) flush(paper, cur, curStem, curStemImg, curStemBlocks, curOptions, curOptionImgs);
                 cur = new Question();
                 cur.hasAnswer = true;
+                // 题号连续性状态推进
+                expectedQNum = qnum > 0 ? qnum + 1 : 0;
+                sectionFresh = false;
+                sectionStarted++;
                 // 赋值当前大题题型（单选题/多选题/判断题/实操题），并保留 docx 原始题型名称用于展示
                 if (sectionType != null) cur.type = sectionType;
                 cur.typeLabel = sectionTypeLabel;
@@ -204,7 +227,11 @@ public class DocxParser {
                 // 题干及其续行（含题干图片）。若末段文本附带分值后缀「（N分）」，则剥离并填充分值。
                 // 各段落之间保留换行，使实操题/编程题等分点描述的格式与 docx 保持一致。
                 if (text.length() > 0) {
-                    ScoreStripped ss = stripTrailingScore(text);
+                    // 分值后缀只在「题干首行」生效：编程题正文里的评分细则（如「…；（1分）」）
+                    // 也形如 （N分），若一并剥离会把题目分值覆盖成细则分值。
+                    ScoreStripped ss = curStem.length() == 0
+                            ? stripTrailingScore(text)
+                            : new ScoreStripped(text, 0);
                     appendLine(curStem, ss.text);
                     addStemText(curStemBlocks, ss.text);
                     if (ss.score > 0) cur.score = ss.score;
@@ -270,6 +297,9 @@ public class DocxParser {
             cur.type = options.isEmpty() ? Question.TYPE_PRACTICAL : Question.TYPE_SINGLE;
         }
         paper.questions.add(cur);
+        // 唯一键按「卷 key + 卷内题号(1 起)」生成：docx 解析出的 id 恒为 0，
+        // 若用 id 会导致同一套卷子所有题共用同一个 key（错题本/收藏/进度串题）。
+        cur.uid = Question.makeUid(paper.key, paper.questions.size());
     }
 
     private static void setAnswer(Question q, String ans) {
@@ -382,7 +412,7 @@ public class DocxParser {
         } else if (count > 0) {
             perScore = total / count;
         }
-        return new SectionInfo(type, title, perScore);
+        return new SectionInfo(type, title, perScore, count);
     }
 
     /**
@@ -430,10 +460,13 @@ public class DocxParser {
         final String type;
         final String label;
         final int score;
-        SectionInfo(String type, String label, int score) {
+        /** 大题标题声明的题数（共N题），未知为 0。 */
+        final int count;
+        SectionInfo(String type, String label, int score, int count) {
             this.type = type;
             this.label = label;
             this.score = score;
+            this.count = count;
         }
     }
 
@@ -499,6 +532,54 @@ public class DocxParser {
         if (stripped == null || stripped.isEmpty()) return false;
         return stripped.matches(".*（\\d+分）\\s*");
     }
+
+    /** 大题正文分点标题（编程题/实操题的「1.准备工作」「2.功能实现」等），不得作为新题。 */
+    private static final String[] SUB_HEADING_LABELS = {
+            "准备工作", "功能实现", "参考程序", "评分标准", "评分细则", "任务要求", "实现效果",
+            "作品提交", "程序说明", "注意事项", "操作步骤", "功能描述", "效果展示"
+    };
+
+    /** 取行首题号（如 "29."、"1.准备工作" → 29/1）；非题号行返回 0。 */
+    private static int questionNumber(String text) {
+        if (text == null) return 0;
+        java.util.regex.Matcher m =
+                java.util.regex.Pattern.compile("^(\\d+)\\s*[\\.．]").matcher(text);
+        if (!m.find()) return 0;
+        try {
+            return Integer.parseInt(m.group(1));
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    /**
+     * 判断「N. xxx」行是否应作为新题起点。
+     * 大题正文的分点（1.准备工作 / 2.功能实现）与真实题号共用「N.」前缀，需用三重条件区分：
+     *  1) 分点标题白名单排除；
+     *  2) 本大题题数配额（标题「共N题」）用尽后不再新建；
+     *  3) 题号连续性——大题首题接受任意题号，其后必须等于上一题号+1
+     *     （分点通常从 1 重新编号，与连续题号不衔接，因此被并入题干）。
+     */
+    private static boolean isNewQuestionStart(int num, String body, int expectedNum,
+                                              boolean sectionFresh, int sectionQuota,
+                                              int startedInSection) {
+        if (num <= 0) return false;
+        if (isSubHeadingLabel(body)) return false;
+        if (sectionQuota > 0 && startedInSection >= sectionQuota) return false;
+        if (sectionFresh || expectedNum <= 0) return true;
+        return num == expectedNum;
+    }
+
+    private static boolean isSubHeadingLabel(String body) {
+        if (body == null) return false;
+        String t = body.trim();
+        if (t.isEmpty() || t.length() > 12) return false;
+        for (String label : SUB_HEADING_LABELS) {
+            if (t.startsWith(label)) return true;
+        }
+        return false;
+    }
+
     private static boolean isOptionStart(String text) {
         // 兼容半角 "A." 与全角 "A．"（U+FF0E）。
         if (text.matches("^[A-D][\\.．].*")) return true;
@@ -533,6 +614,17 @@ public class DocxParser {
 
     private static String toFileName(String rid, Map<String, String> relMap) {
         if (rid == null || rid.isEmpty()) return rid;
+        // 兼容多值/脏数据引用（如 "rId4|rId5"）：取第一个能解析到的 rId，避免图片无法显示
+        if (rid.indexOf('|') >= 0) {
+            for (String part : rid.split("\\|")) {
+                String p = part.trim();
+                if (p.isEmpty()) continue;
+                String mapped = relMap.get(p);
+                if (mapped != null) {
+                    return mapped.startsWith("media/") ? mapped.substring("media/".length()) : mapped;
+                }
+            }
+        }
         String target = relMap.get(rid);
         if (target == null) return rid;
         if (target.startsWith("media/")) return target.substring("media/".length());

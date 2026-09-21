@@ -178,7 +178,84 @@ public class SettingsActivity extends AppCompatActivity {
         // 打开题库下载目录
         findViewById(R.id.btnOpenExamDir).setOnClickListener(v -> onOpenExamDir());
 
+        // 存储权限（写入系统 Download 目录需要）
+        findViewById(R.id.rowStoragePermission).setOnClickListener(v -> onStoragePermission());
+        findViewById(R.id.btnGrantStorage).setOnClickListener(v -> onStoragePermission());
+
+        // 导入时自动下载原题 docx
+        SwitchCompat swAutoDownloadDocx = findViewById(R.id.swAutoDownloadDocx);
+        swAutoDownloadDocx.setChecked(DataStore.isAutoDownloadDocx(this));
+        swAutoDownloadDocx.setOnCheckedChangeListener((btn, checked) -> {
+            DataStore.setAutoDownloadDocx(this, checked);
+            showToast(checked
+                    ? "导入真题时将自动下载原题 docx 到下载目录"
+                    : "导入真题时只解析入库，不下载原题（仍可刷题）");
+        });
+
+        // 数量角标（错题本 / 收藏题）
+        SwitchCompat swBadgeVisible = findViewById(R.id.swBadgeVisible);
+        SeekBar sbBadgeAnim = findViewById(R.id.sbBadgeAnim);
+        TextView tvBadgeAnimValue = findViewById(R.id.tvBadgeAnimValue);
+        swBadgeVisible.setChecked(DataStore.isBadgeVisible(this));
+        swBadgeVisible.setOnCheckedChangeListener((btn, checked) -> {
+            DataStore.setBadgeVisible(this, checked);
+            showToast(checked ? "已显示数量角标" : "已隐藏数量角标");
+        });
+        sbBadgeAnim.setProgress(badgeProgressOf(DataStore.getBadgeAnimDuration(this)));
+        tvBadgeAnimValue.setText(DataStore.getBadgeAnimDuration(this) + " ms");
+        sbBadgeAnim.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                int ms = badgeDurationOf(progress);
+                tvBadgeAnimValue.setText(ms + " ms");
+                DataStore.setBadgeAnimDuration(SettingsActivity.this, ms);
+            }
+            @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+            @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+        });
+
         initAiConfig();
+    }
+
+    /** 角标动画时长 ↔ 滑动条进度（100~1000ms，步长 50）。 */
+    private int badgeProgressOf(int ms) {
+        int p = (ms - 100) / 50;
+        return Math.max(0, Math.min(18, p));
+    }
+
+    private int badgeDurationOf(int progress) {
+        return 100 + Math.max(0, Math.min(18, progress)) * 50;
+    }
+
+    /** 存储权限入口：未授予则申请，已授予则提示（默认下载目录在系统 Download 下）。 */
+    private void onStoragePermission() {
+        if (DataStore.hasStorageAccess(this)) {
+            showToast("已具备存储权限，可直接下载到系统 Download 目录");
+            return;
+        }
+        DataStore.requestStorageAccess(this);
+    }
+
+    /** 刷新下载目录与存储权限的显示状态。 */
+    private void refreshExamDirAndPermission() {
+        tvExamDir.setText(DataStore.getExamDir(this));
+        boolean granted = DataStore.hasStorageAccess(this);
+        TextView tvPerm = findViewById(R.id.tvStoragePermission);
+        if (tvPerm != null) {
+            tvPerm.setText(granted
+                    ? "存储权限：已授予（默认下载到系统 Download 目录）"
+                    : "存储权限：未授予（暂存到应用专属目录，点右侧授予后可写入 Download）");
+        }
+        TextView btnGrant = findViewById(R.id.btnGrantStorage);
+        if (btnGrant != null) {
+            btnGrant.setVisibility(granted ? android.view.View.GONE : android.view.View.VISIBLE);
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // 从系统权限页返回后同步状态
+        refreshExamDirAndPermission();
     }
 
     private void setupCollapse(int headerId, int bodyId) {
@@ -323,7 +400,7 @@ public class SettingsActivity extends AppCompatActivity {
         swAutoAiAnalysis.setChecked(DataStore.getAutoAiAnalysis(this));
         tvAutoAiAnalysisModeValue.setText(DataStore.getAutoAiAnalysisMode(this).equals("wrong") ? "只对错题解析" : "对错都生成解析");
 
-        tvExamDir.setText(DataStore.getExamDir(this));
+        refreshExamDirAndPermission();
         float fontSp = DataStore.getQuestionFontSp(this);
         tvFontSizeValue.setText(((int) fontSp) + " sp");
         sbFontSize.setProgress(Math.max(0, Math.min(12, (int) fontSp - 14)));
@@ -451,6 +528,14 @@ public class SettingsActivity extends AppCompatActivity {
             java.io.File base = android.os.Environment.getExternalStorageDirectory();
             java.io.File f = new java.io.File(base, rel);
             return f.getAbsolutePath();
+        }
+        // 其他存储卷（如 SD 卡）："1234-5678:xxx" → /storage/1234-5678/xxx
+        int colon = docId.indexOf(':');
+        if (colon > 0) {
+            String vol = docId.substring(0, colon);
+            String rel = docId.substring(colon + 1);
+            java.io.File f = new java.io.File("/storage/" + vol, rel);
+            if (f.exists()) return f.getAbsolutePath();
         }
         return null;
     }

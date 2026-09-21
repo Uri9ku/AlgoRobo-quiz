@@ -62,8 +62,13 @@ public class RobotExamUpdater {
                     if (p == null) continue;
                     if (p.key == null) p.key = k;
                     if (p.questions != null) {
-                        for (Question q : p.questions) {
-                            if (q.uid == null || q.uid.isEmpty()) q.uid = Question.makeUid(p.key, q.id);
+                        for (int i = 0; i < p.questions.size(); i++) {
+                            Question q = p.questions.get(i);
+                            // uid 缺失、或为历史缺陷值（同卷所有题共用 "...key#0"）时，
+                            // 统一按卷内题号(1 起)重建，保证每题唯一。
+                            if (q.uid == null || q.uid.isEmpty() || q.uid.endsWith("#0")) {
+                                q.uid = Question.makeUid(p.key, i + 1);
+                            }
                         }
                     }
                 }
@@ -81,6 +86,8 @@ public class RobotExamUpdater {
         FileOutputStream fos = new FileOutputStream(f);
         fos.write(new com.google.gson.Gson().toJson(papers).getBytes("UTF-8"));
         fos.close();
+        // 文件已变更：同步失效内存快照，避免后续读到旧数据（导入后点击新真题提示「暂无题目」）
+        RobotExamBank.invalidateCache();
         Log.i(TAG, "缓存已写入：" + f.getAbsolutePath());
     }
 
@@ -98,9 +105,23 @@ public class RobotExamUpdater {
         if (url == null || url.isEmpty()) return null;
         byte[] data = httpGetBytes(url);
         if (data == null || data.length == 0) return null;
+        return saveDocxToExamDir(ctx, fileName, data);
+    }
+
+    /** 公开包装：供下载流程复用同一套网络抓取逻辑。 */
+    public static byte[] httpGetBytesPublic(String url) throws Exception {
+        return httpGetBytes(url);
+    }
+
+    /** 将 docx 字节写入当前下载目录（默认系统 Download，可在设置更改），返回绝对路径。 */
+    public static String saveDocxToExamDir(Context ctx, String fileName, byte[] data)
+            throws Exception {
+        if (data == null || data.length == 0) return null;
         String name = (fileName == null || fileName.isEmpty())
                 ? "robot_exam_" + System.currentTimeMillis() + ".docx"
                 : fileName;
+        int slash = Math.max(name.lastIndexOf('/'), name.lastIndexOf('\\'));
+        if (slash >= 0) name = name.substring(slash + 1);
         if (!name.toLowerCase().endsWith(".docx") && !name.toLowerCase().endsWith(".doc")) {
             name = name + ".docx";
         }
@@ -156,12 +177,26 @@ public class RobotExamUpdater {
     // 网络
     // ------------------------------------------------------------------
 
+    /** 下载进度回调（百分比 0~100）。 */
+    public interface DownloadProgress {
+        void onPercent(int percent);
+    }
+
     /** 公开的 HTTP GET 字节下载入口（供在线导入真题等功能调用）。 */
     public static byte[] httpGetBytes(String urlStr) throws Exception {
-        return doHttpGetBytes(urlStr);
+        return doHttpGetBytes(urlStr, null);
+    }
+
+    /** 带进度的 HTTP GET 下载入口。 */
+    public static byte[] httpGetBytes(String urlStr, DownloadProgress cb) throws Exception {
+        return doHttpGetBytes(urlStr, cb);
     }
 
     private static byte[] doHttpGetBytes(String urlStr) throws Exception {
+        return doHttpGetBytes(urlStr, null);
+    }
+
+    private static byte[] doHttpGetBytes(String urlStr, DownloadProgress cb) throws Exception {
         URL url = new URL(urlStr);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setConnectTimeout(CONNECT_TIMEOUT);
@@ -174,15 +209,17 @@ public class RobotExamUpdater {
             String loc = conn.getHeaderField("Location");
             conn.disconnect();
             if (loc != null) {
-                return httpGetBytes(absolutize(loc));
+                return httpGetBytes(absolutize(loc), cb);
             }
             throw new Exception("HTTP " + code);
         }
         if (code != 200) throw new Exception("HTTP " + code);
+        int total = conn.getContentLength();
         InputStream is = new BufferedInputStream(conn.getInputStream());
-        byte[] data = readAll(is);
+        byte[] data = readAll(is, total, cb);
         is.close();
         conn.disconnect();
+        if (cb != null) cb.onPercent(100);
         return data;
     }
 
@@ -194,10 +231,28 @@ public class RobotExamUpdater {
     }
 
     private static byte[] readAll(InputStream is) throws Exception {
+        return readAll(is, -1, null);
+    }
+
+    /** 读取全部字节；total>0 且 cb 非空时按百分比回报下载进度（同值不重复回调）。 */
+    private static byte[] readAll(InputStream is, int total, DownloadProgress cb) throws Exception {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         byte[] buf = new byte[8192];
         int n;
-        while ((n = is.read(buf)) != -1) baos.write(buf, 0, n);
+        long read = 0;
+        int last = -1;
+        while ((n = is.read(buf)) != -1) {
+            baos.write(buf, 0, n);
+            read += n;
+            if (cb != null && total > 0) {
+                int pct = (int) (read * 100 / total);
+                if (pct > 100) pct = 100;
+                if (pct != last) {
+                    last = pct;
+                    cb.onPercent(pct);
+                }
+            }
+        }
         return baos.toByteArray();
     }
 
@@ -458,6 +513,41 @@ public class RobotExamUpdater {
             try { return Integer.parseInt(m.group(1)); } catch (Exception e) { return 0; }
         }
         return 0;
+    }
+
+    /**
+     * 由仓库原始文件名生成可读的中文文件名：
+     * 2026.6.CIE.RLE.3.docx → 2026年6月CIE软件编程图形化3级（无法解析时返回 null，调用方回退原名）。
+     */
+    public static String buildChineseDocxName(String sourceName) {
+        if (sourceName == null || sourceName.isEmpty()) return null;
+        String base = sourceName;
+        int slash = Math.max(base.lastIndexOf('/'), base.lastIndexOf('\\'));
+        if (slash >= 0) base = base.substring(slash + 1);
+        int dot = base.lastIndexOf('.');
+        if (dot > 0) base = base.substring(0, dot);
+        String[] seg = base.split("\\.");
+        if (seg.length < 2) return null;
+        int year = 0, month = 0;
+        try { year = Integer.parseInt(seg[0]); } catch (Exception ignore) { }
+        try { month = Integer.parseInt(seg[1]); } catch (Exception ignore) { }
+        String subject = parseSubjectFromFileName(sourceName);
+        int level = parseLevelFromFileName(sourceName);
+        StringBuilder sb = new StringBuilder();
+        if (year > 0) sb.append(year).append("年");
+        if (month > 0) sb.append(month).append("月");
+        sb.append("CIE软件编程");
+        if (subject == null) subject = "robot";
+        switch (subject) {
+            case "py": sb.append("Python"); break;
+            case "c": sb.append("C语言"); break;
+            case "cpp": sb.append("C++"); break;
+            case "gx": sb.append("图形化"); break;
+            case "robot": sb.append("机器人"); break;
+            default: sb.append(subject); break;
+        }
+        if (level > 0) sb.append(level).append("级");
+        return sb.toString();
     }
 
     /**

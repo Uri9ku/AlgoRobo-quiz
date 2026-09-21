@@ -349,6 +349,36 @@
                         </LinearLayout>
                     </HorizontalScrollView>
                 </LinearLayout>
+                <!-- 存储权限：写入系统 Download 目录所需（Android 11+ 为「所有文件访问权限」） -->
+                <LinearLayout android:id="@+id/rowStoragePermission" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginTop="12dp"
+                    android:orientation="horizontal" android:gravity="center_vertical"
+                    android:clickable="true" android:focusable="true">
+                    <TextView android:id="@+id/tvStoragePermission" android:layout_width="0dp"
+                        android:layout_height="wrap_content" android:layout_weight="1"
+                        android:text="存储权限：未授予" android:textSize="12sp" android:textColor="@color/text_sub"/>
+                    <TextView android:id="@+id/btnGrantStorage" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:paddingVertical="8dp"
+                        android:paddingHorizontal="14dp" android:text="授予权限" android:textSize="13sp"
+                        android:textColor="@color/primary" android:background="@drawable/bg_tag_blue"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- 自动下载原题 -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="12dp" android:orientation="horizontal" android:gravity="center_vertical"
+                android:padding="16dp" android:background="@drawable/bg_card">
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="导入时自动下载原题" android:textSize="16sp" android:textColor="@color/text_main"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="开启：导入真题时把原卷 docx 保存到下载目录；关闭：只解析入库，不下载原题，仍可刷题"
+                        android:textSize="12sp" android:textColor="@color/text_sub"/>
+                </LinearLayout>
+                <androidx.appcompat.widget.SwitchCompat android:id="@+id/swAutoDownloadDocx"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
             </LinearLayout>
 
             <!-- 分组：更多 -->
@@ -370,7 +400,51 @@
                 </LinearLayout>
                 <androidx.appcompat.widget.SwitchCompat android:id="@+id/swAutoNext"
                     android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                </LinearLayout>
+
+            <!-- 数量角标（错题本 / 收藏题） -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="vertical" android:padding="16dp" android:background="@drawable/bg_card"
+                android:layout_marginTop="12dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="显示数量角标" android:textSize="16sp" android:textColor="@color/text_main"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:text="错题本 / 收藏题右上角的数量提示，关闭后不再显示"
+                            android:textSize="12sp" android:textColor="@color/text_sub"/>
+                    </LinearLayout>
+                    <androidx.appcompat.widget.SwitchCompat android:id="@+id/swBadgeVisible"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+                </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="1dp"
+                    android:layout_marginTop="14dp" android:background="@color/bg_page"/>
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp" android:orientation="horizontal" android:gravity="center_vertical">
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="角标数字变化速度" android:textSize="16sp"
+                        android:textColor="@color/text_main"/>
+                    <TextView android:id="@+id/tvBadgeAnimValue" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="300 ms" android:textSize="14sp"
+                        android:textColor="@color/primary"/>
+                </LinearLayout>
+                <android.widget.SeekBar android:id="@+id/sbBadgeAnim" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginTop="8dp" android:max="18"/>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="快" android:textSize="11sp"
+                        android:textColor="@color/text_sub"/>
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:gravity="end" android:text="慢" android:textSize="11sp"
+                        android:textColor="@color/text_sub"/>
+                </LinearLayout>
             </LinearLayout>
         </LinearLayout>
+
     </ScrollView>
 </LinearLayout>

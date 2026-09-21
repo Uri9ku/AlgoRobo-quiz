@@ -8,6 +8,8 @@ public class App extends Application {
     public void onCreate() {
         super.onCreate();
         applyStoredDarkMode();
+        // 一次性清理旧版 uid 缺陷残留（同卷共用一个 key）
+        DataStore.purgeLegacyPaperKeys(this);
     }
 
     public void applyStoredDarkMode() {

@@ -21,6 +21,10 @@ public class RobotExamBank {
         public List<Question> questions = new ArrayList<>();
         public String sourceUrl;
         public String sourceName;
+        /** 原题 docx 是否已下载到下载目录（列表按钮据此显示「下载/已下载」）。 */
+        public boolean docxDownloaded;
+        /** 已下载 docx 的绝对路径。 */
+        public String docxPath;
     }
 
     private static List<Paper> cachedPapers;
@@ -79,11 +83,126 @@ public class RobotExamBank {
         }
     }
 
+    /**
+     * 列表「下载」按钮：下载该套真题的原始 docx 到下载目录，并解析入库（之后即可刷题）。
+     * @param preferredName 保存时可读的文件名（可空，空则用仓库原始文件名）
+     * @return 解析出的题目数（0 表示文件已下载但未解析到题目）
+     */
+    public static int downloadAndParse(Context ctx, String paperKey, String preferredName)
+            throws Exception {
+        return downloadAndParse(ctx, paperKey, preferredName, null);
+    }
+
+    /**
+     * 带进度的下载并解析（列表「下载」按钮/自动下载用）。
+     * @param cb 可为空；回调在后台线程触发，调用方自行切回 UI 线程
+     */
+    public static int downloadAndParse(Context ctx, String paperKey, String preferredName,
+                                       ImportProgress cb) throws Exception {
+        Map<String, Paper> map = RobotExamUpdater.loadCache(ctx);
+        if (map == null) map = new java.util.LinkedHashMap<>();
+        Paper old = map.get(paperKey);
+        if (old == null) throw new Exception("未找到该套真题，请重新导入");
+        if (old.sourceUrl == null || old.sourceUrl.isEmpty()) throw new Exception("缺少原文件地址");
+
+        byte[] data = RobotExamUpdater.httpGetBytes(old.sourceUrl, percent -> {
+            if (cb != null) cb.onDownloadPercent(percent);
+        });
+        if (data == null || data.length == 0) throw new Exception("下载失败");
+
+        String saveName = (preferredName == null || preferredName.isEmpty())
+                ? old.sourceName : preferredName;
+        String savedPath = RobotExamUpdater.saveDocxToExamDir(ctx, saveName, data);
+
+        if (cb != null) cb.onParsing();
+        Paper parsed = DocxParser.parse(data, paperKey, ctx.getFilesDir());
+        if (parsed == null) throw new Exception("解析 docx 失败");
+        parsed.key = paperKey;
+        parsed.title = old.title;
+        parsed.period = old.period;
+        parsed.subject = old.subject;
+        parsed.level = old.level;
+        parsed.sourceUrl = old.sourceUrl;
+        parsed.sourceName = old.sourceName;
+        parsed.docxDownloaded = true;
+        parsed.docxPath = savedPath;
+
+        map.put(paperKey, parsed);
+        RobotExamUpdater.saveCachePublic(ctx, map);
+        return parsed.questions == null ? 0 : parsed.questions.size();
+    }
+
+    /** 导入进度回调：下载百分比 → 解析开始。 */
+    public interface ImportProgress {
+        void onDownloadPercent(int percent);
+        void onParsing();
+    }
+
+    /**
+     * 在线导入一套真题：下载原卷（带进度）→ （可选）保存到下载目录 → 解析 → 合并入库。
+     * @param saveDocx 是否把原卷 docx 保存到下载目录（关闭时仅内存解析，不落盘）
+     */
+    public static Paper importFromGitHub(Context ctx, RobotExamUpdater.ReleaseAsset ra,
+                                         String preferredName, boolean saveDocx,
+                                         ImportProgress cb) throws Exception {
+        if (ra == null || ra.downloadUrl == null || ra.downloadUrl.isEmpty()) {
+            throw new Exception("缺少原文件地址");
+        }
+        byte[] data = RobotExamUpdater.httpGetBytes(ra.downloadUrl, percent -> {
+            if (cb != null) cb.onDownloadPercent(percent);
+        });
+        if (data == null || data.length == 0) throw new Exception("下载失败");
+
+        String savedPath = null;
+        if (saveDocx) {
+            String saveName = (preferredName == null || preferredName.isEmpty())
+                    ? ra.fileName : preferredName;
+            savedPath = RobotExamUpdater.saveDocxToExamDir(ctx, saveName, data);
+        }
+
+        if (cb != null) cb.onParsing();
+        Paper parsed = DocxParser.parse(data, ra.key, ctx.getFilesDir());
+        if (parsed == null) throw new Exception("解析 docx 失败");
+        parsed.key = ra.key;
+        parsed.title = ra.title;
+        parsed.period = ra.period;
+        parsed.subject = ra.subject;
+        parsed.level = ra.level;
+        parsed.sourceUrl = ra.downloadUrl;
+        parsed.sourceName = ra.fileName;
+
+        Map<String, Paper> map = RobotExamUpdater.loadCache(ctx);
+        if (map == null) map = new java.util.LinkedHashMap<>();
+        // 之前已下载过原文件时保留其状态，避免本次「不保存」把它标记成未下载
+        Paper prev = map.get(ra.key);
+        boolean hadDocx = prev != null && prev.docxDownloaded
+                && prev.docxPath != null && new File(prev.docxPath).exists();
+        parsed.docxDownloaded = saveDocx || hadDocx;
+        parsed.docxPath = saveDocx ? savedPath : (hadDocx ? prev.docxPath : null);
+
+        map.put(ra.key, parsed);
+        RobotExamUpdater.saveCachePublic(ctx, map);
+        return parsed;
+    }
+
+    /** 下载目录路径（供提示文案使用）。 */
+    public static String examDirPath(Context ctx) {
+        return DataStore.getExamDir(ctx);
+    }
+
     public static List<Question> getQuestions(Context ctx, String paperKey) {
         for (Paper p : getPapers(ctx)) {
             if (p.key.equals(paperKey)) return new ArrayList<>(p.questions);
         }
         return new ArrayList<>();
+    }
+
+    /**
+     * 缓存文件被改写（导入/编辑知识点）后调用：丢弃内存快照。
+     * 否则 getPapers 会一直返回旧快照，导致「列表能看到新导入的真题，点进去却查不到题目」。
+     */
+    public static synchronized void invalidateCache() {
+        cachedPapers = null;
     }
 
     /** 从缓存读取指定 key 的题目列表（不触发联网）。缓存缺失返回 null。 */

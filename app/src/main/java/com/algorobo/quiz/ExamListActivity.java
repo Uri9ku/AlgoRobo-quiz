@@ -21,6 +21,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import android.view.LayoutInflater;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -34,7 +35,10 @@ public class ExamListActivity extends AppCompatActivity {
         String subtitle;   // 展示副标题（难度/日期）
         String sourceUrl;  // 原始 docx 下载地址（下载按钮用）
         String sourceName; // 原始 docx 文件名
-        boolean downloaded; // 是否已缓存
+        boolean downloaded; // 原题 docx 是否已下载到下载目录
+        boolean downloading; // 正在下载（仅内存态，用于按钮/副标题提示）
+        boolean parsing;     // 下载完成，正在解析
+        int percent = -1;    // 下载进度 0~100
 
         int year;          // 年份（筛选用）
         int month;         // 月份（筛选用）
@@ -64,6 +68,9 @@ public class ExamListActivity extends AppCompatActivity {
     private PopupWindow dropdownPopup;
     // 多选模式状态
     private boolean multiSelectMode = false;
+    // 自动下载：正在跑、本次会话已尝试过的 key（避免失败后反复重试）
+    private boolean autoDownloadRunning = false;
+    private final Set<String> autoAttempted = new HashSet<>();
 
     // 筛选状态（-1 或空表示未选择）
     private int filterYear = -1;
@@ -111,12 +118,18 @@ public class ExamListActivity extends AppCompatActivity {
                 TextView btnDownload = convertView.findViewById(R.id.btnExamDownload);
                 CheckBox cbSelect = convertView.findViewById(R.id.cbExamSelect);
                 tvTitle.setText(item.title);
-                if (item.downloaded) {
-                    tvDoneCount.setVisibility(View.VISIBLE);
+                tvDoneCount.setVisibility(View.VISIBLE);
+                if (item.downloading) {
+                    if (item.parsing) tvDoneCount.setText("解析中…");
+                    else if (item.percent >= 0) tvDoneCount.setText("下载中 " + item.percent + "%");
+                    else tvDoneCount.setText("下载中…");
+                } else if (item.downloaded) {
                     int cnt = countDone(item.key);
-                    tvDoneCount.setText(cnt > 0 ? cnt + " 题" : "");
+                    tvDoneCount.setText(cnt > 0 ? cnt + " 题" : "已下载（未解析到题目）");
                 } else {
-                    tvDoneCount.setVisibility(View.GONE);
+                    // 只解析入库、未保存原文件的卷子依然可以刷题
+                    int cnt = countDone(item.key);
+                    tvDoneCount.setText(cnt > 0 ? cnt + " 题 · 未下载原文件" : "未下载");
                 }
 
                 // 多选模式：显示 CheckBox，隐藏下载按钮
@@ -133,7 +146,9 @@ public class ExamListActivity extends AppCompatActivity {
                     cbSelect.setVisibility(View.GONE);
                     if (item.sourceUrl != null && !item.sourceUrl.isEmpty()) {
                         btnDownload.setVisibility(View.VISIBLE);
-                        if (item.downloaded) {
+                        if (item.downloading) {
+                            btnDownload.setText("下载中…");
+                        } else if (item.downloaded) {
                             btnDownload.setText("已下载");
                         } else {
                             btnDownload.setText("下载");
@@ -177,6 +192,8 @@ public class ExamListActivity extends AppCompatActivity {
         setupToolbar();
         // 仅加载本地缓存
         loadCached();
+        // 进入页面时：自动补齐尚未下载的真题原卷（导入后回到本页即自动下载并解析）
+        autoDownloadMissing();
     }
 
     private void setupToolbar() {
@@ -325,6 +342,8 @@ public class ExamListActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == 1001 && resultCode == RESULT_OK) {
             loadCached(); // 导入成功，刷新列表
+            // 导入完成即自动下载并解析这些真题的原卷
+            autoDownloadMissing();
         }
     }
 
@@ -332,12 +351,13 @@ public class ExamListActivity extends AppCompatActivity {
     private void onRemoveSelected() {
         final List<String> keys = new ArrayList<>();
         for (Item it : filteredItems) {
-            if (it.selected && it.downloaded && it.key != null) {
+            // 未下载的登记项也应可移除
+            if (it.selected && it.key != null) {
                 keys.add(it.key);
             }
         }
         if (keys.isEmpty()) {
-            Toast.makeText(this, "请先长按并勾选要移除的已下载真题", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "请先长按并勾选要移除的真题", Toast.LENGTH_SHORT).show();
             return;
         }
         new androidx.appcompat.app.AlertDialog.Builder(this)
@@ -346,8 +366,8 @@ public class ExamListActivity extends AppCompatActivity {
                 .setPositiveButton("移除", (d, w) -> {
                     RobotExamBank.removePapersByKeys(this, keys);
                     // 从列表移除对应项
-                    items.removeIf(it -> it.downloaded && it.key != null && keys.contains(it.key));
-                    filteredItems.removeIf(it -> it.downloaded && it.key != null && keys.contains(it.key));
+                    items.removeIf(it -> it.key != null && keys.contains(it.key));
+                    filteredItems.removeIf(it -> it.key != null && keys.contains(it.key));
                     adapter.notifyDataSetChanged();
                     exitMultiSelectMode();
                     Toast.makeText(this, "已移除 " + keys.size() + " 套真题", Toast.LENGTH_SHORT).show();
@@ -389,7 +409,8 @@ public class ExamListActivity extends AppCompatActivity {
             it.subtitle = buildDifficulty(p);
             it.sourceUrl = p.sourceUrl;
             it.sourceName = p.sourceName;
-            it.downloaded = true;
+            // 「下载/已下载」按钮反映原题 docx 是否已下载到本地下载目录
+            it.downloaded = p.docxDownloaded;
             it.year = parseYearFromPeriod(p.period);
             it.month = parseMonthFromPeriod(p.period);
             it.subject = p.subject;
@@ -420,9 +441,9 @@ public class ExamListActivity extends AppCompatActivity {
         adapter.notifyDataSetChanged();
     }
 
-    /** 搜索题目内容：遍历缓存 Paper 的 questions.stem。 */
+    /** 搜索题目内容：遍历缓存 Paper 的 questions.stem（不要求已下载原文件）。 */
     private boolean itemContainsKeyword(Item it, String kw) {
-        if (it.downloaded && it.key != null) {
+        if (it.key != null) {
             List<Question> qs = RobotExamBank.getQuestionsFromCache(this, it.key);
             if (qs != null) {
                 String k = kw.toLowerCase();
@@ -567,119 +588,188 @@ public class ExamListActivity extends AppCompatActivity {
             return;
         }
         final Item item = selected.get(idx);
-        // 解析下载地址：优先取已缓存 Paper 的 sourceUrl
-        String url = item.sourceUrl;
-        String name = item.sourceName;
-        if (item.downloaded && item.key != null) {
-            RobotExamBank.Paper p = RobotExamBank.getPaper(this, item.key);
-            if (p != null) {
-                url = p.sourceUrl != null ? p.sourceUrl : url;
-                name = p.sourceName != null ? p.sourceName : name;
-            }
-        }
-        if (url == null || url.isEmpty()) {
+        if (item.key == null || item.sourceUrl == null || item.sourceUrl.isEmpty()) {
             Toast.makeText(this, "第 " + (idx + 1) + " 套暂无原始文件地址，已跳过", Toast.LENGTH_SHORT).show();
             batchDownload(selected, idx + 1, success);
             return;
         }
-        final String fUrl = url;
         // 生成中文文件名（若失败则回退原始文件名）
-        final String cnName = buildSourceDocxName(name);
-        final String saveName = cnName != null ? cnName : name;
+        final String cnName = buildSourceDocxName(item.sourceName);
         new Thread(() -> {
-            String saved = RobotExamBank.downloadSourceDocx(this, makePaper(fUrl, saveName));
-            runOnUiThread(() -> batchDownload(selected, idx + 1, success + (saved != null ? 1 : 0)));
+            int n = -1;
+            try {
+                n = RobotExamBank.downloadAndParse(this, item.key, cnName);
+            } catch (Exception ignore) {
+            }
+            final int fn = n;
+            runOnUiThread(() -> batchDownload(selected, idx + 1, success + (fn >= 0 ? 1 : 0)));
         }).start();
     }
     /** 根据原始 docx 文件名生成中文文件名：2026.6.CIE.Python.1 → 2026年6月CIE软件编程Python1级。 */
     private String buildSourceDocxName(String sourceName) {
-        if (sourceName == null || sourceName.isEmpty()) return null;
-        // 去掉扩展名与路径
-        String base = sourceName;
-        int slash = base.lastIndexOf('/');
-        if (slash >= 0) base = base.substring(slash + 1);
-        int dot = base.lastIndexOf('.');
-        if (dot > 0) base = base.substring(0, dot);
-        // 以 . 切分段落：年 . 月 . CIE . 科目 . 等级
-        String[] seg = base.split("\\.");
-        if (seg.length < 2) return null;
-        int year = 0, month = 0;
-        try { year = Integer.parseInt(seg[0]); } catch (Exception e) { }
-        try { month = seg.length >= 2 ? Integer.parseInt(seg[1]) : 0; } catch (Exception e) { }
-        String subject = RobotExamUpdater.parseSubjectFromFileName(sourceName);
-        int level = RobotExamUpdater.parseLevelFromFileName(sourceName);
-        StringBuilder sb = new StringBuilder();
-        if (year > 0) sb.append(year).append("年");
-        if (month > 0) sb.append(month).append("月");
-        sb.append("CIE软件编程");
-        if (subject == null) subject = "robot";
-        switch (subject) {
-            case "py": sb.append("Python"); break;
-            case "c": sb.append("C语言"); break;
-            case "cpp": sb.append("C++"); break;
-            case "gx": sb.append("图形化"); break;
-            case "robot": sb.append("机器人"); break;
-            default: sb.append(subject); break;
-        }
-        if (level > 0) sb.append(level).append("级");
-        return sb.toString();
+        return RobotExamUpdater.buildChineseDocxName(sourceName);
     }
-    /** 点击列表项：进入答题。 */
+    /** 点击列表项：进入答题。只要解析入库了题目即可刷题，不要求下载原文件。 */
     private void onItemClick(Item item) {
-        if (item.downloaded && item.key != null) {
-            startQuiz(item.key, item.title);
+        if (item.key == null) {
+            Toast.makeText(this, "该套真题数据异常，请重新导入", Toast.LENGTH_SHORT).show();
             return;
         }
-        Toast.makeText(this, "无法获取该期真题地址", Toast.LENGTH_SHORT).show();
+        if (countDone(item.key) <= 0) {
+            if (item.downloaded) {
+                Toast.makeText(this, "该套真题未解析到题目，可点「已下载」重新下载，或打开目录查看原文件",
+                        Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(this, "该套真题尚未解析到题目，请先点右侧「下载」获取原卷",
+                        Toast.LENGTH_LONG).show();
+            }
+            return;
+        }
+        startQuiz(item.key, item.title);
     }
-    /** 下载按钮：下载该期对应的原始 docx 文件。 */
+    /** 下载按钮：未下载→直接下载；已下载→提示打开目录/再次下载。 */
     private void onDownload(Item item) {
-        // 已下载的项再次点击弹二次确认
+        if (item.downloading) {
+            Toast.makeText(this, "正在下载中，请稍候…", Toast.LENGTH_SHORT).show();
+            return;
+        }
         if (item.downloaded) {
             new androidx.appcompat.app.AlertDialog.Builder(this)
-                    .setTitle("重新下载")
-                    .setMessage("该真题已下载过，是否重新下载？")
-                    .setPositiveButton("重新下载", (d, w) -> doDownload(item))
+                    .setTitle("该真题已下载过")
+                    .setMessage("原文件已保存到下载目录：\n" + RobotExamBank.examDirPath(this)
+                            + "\n\n是否打开该目录，或再次下载？")
+                    .setPositiveButton("打开目录", (d, w) -> DataStore.openExamDir(this, this))
+                    .setNeutralButton("再次下载", (d, w) -> doDownload(item))
                     .setNegativeButton("取消", null)
                     .show();
             return;
         }
         doDownload(item);
     }
-    private void doDownload(Item item) {
-        String url = item.sourceUrl;
-        String name = item.sourceName;
-        if (item.downloaded && item.key != null) {
-            RobotExamBank.Paper p = RobotExamBank.getPaper(this, item.key);
-            if (p != null) {
-                url = p.sourceUrl != null ? p.sourceUrl : url;
-                name = p.sourceName != null ? p.sourceName : name;
+    /**
+     * 自动补齐尚未下载的真题：导入后回到本页即自动抓取 GitHub 原卷并解析入库。
+     * 逐个串行下载（避免并发过多），每完成一套即刷新列表；同一会话内失败不反复重试。
+     */
+    private void autoDownloadMissing() {
+        if (autoDownloadRunning) return;
+        // 设置里关闭「自动下载原题」后，不再自动抓取原卷（题目仍可用，只是不保存原文件）
+        if (!DataStore.isAutoDownloadDocx(this)) return;
+        final List<Item> pending = new ArrayList<>();
+        for (Item it : items) {
+            if (it.key != null && !it.downloaded && !it.downloading
+                    && it.sourceUrl != null && !it.sourceUrl.isEmpty()
+                    && !autoAttempted.contains(it.key)) {
+                pending.add(it);
             }
         }
-        if (url == null || url.isEmpty()) {
-            Toast.makeText(this, "暂无原始文件地址，请先点击进入该期真题", Toast.LENGTH_SHORT).show();
+        if (pending.isEmpty()) return;
+        autoDownloadRunning = true;
+        for (Item it : pending) autoAttempted.add(it.key);
+        Toast.makeText(this, "开始自动下载 " + pending.size() + " 套真题原卷…", Toast.LENGTH_SHORT).show();
+        autoDownloadNext(pending, 0, 0);
+    }
+
+    private void autoDownloadNext(final List<Item> pending, final int idx, final int okCount) {
+        if (idx >= pending.size() || isFinishing()) {
+            autoDownloadRunning = false;
+            if (okCount > 0) {
+                Toast.makeText(this, "已自动下载并解析 " + okCount + " 套真题", Toast.LENGTH_LONG).show();
+            }
             return;
         }
-        final String fUrl = url;
-        final String fName = name;
-        Toast.makeText(this, "开始下载" + (fName == null ? "" : " " + fName), Toast.LENGTH_SHORT).show();
+        final Item item = pending.get(idx);
+        item.downloading = true;
+        item.parsing = false;
+        item.percent = 0;
+        adapter.notifyDataSetChanged();
+        final String cnName = buildSourceDocxName(item.sourceName);
         new Thread(() -> {
-            String saved = RobotExamBank.downloadSourceDocx(this, makePaper(fUrl, fName));
+            int n = -1;
+            try {
+                n = RobotExamBank.downloadAndParse(ExamListActivity.this, item.key, cnName,
+                        new RobotExamBank.ImportProgress() {
+                            @Override public void onDownloadPercent(int percent) {
+                                runOnUiThread(() -> {
+                                    item.percent = percent;
+                                    adapter.notifyDataSetChanged();
+                                });
+                            }
+                            @Override public void onParsing() {
+                                runOnUiThread(() -> {
+                                    item.parsing = true;
+                                    adapter.notifyDataSetChanged();
+                                });
+                            }
+                        });
+            } catch (Exception ignore) {
+            }
+            final int fn = n;
             runOnUiThread(() -> {
-                if (saved != null) {
-                    Toast.makeText(this, "已保存到下载目录", Toast.LENGTH_LONG).show();
-                } else {
-                    Toast.makeText(this, "下载失败", Toast.LENGTH_SHORT).show();
-                }
+                item.downloading = false;
+                item.parsing = false;
+                item.downloaded = fn >= 0;
+                adapter.notifyDataSetChanged();
+                autoDownloadNext(pending, idx + 1, okCount + (fn >= 0 ? 1 : 0));
             });
         }).start();
     }
 
-    private RobotExamBank.Paper makePaper(String url, String name) {
-        RobotExamBank.Paper p = new RobotExamBank.Paper();
-        p.sourceUrl = url;
-        p.sourceName = name;
-        return p;
+    private void doDownload(Item item) {
+        if (item.key == null) {
+            Toast.makeText(this, "该套真题数据异常，请重新导入", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (item.sourceUrl == null || item.sourceUrl.isEmpty()) {
+            Toast.makeText(this, "暂无原始文件地址，请重新导入该套真题", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        // 立即进入下载态，列表项上实时显示 下载中 x% → 解析中
+        item.downloading = true;
+        item.parsing = false;
+        item.percent = 0;
+        adapter.notifyDataSetChanged();
+        final String cnName = buildSourceDocxName(item.sourceName);
+        new Thread(() -> {
+            int n = -1;
+            String err = null;
+            try {
+                n = RobotExamBank.downloadAndParse(this, item.key, cnName,
+                        new RobotExamBank.ImportProgress() {
+                            @Override public void onDownloadPercent(int percent) {
+                                runOnUiThread(() -> {
+                                    item.percent = percent;
+                                    adapter.notifyDataSetChanged();
+                                });
+                            }
+                            @Override public void onParsing() {
+                                runOnUiThread(() -> {
+                                    item.parsing = true;
+                                    adapter.notifyDataSetChanged();
+                                });
+                            }
+                        });
+            } catch (Exception e) {
+                err = e.getMessage();
+            }
+            final int fn = n;
+            final String ferr = err;
+            runOnUiThread(() -> {
+                item.downloading = false;
+                item.parsing = false;
+                if (ferr != null) {
+                    adapter.notifyDataSetChanged();
+                    Toast.makeText(this, "下载失败：" + ferr, Toast.LENGTH_LONG).show();
+                    return;
+                }
+                loadCached();
+                if (fn > 0) {
+                    Toast.makeText(this, "已下载并导入 " + fn + " 题", Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(this, "原卷已下载，但未解析到题目，可打开目录查看原文件",
+                            Toast.LENGTH_LONG).show();
+                }
+            });
+        }).start();
     }
 
     // ============ 标题与字段解析 ============

@@ -46,6 +46,34 @@ public class DataStore {
         ed.apply();
     }
 
+    /**
+     * 清理历史缺陷残留：旧版按 id 生成 uid（docx 解析出的 id 恒为 0），
+     * 导致同一套卷子所有题共用 "<卷key>#0"。修复后这类 key 不可能再匹配到题目，
+     * 若不清掉会让错题本/收藏角标虚高。内置题与自定义题的前缀不受影响。
+     */
+    public static void purgeLegacyPaperKeys(Context c) {
+        purgeLegacyKeySet(c, "wrong_ids");
+        purgeLegacyKeySet(c, "favorite_ids");
+    }
+
+    private static void purgeLegacyKeySet(Context c, String prefKey) {
+        SharedPreferences p = sp(c);
+        Set<String> old = p.getStringSet(prefKey, null);
+        if (old == null || old.isEmpty()) return;
+        Set<String> kept = new HashSet<>();
+        boolean changed = false;
+        for (String uid : old) {
+            if (isLegacyPaperKey(uid)) changed = true;
+            else kept.add(uid);
+        }
+        if (changed) p.edit().putStringSet(prefKey, kept).apply();
+    }
+
+    private static boolean isLegacyPaperKey(String uid) {
+        if (uid == null || !uid.endsWith("#0")) return false;
+        return !uid.startsWith("custom#") && !uid.startsWith("builtin#");
+    }
+
     // ==================== 错题本：做对次数追踪 ====================
 
     // 做对次数阈值（错题做对 N 次后自动移除），默认 2
@@ -374,24 +402,96 @@ public class DataStore {
 
     // ==================== 题库下载目录 ====================
 
-    // 默认下载目录：应用外部专属目录下的 exam_downloads 子目录
+    /** 默认下载目录：系统公共 Download 目录（便于用文件管理器/WPS 找到原卷）。 */
     public static java.io.File defaultExamDir(Context c) {
+        java.io.File pub = null;
+        try {
+            pub = android.os.Environment.getExternalStoragePublicDirectory(
+                    android.os.Environment.DIRECTORY_DOWNLOADS);
+        } catch (Exception ignore) {
+        }
+        if (pub != null) return pub;
+        return fallbackExamDir(c);
+    }
+
+    /** 无存储权限时的回退目录：应用专属外部目录，读写无需任何权限。 */
+    public static java.io.File fallbackExamDir(Context c) {
         java.io.File base = c.getExternalFilesDir(null);
         if (base == null) base = c.getFilesDir();
         return new java.io.File(base, "exam_downloads");
     }
 
-    // 获取题库下载目录（绝对路径字符串）。未设置时返回默认目录。
+    /** 是否已获得写入公共目录的权限（Android 11+ 为「所有文件访问权限」，10 及以下为存储读写权限）。 */
+    public static boolean hasStorageAccess(Context c) {
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= 30) {
+                return android.os.Environment.isExternalStorageManager();
+            }
+            return c.checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    == android.content.pm.PackageManager.PERMISSION_GRANTED;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** 申请存储权限：Android 11+ 跳系统「所有文件访问权限」页，10 及以下走运行时授权。 */
+    public static void requestStorageAccess(Activity act) {
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= 30) {
+                Intent i = new Intent(
+                        android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                        Uri.parse("package:" + act.getPackageName()));
+                act.startActivity(i);
+            } else {
+                act.requestPermissions(
+                        new String[]{android.Manifest.permission.WRITE_EXTERNAL_STORAGE}, 9101);
+            }
+        } catch (Exception e) {
+            toast(act, "无法打开权限设置，请在系统设置中授予存储权限");
+        }
+    }
+
+    // 获取题库下载目录（绝对路径字符串）。未设置时返回默认目录；无权限时回退到应用专属目录。
     public static String getExamDir(Context c) {
         String s = sp(c).getString("setting_exam_dir", "");
-        if (s == null || s.isEmpty()) {
-            return defaultExamDir(c).getAbsolutePath();
+        if (s != null && !s.isEmpty()) {
+            return s;
         }
-        return s;
+        if (!hasStorageAccess(c)) {
+            return fallbackExamDir(c).getAbsolutePath();
+        }
+        return defaultExamDir(c).getAbsolutePath();
     }
 
     public static void setExamDir(Context c, String path) {
         sp(c).edit().putString("setting_exam_dir", path == null ? "" : path).apply();
+    }
+
+    /** 在线导入时是否自动下载原题 docx（关闭则只解析入库、不保存原文件），默认开启。 */
+    public static boolean isAutoDownloadDocx(Context c) {
+        return sp(c).getBoolean("setting_auto_download_docx", true);
+    }
+
+    public static void setAutoDownloadDocx(Context c, boolean on) {
+        sp(c).edit().putBoolean("setting_auto_download_docx", on).apply();
+    }
+
+    /** 首页是否显示数量角标（错题本 / 收藏题），默认显示。 */
+    public static boolean isBadgeVisible(Context c) {
+        return sp(c).getBoolean("setting_badge_visible", true);
+    }
+
+    public static void setBadgeVisible(Context c, boolean on) {
+        sp(c).edit().putBoolean("setting_badge_visible", on).apply();
+    }
+
+    /** 角标数字变化动画时长（毫秒），越小越快，默认 300。 */
+    public static int getBadgeAnimDuration(Context c) {
+        return sp(c).getInt("setting_badge_anim_ms", 300);
+    }
+
+    public static void setBadgeAnimDuration(Context c, int ms) {
+        sp(c).edit().putInt("setting_badge_anim_ms", ms).apply();
     }
 
     // 知识点缓存：key 为题目唯一标识，value 为识别出的知识点文本
@@ -457,36 +557,32 @@ public class DataStore {
      */
     public static boolean openExamDir(Context c, Activity act) {
         String dirPath = getExamDir(c);
-        // 特判：若存储的是 content:// URI，改用 ACTION_OPEN_DOCUMENT_TREE 或提示用户
-        if (dirPath != null && dirPath.startsWith("content://")) {
-            try {
-                Uri contentUri = Uri.parse(dirPath);
-                Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
-                pick.setData(contentUri);
-                pick.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-                act.startActivity(pick);
-                return true;
-            } catch (Exception e) {
-                // 继续尝试按文件路径处理
-            }
-        }
         if (dirPath == null || dirPath.isEmpty()) {
             dirPath = defaultExamDir(c).getAbsolutePath();
+        }
+        // 1) 用户选的是 SAF 目录（content://）：直接按文档 URI 打开该目录
+        if (dirPath != null && dirPath.startsWith("content://")) {
+            if (viewDocumentUri(act, Uri.parse(dirPath))) return true;
         }
         try {
             File dir = new File(dirPath);
             if (!dir.exists()) dir.mkdirs();
             if (!dir.exists()) {
-                toast(c, "下载目录不存在：" + dirPath);
+                toast(c, "下载目录不存在且无法创建：" + dirPath);
                 return false;
             }
+            // 2) 优先用系统「文档提供者」的目录 URI：
+            //    系统文件管理器（Files/DocumentsUI）只认识 externalstorage 这类 authority，
+            //    用我们自己的 FileProvider URI 会解析失败并退回其默认位置（表现为总是打开 Download）。
+            Uri docUri = toExternalStorageDocUri(dirPath);
+            android.util.Log.i("OpenExamDir", "dir=" + dirPath + " docUri=" + docUri);
+            if (docUri != null && viewDocumentUri(act, docUri)) return true;
+            // 3) 回退：FileProvider URI + 多种 MIME
             Uri uri;
             try {
                 uri = FileProvider.getUriForFile(c, c.getPackageName() + ".fileprovider", dir);
             } catch (IllegalArgumentException fe) {
-                // FileProvider 无法映射该路径（如 /storage 其他卷），退回 file:// 会触发 FileUriExposed，
-                // 这里直接给出明确提示。
-                toast(c, "无法暴露该目录，请在设置中重新选择下载目录");
+                toast(c, "无法打开该目录，请在设置中重新选择下载目录");
                 android.util.Log.e("OpenExamDir", "FileProvider root not configured for: " + dirPath, fe);
                 return false;
             }
@@ -506,12 +602,65 @@ public class DataStore {
             fallback.setData(uri);
             fallback.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
             if (startActivitySafe(act, fallback)) return true;
-            toast(c, "未找到可打开目录的应用");
+            toast(c, "未找到可打开目录的应用。目录路径：" + dirPath);
             return false;
         } catch (Exception e) {
             android.util.Log.e("OpenExamDir", "open dir failed", e);
             toast(c, "打开目录失败：" + e.getMessage());
             return false;
+        }
+    }
+
+    /**
+     * 用系统「文档」界面打开一个目录 URI。
+     * 关键点：部分 ROM（ColorOS 等）会因包可见性/AppFilter 丢弃「隐式」目录意图
+     * （startActivity 不抛异常但什么也不发生，表现为点「打开目录」没反应/打开错位置），
+     * 因此这里先按显式组件启动能处理该意图的应用，再退回隐式启动。
+     */
+    private static boolean viewDocumentUri(final Activity act, final Uri uri) {
+        if (act == null || uri == null) return false;
+        Intent base = new Intent(Intent.ACTION_VIEW);
+        base.setDataAndType(uri, "vnd.android.document/directory");
+        base.putExtra("android.provider.extra.INITIAL_URI", uri);
+        base.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        try {
+            java.util.List<android.content.pm.ResolveInfo> list =
+                    act.getPackageManager().queryIntentActivities(base, 0);
+            for (android.content.pm.ResolveInfo ri : list) {
+                Intent explicit = new Intent(base);
+                explicit.setClassName(ri.activityInfo.packageName, ri.activityInfo.name);
+                explicit.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                if (startActivitySafe(act, explicit)) return true;
+            }
+        } catch (Exception e) {
+            android.util.Log.w("OpenExamDir", "resolve doc-dir handler failed", e);
+        }
+        Intent implicit = new Intent(base);
+        implicit.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        if (startActivitySafe(act, implicit)) return true;
+        return false;
+    }
+
+    /**
+     * 将主外部存储下的绝对路径转换为系统文档提供者的目录 URI：
+     * /storage/emulated/0/无人机 → content://com.android.externalstorage.documents/document/primary%3A无人机
+     */
+    private static Uri toExternalStorageDocUri(String path) {
+        try {
+            if (path == null) return null;
+            String primary = android.os.Environment.getExternalStorageDirectory().getAbsolutePath();
+            if (!path.startsWith(primary)) {
+                android.util.Log.i("OpenExamDir", "not under primary: " + path + " vs " + primary);
+                return null;
+            }
+            String rel = path.substring(primary.length());
+            while (rel.startsWith("/")) rel = rel.substring(1);
+            String docId = "primary:" + rel;
+            return Uri.parse("content://com.android.externalstorage.documents/document/"
+                    + Uri.encode(docId));
+        } catch (Exception e) {
+            android.util.Log.w("OpenExamDir", "toExternalStorageDocUri failed", e);
+            return null;
         }
     }
 

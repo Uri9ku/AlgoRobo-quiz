@@ -37,6 +37,13 @@ public class ImportOnlineActivity extends AppCompatActivity {
         int year;
         int month;
         boolean selected;
+        // 导入过程状态（仅内存态）
+        int percent = -1;      // -1 未开始；0~100 下载进度
+        boolean parsing;       // 正在解析
+        boolean done;          // 解析完成
+        int questionCount;
+        String failMsg;        // 非空表示失败
+        boolean active;        // 是否为当前正在下载的那一条
     }
     private final List<Cand> all = new ArrayList<>();
     private final List<Cand> shown = new ArrayList<>();
@@ -54,6 +61,7 @@ public class ImportOnlineActivity extends AppCompatActivity {
     private boolean isAllMode = false;     // 是否处于「全部」模式（点击了「全部」Tab）
     private boolean loading = false;     // 是否正在加载某个仓库
     private boolean selectMode = false;  // 是否处于选择模式（勾选框与底栏可见）
+    private boolean importing = false;   // 是否正在导入（导入期间隐藏勾选框与底栏）
     private int filterYear = -1;
     private int filterMonth = -1;
     private String filterSubject = null;
@@ -119,11 +127,34 @@ public class ImportOnlineActivity extends AppCompatActivity {
                     updateCount();
                     updateSelectAllState();
                 });
+                // 右下角状态：下载百分比 → 解析中 → 解析完成 / 失败
+                TextView tvStatus = convertView.findViewById(R.id.tvImportStatus);
+                String status = null;
+                int statusColor = getColor(R.color.primary);
+                if (c.failMsg != null) {
+                    status = c.failMsg;
+                    statusColor = getColor(R.color.danger);
+                } else if (c.done) {
+                    status = c.questionCount > 0 ? "解析完成" : "解析完成（0 题）";
+                } else if (c.parsing) {
+                    status = "解析中";
+                } else if (c.percent >= 0) {
+                    // 当前下载中的显示百分比，排队中的显示「等待中」，保证点击导入后立刻有反馈
+                    status = c.active ? (c.percent + "%") : "等待中";
+                }
+                if (status == null) {
+                    tvStatus.setVisibility(View.GONE);
+                } else {
+                    tvStatus.setVisibility(View.VISIBLE);
+                    tvStatus.setText(status);
+                    tvStatus.setTextColor(statusColor);
+                }
                 return convertView;
             }
         };
         lv.setAdapter(adapter);
         lv.setOnItemClickListener((parent, view, position, id) -> {
+            if (importing) return;  // 导入过程中不接受勾选操作
             Cand c = shown.get(position);
             c.selected = !c.selected;
             selectMode = true; // 条目点击勾选即进入选择模式
@@ -370,9 +401,9 @@ public class ImportOnlineActivity extends AppCompatActivity {
         int sel = 0;
         for (Cand c : all) if (c.selected) sel++;
         tvCount.setText("共 " + shown.size() + " 套\n已选 " + sel + " 套");
-        // 底栏可见性由选择模式驱动：取消全选后仍显示，点击「取消」后隐藏
+        // 底栏可见性由选择模式驱动：取消全选后仍显示，点击「取消」后隐藏；导入期间隐藏
         if (llImportBottom != null)
-            llImportBottom.setVisibility(selectMode ? View.VISIBLE : View.GONE);
+            llImportBottom.setVisibility((selectMode && !importing) ? View.VISIBLE : View.GONE);
         updateSelectAllState();
     }
     private void updateSelectAllState() {
@@ -385,52 +416,88 @@ public class ImportOnlineActivity extends AppCompatActivity {
     }
 
     private void confirmImport() {
-        final List<RobotExamUpdater.ReleaseAsset> chosen = new ArrayList<>();
-        for (Cand c : all) if (c.selected) chosen.add(c.asset);
+        if (importing) return;
+        final List<Cand> chosen = new ArrayList<>();
+        for (Cand c : all) if (c.selected) chosen.add(c);
         if (chosen.isEmpty()) {
             Toast.makeText(this, "请先勾选要导入的真题", Toast.LENGTH_SHORT).show();
             return;
         }
-        btnConfirm.setEnabled(false);
+        // 导入期间：隐藏勾选框与底部工具栏，逐条在右下角显示「下载进度 → 解析中 → 解析完成」
+        importing = true;
+        selectMode = false;
+        for (Cand c : chosen) {
+            // 立即置为 0%，让列表控件在点击「导入」后马上显示状态（等待中/0%→100%）
+            c.percent = 0;
+            c.parsing = false;
+            c.done = false;
+            c.active = false;
+            c.failMsg = null;
+            c.questionCount = 0;
+        }
+        adapter.notifyDataSetChanged();
+        updateCount();
         Toast.makeText(this, "开始导入 " + chosen.size() + " 套真题…", Toast.LENGTH_SHORT).show();
-        final File mediaDir = getFilesDir();
+        startImportNext(chosen, 0, 0);
+    }
+
+    /** 串行导入：每套在后台线程下载+解析，完成后在右下角更新状态，再进入下一套。 */
+    private void startImportNext(final List<Cand> list, final int idx, final int okCount) {
+        if (idx >= list.size() || isFinishing()) {
+            importing = false;
+            adapter.notifyDataSetChanged();
+            updateCount();
+            if (okCount > 0) {
+                setResult(RESULT_OK);
+                Toast.makeText(this, "导入完成：成功 " + okCount + "/" + list.size() + " 套",
+                        Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(this, "导入失败，请检查网络后重试", Toast.LENGTH_LONG).show();
+            }
+            return;
+        }
+        final Cand c = list.get(idx);
+        c.active = true;
+        adapter.notifyDataSetChanged();
+        final String cnName = RobotExamUpdater.buildChineseDocxName(c.asset.fileName);
+        final boolean saveDocx = DataStore.isAutoDownloadDocx(this);
         new Thread(() -> {
-            final List<RobotExamBank.Paper> imported = new ArrayList<>();
-            final StringBuilder err = new StringBuilder();
-            for (RobotExamUpdater.ReleaseAsset ra : chosen) {
-                try {
-                    RobotExamBank.Paper p = RobotExamUpdater.importPaperFromDocx(this, ra, mediaDir);
-                    if (p != null) imported.add(p);
-                } catch (Exception e) {
-                    err.append(ra.fileName).append(": ").append(e.getMessage()).append("\n");
-                }
+            int n = -1;
+            String err = null;
+            try {
+                RobotExamBank.Paper p = RobotExamBank.importFromGitHub(this, c.asset, cnName, saveDocx,
+                        new RobotExamBank.ImportProgress() {
+                            @Override public void onDownloadPercent(int percent) {
+                                runOnUiThread(() -> {
+                                    c.percent = percent;
+                                    adapter.notifyDataSetChanged();
+                                });
+                            }
+                            @Override public void onParsing() {
+                                runOnUiThread(() -> {
+                                    c.parsing = true;
+                                    adapter.notifyDataSetChanged();
+                                });
+                            }
+                        });
+                n = (p == null || p.questions == null) ? 0 : p.questions.size();
+            } catch (Exception e) {
+                err = e.getMessage() == null ? "未知错误" : e.getMessage();
             }
-            int saved = 0;
-            if (!imported.isEmpty()) {
-                try {
-                    java.util.Map<String, RobotExamBank.Paper> map = RobotExamUpdater.loadCache(this);
-                    if (map == null) map = new java.util.LinkedHashMap<>();
-                    for (RobotExamBank.Paper p : imported) {
-                        map.put(p.key, p);
-                        saved++;
-                    }
-                    RobotExamUpdater.saveCachePublic(this, map);
-                } catch (Exception e) {
-                    err.append("写入缓存失败: ").append(e.getMessage());
-                }
-            }
-            final int finalSaved = saved;
-            final String errMsg = err.toString();
+            final int fn = n;
+            final String ferr = err;
             runOnUiThread(() -> {
-                btnConfirm.setEnabled(true);
-                if (finalSaved > 0) {
-                    Toast.makeText(this, "成功导入 " + finalSaved + " 套真题", Toast.LENGTH_LONG).show();
-                    setResult(RESULT_OK);
-                    finish();
+                c.parsing = false;
+                c.active = false;
+                if (ferr != null) {
+                    c.percent = -1;
+                    c.failMsg = ferr.contains("解析") ? "解析失败" : "下载失败";
                 } else {
-                    Toast.makeText(this, "导入失败：" + (errMsg.isEmpty() ? "未知错误" : errMsg),
-                            Toast.LENGTH_LONG).show();
+                    c.done = true;
+                    c.questionCount = fn;
                 }
+                adapter.notifyDataSetChanged();
+                startImportNext(list, idx + 1, okCount + (ferr == null ? 1 : 0));
             });
         }).start();
     }

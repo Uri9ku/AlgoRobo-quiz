@@ -104,11 +104,18 @@
                         <TextView android:id="@+id/labelWrongBook" android:layout_width="wrap_content" android:layout_height="wrap_content"
                             android:layout_marginTop="6dp" android:text="错题本" android:textSize="12sp" android:textColor="@color/text_main" />
                     </LinearLayout>
-                    <TextView android:id="@+id/badgeWrong" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="0" android:textSize="10sp" android:textColor="@android:color/white"
-                        android:paddingStart="6dp" android:paddingEnd="6dp" android:paddingTop="1dp" android:paddingBottom="1dp"
-                        android:background="@drawable/bg_badge_danger" android:minWidth="16dp" android:gravity="center"
-                        android:visibility="gone" android:layout_gravity="top|end" android:layout_marginTop="1dp" />
+                    <!-- 数量角标：外层裁剪容器 + 内层数字，数字变化时上下滑动顶替 -->
+                    <FrameLayout android:id="@+id/badgeWrongBox" android:layout_width="wrap_content"
+                        android:layout_height="18dp" android:minWidth="18dp"
+                        android:background="@drawable/bg_badge_danger"
+                        android:clipChildren="true" android:clipToPadding="true"
+                        android:visibility="gone" android:layout_gravity="top|end" android:layout_marginTop="1dp">
+                        <TextView android:id="@+id/badgeWrong" android:layout_width="wrap_content"
+                            android:layout_height="match_parent" android:layout_gravity="center"
+                            android:gravity="center" android:includeFontPadding="false"
+                            android:text="0" android:textSize="10sp" android:textColor="@android:color/white"
+                            android:paddingStart="6dp" android:paddingEnd="6dp" />
+                    </FrameLayout>
                 </FrameLayout>
 
                 <!-- 5 收藏题 -->
@@ -123,11 +130,18 @@
                         <TextView android:id="@+id/labelFavorite" android:layout_width="wrap_content" android:layout_height="wrap_content"
                             android:layout_marginTop="6dp" android:text="收藏题" android:textSize="12sp" android:textColor="@color/text_main" />
                     </LinearLayout>
-                    <TextView android:id="@+id/badgeFavorite" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="0" android:textSize="10sp" android:textColor="@android:color/white"
-                        android:paddingStart="6dp" android:paddingEnd="6dp" android:paddingTop="1dp" android:paddingBottom="1dp"
-                        android:background="@drawable/bg_badge_warning" android:minWidth="16dp" android:gravity="center"
-                        android:visibility="gone" android:layout_gravity="top|end" android:layout_marginTop="1dp" />
+                    <!-- 数量角标：外层裁剪容器 + 内层数字，数字变化时上下滑动顶替 -->
+                    <FrameLayout android:id="@+id/badgeFavoriteBox" android:layout_width="wrap_content"
+                        android:layout_height="18dp" android:minWidth="18dp"
+                        android:background="@drawable/bg_badge_warning"
+                        android:clipChildren="true" android:clipToPadding="true"
+                        android:visibility="gone" android:layout_gravity="top|end" android:layout_marginTop="1dp">
+                        <TextView android:id="@+id/badgeFavorite" android:layout_width="wrap_content"
+                            android:layout_height="match_parent" android:layout_gravity="center"
+                            android:gravity="center" android:includeFontPadding="false"
+                            android:text="0" android:textSize="10sp" android:textColor="@android:color/white"
+                            android:paddingStart="6dp" android:paddingEnd="6dp" />
+                    </FrameLayout>
                 </FrameLayout>
 
                 <!-- 6 学习统计 -->
