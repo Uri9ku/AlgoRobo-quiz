@@ -72,6 +72,8 @@ public final class DevModeOverlay {
     private static int panelX = Integer.MIN_VALUE, panelY = Integer.MIN_VALUE;
     /** 信息区高度（px），跨页面保留。 */
     private static int listHeight = -1;
+    /** 父子滑动条量程（会话内见过的最大层级深度）。 */
+    private static int sliderMaxDepth = 1;
 
     // ===================== 生命周期入口 =====================
 
@@ -338,11 +340,14 @@ public final class DevModeOverlay {
             @Override
             public void onProgressChanged(SeekBar bar, int progress, boolean fromUser) {
                 if (!fromUser || updatingBar) return;
-                if (progress < 0 || progress >= chain.size()) return;
-                View v = chain.get(progress);
+                if (chain.isEmpty()) return;
+                int p = progress;
+                if (p >= chain.size()) p = chain.size() - 1;
+                if (p < 0) p = 0;
+                View v = chain.get(p);
                 selected = v;
                 if (highlight != null) highlight.setTarget(v);
-                showInfo(v, progress);
+                showInfo(v, p);
             }
 
             @Override
@@ -563,14 +568,16 @@ public final class DevModeOverlay {
             highlight.setTarget(v);
             highlight.setVisibility(View.VISIBLE);
         }
-        int idx = chain.size() - 1;
+        int depth = chain.size() - 1;
+        if (depth > sliderMaxDepth) sliderMaxDepth = depth;
         updatingBar = true;
         if (levelBar != null) {
-            levelBar.setMax(Math.max(1, chain.size() - 1));
-            levelBar.setProgress(idx);
+            // 滑块量程取会话内见过的最大层级，位置=当前控件的层级，切换控件时位置会实时变化
+            levelBar.setMax(Math.max(1, sliderMaxDepth));
+            levelBar.setProgress(depth);
         }
         updatingBar = false;
-        showInfo(v, idx);
+        showInfo(v, depth);
         if (panel != null && panel.getVisibility() != View.VISIBLE) {
             panel.setVisibility(View.VISIBLE);
             applyPanelHeight();
@@ -602,8 +609,9 @@ public final class DevModeOverlay {
             View rowView = inf.inflate(R.layout.dev_row, rowsContainer, false);
             TextView left = rowView.findViewById(R.id.devRowLeft);
             TextView right = rowView.findViewById(R.id.devRowRight);
-            left.setText(r[1]);
-            right.setText(r[0] + "：" + r[2]);
+            // 两列互换：左列=中文说明，右列=原始数值/表达式；复制按钮固定在右侧列之后，复制原始数值
+            left.setText(r[0] + "：" + r[2]);
+            right.setText(r[1]);
             final String copyText = r[1];
             rowView.findViewById(R.id.devRowCopy).setOnClickListener(x ->
                     copyToClipboard(c, "已复制：" + r[0], copyText));

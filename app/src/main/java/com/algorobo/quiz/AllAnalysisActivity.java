@@ -31,6 +31,9 @@ public class AllAnalysisActivity extends AppCompatActivity {
     /** 解析区全局展开状态（工具栏「全部收起/全部展开」控制）。 */
     private boolean allExpanded = true;
     private int currentIndexPos = -1;
+    /** 批量选择模式：长按题目进入，工具栏切为批量收藏/批量错题。 */
+    private boolean selectMode = false;
+    private final java.util.Set<String> selectedUids = new java.util.HashSet<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,8 +66,14 @@ public class AllAnalysisActivity extends AppCompatActivity {
         adapter = new AnalysisAdapter();
         rv.setAdapter(adapter);
 
-        btnAnalysisAllAi.setOnClickListener(v -> confirmAnalyzeAll());
-        btnAnalysisExpandAll.setOnClickListener(v -> toggleAllExpand());
+        btnAnalysisAllAi.setOnClickListener(v -> {
+            if (selectMode) batchFavorite();
+            else confirmAnalyzeAll();
+        });
+        btnAnalysisExpandAll.setOnClickListener(v -> {
+            if (selectMode) batchWrong();
+            else toggleAllExpand();
+        });
         btnAnalysisDraft.setOnClickListener(v -> DraftPaper.show(this, null, null));
         updateExpandButton();
 
@@ -232,9 +241,86 @@ public class AllAnalysisActivity extends AppCompatActivity {
     }
 
     private void updateExpandButton() {
-        if (btnAnalysisExpandAll == null) return;
-        btnAnalysisExpandAll.setImageResource(allExpanded
-                ? R.drawable.ic_tool_collapse : R.drawable.ic_tool_expand);
+        updateToolbar();
+    }
+
+    /** 工具栏样式：普通模式为 全部解析/全部展开收起/草稿纸；批量模式为 批量收藏/批量错题。 */
+    private void updateToolbar() {
+        if (btnAnalysisAllAi == null) return;
+        if (selectMode) {
+            btnAnalysisAllAi.setImageResource(R.drawable.ic_tool_favorite_filled);
+            btnAnalysisAllAi.setContentDescription("批量加入收藏题");
+            btnAnalysisExpandAll.setImageResource(R.drawable.ic_tool_wrongbook);
+            btnAnalysisExpandAll.setContentDescription("批量加入错题本");
+            btnAnalysisDraft.setVisibility(View.GONE);
+        } else {
+            btnAnalysisAllAi.setImageResource(R.drawable.ic_tool_analyze);
+            btnAnalysisAllAi.setContentDescription("全部解析");
+            btnAnalysisExpandAll.setImageResource(allExpanded
+                    ? R.drawable.ic_tool_collapse : R.drawable.ic_tool_expand);
+            btnAnalysisExpandAll.setContentDescription("全部展开收起");
+            btnAnalysisDraft.setVisibility(View.VISIBLE);
+        }
+    }
+
+    // ===================== 批量选择模式 =====================
+
+    private void enterSelectMode() {
+        selectMode = true;
+        selectedUids.clear();
+        updateToolbar();
+        adapter.notifyDataSetChanged();
+        toast("已进入批量选择：勾选题目后点工具栏按钮");
+    }
+
+    private void exitSelectMode() {
+        selectMode = false;
+        selectedUids.clear();
+        updateToolbar();
+        adapter.notifyDataSetChanged();
+    }
+
+    void toggleSelect(String uid) {
+        if (uid == null) return;
+        if (!selectedUids.remove(uid)) selectedUids.add(uid);
+        adapter.notifyDataSetChanged();
+    }
+
+    private void batchFavorite() {
+        if (selectedUids.isEmpty()) {
+            toast("请先勾选题目");
+            return;
+        }
+        int n = 0;
+        for (String uid : new ArrayList<>(selectedUids)) {
+            if (!DataStore.isFavorite(this, uid)) DataStore.addFavorite(this, uid);
+            n++;
+        }
+        toast("已加入收藏题 " + n + " 道");
+        exitSelectMode();
+    }
+
+    private void batchWrong() {
+        if (selectedUids.isEmpty()) {
+            toast("请先勾选题目");
+            return;
+        }
+        int n = 0;
+        for (String uid : new ArrayList<>(selectedUids)) {
+            DataStore.addWrong(this, uid);
+            n++;
+        }
+        toast("已加入错题本 " + n + " 道");
+        exitSelectMode();
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (selectMode) {
+            exitSelectMode();
+            return;
+        }
+        super.onBackPressed();
     }
 
     // ===================== 工具方法（供 Adapter 与工具栏共用） =====================
@@ -376,6 +462,29 @@ public class AllAnalysisActivity extends AppCompatActivity {
             applyAnalysisVisibility(h);
             bindActions(h, r);
             renderRecordImages(h, r);
+            bindSelectMode(h, r);
+        }
+
+        /** 批量选择模式：收藏/错题图标隐藏、显示勾选框；长按进入、点击勾选。 */
+        private void bindSelectMode(final Holder h, final AnswerRecord r) {
+            final String uid = r.uid;
+            h.cbSelect.setVisibility(selectMode ? View.VISIBLE : View.GONE);
+            h.btnFav.setVisibility(selectMode ? View.GONE : View.VISIBLE);
+            h.btnWrong.setVisibility(selectMode ? View.GONE : View.VISIBLE);
+            h.cbSelect.setOnCheckedChangeListener(null);
+            h.cbSelect.setChecked(uid != null && selectedUids.contains(uid));
+            h.cbSelect.setOnCheckedChangeListener((b, checked) -> {
+                if (uid == null) return;
+                if (checked) selectedUids.add(uid);
+                else selectedUids.remove(uid);
+            });
+            h.itemView.setOnLongClickListener(v -> {
+                if (!selectMode) enterSelectMode();
+                return true;
+            });
+            h.itemView.setOnClickListener(v -> {
+                if (selectMode) toggleSelect(uid);
+            });
         }
 
         /** 题号行右侧：收藏 / 错题本（复用刷题页的数据与图标）。 */
@@ -629,6 +738,7 @@ public class AllAnalysisActivity extends AppCompatActivity {
             TextView index, type, stem, options, user, correctAns, result, detail;
             TextView knowledge, btnAi, btnToggle, aiDetail;
             ImageView ivStemImage, btnFav, btnWrong;
+            android.widget.CheckBox cbSelect;
             LinearLayout analysisOptionImages;
             boolean expanded = true;
 
@@ -650,6 +760,7 @@ public class AllAnalysisActivity extends AppCompatActivity {
                 analysisOptionImages = v.findViewById(R.id.analysisOptionImages);
                 btnFav = v.findViewById(R.id.btnAnalysisFavorite);
                 btnWrong = v.findViewById(R.id.btnAnalysisWrongbook);
+                cbSelect = v.findViewById(R.id.cbAnalysisSelect);
                 bindToggle(this);
             }
         }

@@ -22,8 +22,7 @@
             android:singleLine="true"
             android:text=""
             android:textSize="11sp"
-            android:textColor="@color/text_main"
-            android:fontFamily="monospace" />
+            android:textColor="@color/text_main" />
     </HorizontalScrollView>
 
     <HorizontalScrollView
@@ -41,7 +40,8 @@
             android:singleLine="true"
             android:text=""
             android:textSize="11sp"
-            android:textColor="@color/primary" />
+            android:textColor="@color/primary"
+            android:fontFamily="monospace" />
     </HorizontalScrollView>
 
     <TextView

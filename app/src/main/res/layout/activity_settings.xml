@@ -286,6 +286,28 @@
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:text=" ›" android:textSize="18sp" android:textColor="@color/text_sub"/>
                 </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="1dp"
+                    android:layout_marginTop="14dp" android:background="@color/bg_page"/>
+
+                <!-- AI 角色设定：决定 AI 解析的风格 -->
+                <LinearLayout android:id="@+id/btnAiRole" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginTop="14dp"
+                    android:orientation="horizontal" android:gravity="center_vertical">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="AI 角色设定" android:textSize="16sp" android:textColor="@color/text_main"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:text="选择 AI 解析的风格，也可自定义角色"
+                            android:textSize="12sp" android:textColor="@color/text_sub"/>
+                    </LinearLayout>
+                    <TextView android:id="@+id/tvAiRoleValue"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="默认" android:textSize="14sp" android:textColor="@color/primary"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text=" ›" android:textSize="18sp" android:textColor="@color/text_sub"/>
+                </LinearLayout>
             </LinearLayout>
 
             <!-- AI 模型配置（单一入口组件） -->

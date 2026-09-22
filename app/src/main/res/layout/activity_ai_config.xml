@@ -120,22 +120,6 @@
                     <androidx.appcompat.widget.SwitchCompat android:id="@+id/swVision"
                         android:layout_width="wrap_content" android:layout_height="wrap_content"/>
                 </LinearLayout>
-
-                <!-- 模型支持音频解析 -->
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp" android:orientation="horizontal" android:gravity="center_vertical">
-                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
-                        android:layout_weight="1" android:orientation="vertical">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="模型支持音频解析" android:textSize="15sp" android:textColor="@color/text_main"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="启用后，音频将直接发送给 AI 处理"
-                            android:textSize="11sp" android:textColor="@color/text_sub"/>
-                    </LinearLayout>
-                    <androidx.appcompat.widget.SwitchCompat android:id="@+id/swAudio"
-                        android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                </LinearLayout>
             </LinearLayout>
 
             <!-- 操作按钮：保存 / 新建 / 删除 -->

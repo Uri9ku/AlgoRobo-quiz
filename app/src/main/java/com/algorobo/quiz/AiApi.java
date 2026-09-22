@@ -39,7 +39,6 @@ public class AiApi {
         public String models;    // 模型名称，逗号分隔多个
 
         public boolean vision;  // 模型是否支持识图
-        public boolean audio;   // 模型是否支持音频解析
         public Config() {
         }
 
@@ -51,14 +50,13 @@ public class AiApi {
             this.models = models;
         }
 
-        public Config(String name, String provider, String endpoint, String apiKey, String models, boolean vision, boolean audio) {
+        public Config(String name, String provider, String endpoint, String apiKey, String models, boolean vision) {
             this.name = name;
             this.provider = provider;
             this.endpoint = endpoint;
             this.apiKey = apiKey;
             this.models = models;
             this.vision = vision;
-            this.audio = audio;
         }
         /** 返回第一个模型名（用于默认调用）。 */
         public String firstModel() {
@@ -148,14 +146,20 @@ public class AiApi {
             return new Result(false, "请先在「AI 模型配置」中完善配置", 0);
         }
         String endpoint = normalizeEndpoint(cfg.endpoint);
-        String prompt = buildAnalysisPrompt(q, userAnswerText, isCorrect);
+        String prompt = buildAnalysisPrompt(q, userAnswerText, isCorrect, DataStore.getAiRole(ctx));
         return chat(cfg, endpoint, "analysis", prompt, 0.3f);
     }
-    /** 构造 AI 解析的 prompt：题目 + 正确答案 + 用户答案 + 参考答案解析。 */
-    private static String buildAnalysisPrompt(Question q, String userAnswerText, boolean isCorrect) {
+    /** 构造 AI 解析的 prompt：题目 + 正确答案 + 用户答案 + 参考答案解析；role 为用户设定的角色（可空）。 */
+    private static String buildAnalysisPrompt(Question q, String userAnswerText, boolean isCorrect, String role) {
         StringBuilder sb = new StringBuilder();
-        sb.append("你是一名少儿编程辅导老师。请针对下面这道编程题给出详细解析，");
-        sb.append("要求语言通俗易懂、条理清晰，帮助小朋友理解为什么选这个答案、错在哪里。\n\n");
+        if (role != null && !role.trim().isEmpty()) {
+            // 使用用户设定的 AI 角色口吻
+            sb.append(role.trim()).append("\n");
+            sb.append("请针对下面这道题给出详细解析，要求条理清晰、贴合上述角色风格。\n\n");
+        } else {
+            sb.append("你是一名少儿编程辅导老师。请针对下面这道编程题给出详细解析，");
+            sb.append("要求语言通俗易懂、条理清晰，帮助小朋友理解为什么选这个答案、错在哪里。\n\n");
+        }
         sb.append("题型：").append(q == null ? "" : q.type).append("\n");
         sb.append("题目：").append(q == null ? "" : q.stem).append("\n");
         if (q != null && q.options != null && q.options.length > 0) {

@@ -3,6 +3,7 @@ package com.algorobo.quiz;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
+import android.widget.EditText;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -158,6 +159,9 @@ public class SettingsActivity extends AppCompatActivity {
         });
         // AI 自动解析模式选择
         findViewById(R.id.btnAutoAiAnalysisMode).setOnClickListener(v -> showAutoAiAnalysisModeDialog());
+        // AI 角色设定：决定 AI 解析的风格
+        findViewById(R.id.btnAiRole).setOnClickListener(v -> showAiRoleDialog());
+        updateAiRoleValue();
 
         // 下载目录标题点击折叠/展开按钮区
         final android.widget.LinearLayout examDirButtons = findViewById(R.id.examDirButtons);
@@ -214,8 +218,7 @@ public class SettingsActivity extends AppCompatActivity {
         });
 
         // 开发者模式悬浮球：关闭后每个页面都不再显示悬浮球
-        SwitchCompat swDevMode = findViewById(R.id.swDevMode);
-        swDevMode.setChecked(DataStore.isDevModeEnabled(this));
+        SwitchCompat swDevMode = findViewById(R.id.swDevMode);        swDevMode.setChecked(DataStore.isDevModeEnabled(this));
         swDevMode.setOnCheckedChangeListener((btn, checked) -> {
             DataStore.setDevModeEnabled(this, checked);
             DevModeOverlay.onSettingChanged(this);
@@ -223,6 +226,75 @@ public class SettingsActivity extends AppCompatActivity {
         });
 
         initAiConfig();
+    }
+
+    // ===================== AI 角色设定 =====================
+
+    /** 内置角色预设：{显示名, 角色描述（作为 prompt 前缀）}。 */
+    private static final String[][] AI_ROLES = {
+            {"默认（少儿编程老师）", ""},
+            {"亲切鼓励型", "你是一位亲切耐心的少儿编程启蒙老师，语气温柔，多用鼓励、比喻和生活化例子，避免生僻术语，让小朋友听得懂、有信心。"},
+            {"简洁要点型", "你是一位干练的应试辅导老师，回答尽量简洁：先给定论，再分条列出要点，不展开无关内容，便于快速记忆。"},
+            {"严谨学术型", "你是一位严谨的技术讲师，使用准确的专业术语与完整的推理链条讲解原理和细节，逻辑清晰、层层递进。"},
+            {"启发提问型", "你是一位善于启发思考的老师，通过一步步提问引导小朋友自己得出结论，不要直接给出答案，最后再总结。"},
+    };
+
+    private void showAiRoleDialog() {
+        final String[] names = new String[AI_ROLES.length + 1];
+        for (int i = 0; i < AI_ROLES.length; i++) names[i] = AI_ROLES[i][0];
+        names[AI_ROLES.length] = "自定义…";
+        String cur = DataStore.getAiRole(this);
+        int selected = -1;
+        for (int i = 0; i < AI_ROLES.length; i++) {
+            if (AI_ROLES[i][1].equals(cur == null ? "" : cur)) { selected = i; break; }
+        }
+        if (selected < 0 && cur != null && !cur.trim().isEmpty()) selected = AI_ROLES.length;
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("AI 角色设定")
+                .setSingleChoiceItems(names, selected, (d, which) -> {
+                    d.dismiss();
+                    if (which < AI_ROLES.length) {
+                        DataStore.setAiRole(this, AI_ROLES[which][1]);
+                        updateAiRoleValue();
+                        showToast("已切换为「" + AI_ROLES[which][0] + "」");
+                    } else {
+                        showCustomRoleDialog(cur);
+                    }
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    private void showCustomRoleDialog(String current) {
+        final EditText input = new EditText(this);
+        input.setHint("例如：你是一位幽默风趣的老师，喜欢用打比方讲解");
+        input.setMinLines(3);
+        input.setGravity(android.view.Gravity.TOP);
+        input.setText(current == null ? "" : current);
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("自定义 AI 角色")
+                .setView(input)
+                .setPositiveButton("保存", (d, w) -> {
+                    DataStore.setAiRole(this, input.getText().toString().trim());
+                    updateAiRoleValue();
+                    showToast("已保存自定义角色");
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    private void updateAiRoleValue() {
+        TextView tv = findViewById(R.id.tvAiRoleValue);
+        if (tv == null) return;
+        String cur = DataStore.getAiRole(this);
+        if (cur == null || cur.trim().isEmpty()) {
+            tv.setText("默认");
+            return;
+        }
+        for (String[] role : AI_ROLES) {
+            if (role[1].equals(cur)) { tv.setText(role[0]); return; }
+        }
+        tv.setText("自定义");
     }
 
     /** 角标动画时长 ↔ 滑动条进度（100~1000ms，步长 50）。 */

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 知识点掌握度花瓣（6 个表示进度，按比例点亮） -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="14dp" android:height="14dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M12,2.6 C8.2,7.6 8.2,16.4 12,21.4 C15.8,16.4 15.8,7.6 12,2.6 Z" />
+</vector>

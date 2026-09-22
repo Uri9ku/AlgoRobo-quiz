@@ -297,6 +297,24 @@ public class QuizActivity extends AppCompatActivity {
             String key = src.substring("paper:".length());
             return new ArrayList<>(RobotExamBank.getQuestions(this, key));
         }
+        // 知识点练习：只加载该知识点下的题目（uid 由首页知识点树传入）
+        if ("kpuids".equals(src)) {
+            List<Question> result = new ArrayList<>();
+            java.util.Set<String> ids = new java.util.HashSet<>();
+            java.util.ArrayList<String> uids = getIntent().getStringArrayListExtra("kpuids");
+            if (uids != null) ids.addAll(uids);
+            if (ids.isEmpty()) return result;
+            for (Question q : QuestionBank.getAll()) {
+                if (ids.contains(q.uniqueKey())) result.add(q);
+            }
+            for (RobotExamBank.Paper p : RobotExamBank.getCachedPapersList(this)) {
+                if (p.questions == null) continue;
+                for (Question q : p.questions) {
+                    if (ids.contains(q.uniqueKey())) result.add(q);
+                }
+            }
+            return result;
+        }
         List<Question> all = QuestionBank.getAll();
         if ("wrong".equals(src) || "favorite".equals(src)) {
             java.util.Set<String> ids = "wrong".equals(src)
@@ -1019,16 +1037,29 @@ public class QuizActivity extends AppCompatActivity {
         if ("wrong".equals(mode) && correct) return; // 只对错题解析时，答对不触发
         triggerAiAnalysis(q, correct);
     }
-    // 手动触发（按钮点击）
+    // 手动触发（按钮点击）：已生成过 AI 解析时二次确认是否重新解析
     private void onAiAnalysisClick() {
-        Question q = questions.get(index);
-        boolean correct = isCurrentCorrect();
-        triggerAiAnalysis(q, correct);
-    }
-    // 触发 AI 解析：缓存优先，无线程阻塞地后台调用
-    private void triggerAiAnalysis(Question q, boolean correct) {
-        // 缓存优先：已生成过则直接展示
+        final Question q = questions.get(index);
+        final boolean correct = isCurrentCorrect();
         if (hasAiAnalysisCached(q)) {
+            new androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle("AI 解析")
+                    .setMessage("本题已经生成过 AI 解析，是否重新解析？")
+                    .setNegativeButton("取消", null)
+                    .setPositiveButton("重新解析", (d, w) -> runAiAnalysis(q, correct, true))
+                    .show();
+            return;
+        }
+        runAiAnalysis(q, correct, false);
+    }
+    // 触发 AI 解析：缓存优先，无线程阻塞地后台调用（内部入口不弹确认）
+    private void triggerAiAnalysis(Question q, boolean correct) {
+        runAiAnalysis(q, correct, false);
+    }
+
+    private void runAiAnalysis(Question q, boolean correct, boolean force) {
+        // 缓存优先：已生成过且不强制重解析时直接展示
+        if (!force && hasAiAnalysisCached(q)) {
             showAiAnalysis(DataStore.getAiAnalysis(this, q.uniqueKey()));
             return;
         }

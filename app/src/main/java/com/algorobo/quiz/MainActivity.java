@@ -84,6 +84,10 @@ public class MainActivity extends AppCompatActivity {
         renderExamType(currentTypeIndex);
         renderCategories();
         renderGreenContainer();
+        // 后台刷新《机器人等级考试备考目录.md》（题库仓库 _meta 下），目录更新后自动重新分级
+        RobotCatalog.refreshAsync(this, changed -> {
+            if (changed) runOnUiThread(this::renderGreenContainer);
+        });
     }
 
     // ===== 顶部考试类型下拉框 =====
@@ -173,127 +177,216 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // ===== 底部绿框三级容器 =====
+    // ===== 底部绿框：机器人按「备考目录.md」分级；其他科目按题目标签聚合 =====
     private void renderGreenContainer() {
         ExamType t = ExamCategoryCatalog.getByIndex(currentTypeIndex);
         llGreenContainer.removeAllViews();
+        llGreenContainer.setBackgroundResource(R.drawable.bg_card);
         if (t.categories.isEmpty() || currentCategoryIndex >= t.categories.size()) {
             return;
         }
         Category c = t.categories.get(currentCategoryIndex);
+        boolean isRobot = c.name != null && c.name.contains("机器人");
 
-        // 统一三级树：所有类目（普通 + 机器人）都映射为 TreeNode 树
-        List<TreeNode> roots = ExamCategoryCatalog.buildTree(c);
+        List<Question> qs = collectKnowledgeQuestions(c.name);
+        kpAnswered = new HashSet<>();
+        for (Question q : qs) {
+            int[] st = DataStore.getQuestionStat(this, q.uniqueKey());
+            if (st != null && st[0] > 0) kpAnswered.add(q.uniqueKey());
+        }
+
+        List<RobotCatalog.KpNode> roots;
+        if (isRobot) {
+            // 机器人：层级完全由 assets/在线刷新的《机器人等级考试备考目录.md》决定
+            roots = RobotCatalog.buildCatalogTree(this, qs);
+        } else if (qs.isEmpty()) {
+            TextView empty = new TextView(this);
+            empty.setText("该科目暂无知识点：请先在「真题练习」导入真题（题目需带知识点标签）");
+            empty.setTextSize(13);
+            empty.setTextColor(getColor(R.color.text_sub));
+            empty.setPadding(dp(12), dp(16), dp(12), dp(16));
+            llGreenContainer.addView(empty);
+            return;
+        } else {
+            roots = RobotCatalog.buildTagTree(qs);
+        }
+
         if (roots.isEmpty()) {
             TextView empty = new TextView(this);
             empty.setText("暂无目录，待完善");
             empty.setTextSize(13);
             empty.setTextColor(getColor(R.color.text_sub));
-            empty.setPadding(dp(4), dp(12), dp(4), dp(12));
+            empty.setPadding(dp(12), dp(16), dp(12), dp(16));
             llGreenContainer.addView(empty);
             return;
         }
-
         for (int i = 0; i < roots.size(); i++) {
-            llGreenContainer.addView(buildTreeNode(roots.get(i), String.valueOf(i), 0));
+            addKpNode(roots.get(i), 0);
         }
     }
 
-    /**
-     * 递归构建三级目录节点卡片。
-     * @param node  当前节点
-     * @param path  当前节点路径（如 "0"、"0/1"、"0/1/2"），作为展开状态 key
-     * @param depth 层级深度：0=一级，1=二级，2=三级叶子
-     */
-    private View buildTreeNode(TreeNode node, String path, int depth) {
-        final boolean hasChildren = node.children != null && !node.children.isEmpty();
-        final boolean expanded = expandedPaths.contains(path);
-        final boolean isLeaf = !hasChildren; // 三级叶子（知识点）
+    private Set<String> kpAnswered = new HashSet<>();
 
-        LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(12), dp(8), dp(12), dp(8));
-        card.setBackgroundResource(R.drawable.bg_card);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        lp.setMargins(dp(depth * 8), 0, 0, dp(8));
-        card.setLayoutParams(lp);
+    /** 科目名 → 真题 subject 缩写（真题 key 形如 2024_12_robot_1）。 */
+    private String subjectOfCategory(String name) {
+        if (name == null) return null;
+        if (name.contains("机器人")) return "robot";
+        if (name.contains("Python") || name.contains("python")) return "py";
+        if (name.contains("图形化")) return "gx";
+        if (name.contains("C")) return "c";
+        return null;
+    }
 
-        // 标题行：箭头 + 标题 + 进度（叶子）
-        LinearLayout header = new LinearLayout(this);
-        header.setOrientation(LinearLayout.HORIZONTAL);
-        header.setGravity(Gravity.CENTER_VERTICAL);
-
-        TextView arrow = new TextView(this);
-        if (hasChildren) {
-            arrow.setText(expanded ? "\u25be" : "\u25b8");
-        } else {
-            arrow.setText("\u00b7"); // 叶子用小圆点
+    /** 收集该科目已导入、且带知识点的题目。 */
+    private List<Question> collectKnowledgeQuestions(String categoryName) {
+        String subject = subjectOfCategory(categoryName);
+        List<Question> out = new java.util.ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        for (RobotExamBank.Paper p : RobotExamBank.getCachedPapersList(this)) {
+            if (p.key == null || p.questions == null) continue;
+            if (subject != null && !p.key.contains("_" + subject + "_")) continue;
+            for (Question q : p.questions) {
+                if (q.knowledgePoints == null || q.knowledgePoints.length == 0) continue;
+                if (seen.add(q.uniqueKey())) out.add(q);
+            }
         }
-        arrow.setTextSize(15);
-        arrow.setTextColor(getColor(R.color.primary));
-        arrow.setPadding(0, 0, dp(6), 0);
-        header.addView(arrow);
+        return out;
+    }
+
+    private int kpDoneCount(RobotCatalog.KpNode n) {
+        int c = 0;
+        for (String uid : n.uids) if (kpAnswered.contains(uid)) c++;
+        return c;
+    }
+
+    /** 平铺渲染节点与其已展开的子节点（逐行展开，按层级阶梯缩进）。 */
+    private void addKpNode(RobotCatalog.KpNode node, int depth) {
+        llGreenContainer.addView(buildKpRow(node, depth));
+        View divider = new View(this);
+        divider.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, dp(1))));
+        divider.setBackgroundColor(getColor(R.color.divider));
+        llGreenContainer.addView(divider);
+        if (!node.children.isEmpty() && expandedPaths.contains(node.path)) {
+            for (RobotCatalog.KpNode ch : node.children) addKpNode(ch, depth + 1);
+        }
+    }
+
+    /** 单行：状态圆点 + 名称/花瓣进度 + 右侧箭头。 */
+    private View buildKpRow(RobotCatalog.KpNode node, int depth) {
+        final boolean hasChildren = !node.children.isEmpty();
+        final boolean expanded = expandedPaths.contains(node.path);
+
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(12 + depth * 16), dp(12), dp(12), dp(12));
+
+        TextView dot = new TextView(this);
+        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(dp(24), dp(24));
+        dot.setLayoutParams(dlp);
+        dot.setGravity(Gravity.CENTER);
+        dot.setTextSize(12);
+        if (!hasChildren) {
+            dot.setText("\u00b7");
+            dot.setBackgroundResource(R.drawable.bg_kp_circle_outline);
+            dot.setTextColor(getColor(R.color.text_sub));
+        } else if (expanded) {
+            dot.setText("\u25b4");
+            dot.setBackgroundResource(R.drawable.bg_kp_circle_filled);
+            dot.setTextColor(Color.WHITE);
+        } else {
+            dot.setText("\u25be");
+            dot.setBackgroundResource(R.drawable.bg_kp_circle_outline);
+            dot.setTextColor(getColor(R.color.text_sub));
+        }
+        row.addView(dot);
+
+        // 名称 + 花瓣进度
+        LinearLayout col = new LinearLayout(this);
+        col.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams clp = new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        clp.leftMargin = dp(12);
+        col.setLayoutParams(clp);
 
         TextView title = new TextView(this);
         title.setText(node.title);
-        title.setTextSize(depth == 0 ? 15 : (depth == 1 ? 14 : 13));
-        title.setTextColor(depth == 0 ? getColor(R.color.primary) : getColor(R.color.text_main));
-        if (depth == 0 || depth == 1) {
-            title.setTypeface(null, android.graphics.Typeface.BOLD);
+        title.setTextSize(depth <= 0 ? 16 : (depth == 1 ? 15 : 14));
+        title.setTextColor(depth == 0 ? getColor(R.color.text_main) : getColor(R.color.text_sub));
+        if (depth == 0) title.setTypeface(null, android.graphics.Typeface.BOLD);
+        col.addView(title);
+
+        int total = node.uids.size();
+        int done = kpDoneCount(node);
+        LinearLayout prog = new LinearLayout(this);
+        prog.setOrientation(LinearLayout.HORIZONTAL);
+        prog.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        plp.topMargin = dp(6);
+        prog.setLayoutParams(plp);
+        int filled = done > 0 ? Math.max(1, Math.round(6f * done / Math.max(1, total))) : 0;
+        for (int i = 0; i < 6; i++) {
+            android.widget.ImageView petal = new android.widget.ImageView(this);
+            LinearLayout.LayoutParams petalLp = new LinearLayout.LayoutParams(dp(14), dp(14));
+            petalLp.rightMargin = dp(3);
+            petal.setLayoutParams(petalLp);
+            petal.setImageResource(R.drawable.ic_kp_petal);
+            petal.setImageTintList(android.content.res.ColorStateList.valueOf(getColor(
+                    i < filled ? R.color.primary : R.color.divider)));
+            prog.addView(petal);
         }
-        header.addView(title, new LinearLayout.LayoutParams(
-            0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView cnt = new TextView(this);
+        cnt.setText(done + "/" + total);
+        cnt.setTextSize(12);
+        cnt.setTextColor(getColor(R.color.text_sub));
+        cnt.setPadding(dp(6), 0, 0, 0);
+        prog.addView(cnt);
+        col.addView(prog);
+        row.addView(col);
 
-        // 叶子节点右侧显示刷题进度
-        if (isLeaf && node.progress != null && !node.progress.isEmpty()) {
-            TextView prog = new TextView(this);
-            prog.setText(node.progress);
-            prog.setTextSize(12);
-            prog.setTextColor(getColor(R.color.text_sub));
-            header.addView(prog);
-        }
+        android.widget.ImageView arrow = new android.widget.ImageView(this);
+        LinearLayout.LayoutParams alp = new LinearLayout.LayoutParams(dp(16), dp(16));
+        alp.leftMargin = dp(8);
+        arrow.setLayoutParams(alp);
+        arrow.setImageResource(R.drawable.ic_arrow_right);
+        arrow.setImageTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.text_sub)));
+        row.addView(arrow);
 
-        card.addView(header);
-
-        // 点击交互：有子节点→展开/折叠；叶子→跳转知识点刷题（预留）
-        header.setOnClickListener(v -> {
+        row.setOnClickListener(v -> {
             if (hasChildren) {
-                if (expandedPaths.contains(path)) {
-                    expandedPaths.remove(path);
-                } else {
-                    expandedPaths.add(path);
-                }
+                if (expandedPaths.contains(node.path)) expandedPaths.remove(node.path);
+                else expandedPaths.add(node.path);
                 renderGreenContainer();
             } else {
-                onLeafClick(node, path);
+                startKnowledgeQuiz(node);
             }
         });
-
-        // 展开时递归渲染子节点
-        if (expanded && hasChildren) {
-            LinearLayout body = new LinearLayout(this);
-            body.setOrientation(LinearLayout.VERTICAL);
-            body.setPadding(0, dp(4), 0, 0);
-            card.addView(body);
-            for (int i = 0; i < node.children.size(); i++) {
-                body.addView(buildTreeNode(node.children.get(i),
-                    path + "/" + i, depth + 1));
-            }
-        }
-
-        return card;
+        return row;
     }
 
-    /** 三级叶子节点点击：后期用于知识点分类刷题跳转 */
-    private void onLeafClick(TreeNode node, String path) {
-        Toast.makeText(this, "知识点：「" + node.title + "」", Toast.LENGTH_SHORT).show();
+    /** 点知识点叶子：进入刷题页（复用 QuizActivity），题目仅该知识点下的。 */
+    private void startKnowledgeQuiz(RobotCatalog.KpNode node) {
+        java.util.ArrayList<String> uids = new java.util.ArrayList<>(node.uids);
+        if (uids.isEmpty()) {
+            Toast.makeText(this, "「" + node.title + "」暂无题目", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        Intent i = new Intent(this, QuizActivity.class);
+        i.putExtra("source", "kpuids");
+        i.putExtra("random", false);
+        i.putStringArrayListExtra("kpuids", uids);
+        PageTitle.put(i, node.title);
+        startActivity(i);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         bindBadges();
+        // 导入/删除真题后，知识点聚合需要重新生成
+        renderGreenContainer();
     }
     private void bindBadges() {
         int wrong = DataStore.getWrongIds(this).size();

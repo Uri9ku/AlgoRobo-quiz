@@ -378,8 +378,7 @@ public class DataStore {
     }
 
     /** 当前选中的配置名。 */
-    public static String getAiCurrentConfig(Context c) {
-        String name = sp(c).getString(KEY_AI_CURRENT, "");
+    public static String getAiCurrentConfig(Context c) {        String name = sp(c).getString(KEY_AI_CURRENT, "");
         if (name == null || name.isEmpty()) {
             return "默认配置";
         }
@@ -398,6 +397,15 @@ public class DataStore {
             if (cfg.name != null && cfg.name.equals(cur)) return cfg;
         }
         return list.isEmpty() ? new AiApi.Config("默认配置", "", "", "", "") : list.get(0);
+    }
+
+    /** AI 角色设定（解析风格）：空表示使用内置默认老师口吻。 */
+    public static String getAiRole(Context c) {
+        return sp(c).getString("setting_ai_role", "");
+    }
+
+    public static void setAiRole(Context c, String role) {
+        sp(c).edit().putString("setting_ai_role", role == null ? "" : role).apply();
     }
 
     // ==================== 题库下载目录 ====================

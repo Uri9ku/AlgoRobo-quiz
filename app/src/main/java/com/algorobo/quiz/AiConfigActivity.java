@@ -26,7 +26,6 @@ public class AiConfigActivity extends AppCompatActivity {
     private EditText etApiKey;
     private EditText etModels;
     private SwitchCompat swVision;
-    private SwitchCompat swAudio;
     private ProgressBar pbAiConfig;
 
     private List<AiApi.Config> configs;
@@ -47,7 +46,6 @@ public class AiConfigActivity extends AppCompatActivity {
         etApiKey = findViewById(R.id.etApiKey);
         etModels = findViewById(R.id.etModels);
         swVision = findViewById(R.id.swVision);
-        swAudio = findViewById(R.id.swAudio);
         pbAiConfig = findViewById(R.id.pbAiConfig);
 
         findViewById(R.id.btnBackAiConfig).setOnClickListener(v -> finish());
@@ -81,7 +79,6 @@ public class AiConfigActivity extends AppCompatActivity {
         etApiKey.setText(cfg.apiKey == null ? "" : cfg.apiKey);
         etModels.setText(cfg.models == null ? "" : cfg.models);
         swVision.setChecked(cfg.vision);
-        swAudio.setChecked(cfg.audio);
         tvAiConfigStatus.setText("");
         pbAiConfig.setVisibility(View.GONE);
     }
@@ -95,8 +92,7 @@ public class AiConfigActivity extends AppCompatActivity {
                 etEndpoint.getText().toString().trim(),
                 etApiKey.getText().toString().trim(),
                 etModels.getText().toString().trim(),
-                swVision.isChecked(),
-                swAudio.isChecked()
+                swVision.isChecked()
         );
     }
 
@@ -116,6 +112,8 @@ public class AiConfigActivity extends AppCompatActivity {
                 .setSingleChoiceItems(names, selected, (d, which) -> {
                     current = configs.get(which);
                     DataStore.setAiCurrentConfig(this, current.name);
+                    // 同步旧字段，避免切换配置后调用方读到上一套的端点/密钥
+                    syncLegacyFields(current);
                     loadIntoUi(current);
                     d.dismiss();
                 })
@@ -143,7 +141,6 @@ public class AiConfigActivity extends AppCompatActivity {
                         // 根据提供商能力更新识图/音频开关默认值（仅在用户尚未填写模型时同步）
                         if (etModels.getText() == null || etModels.getText().toString().trim().isEmpty()) {
                             swVision.setChecked(p.vision);
-                            swAudio.setChecked(p.audio);
                         }
                     }
                     d.dismiss();
@@ -181,10 +178,11 @@ public class AiConfigActivity extends AppCompatActivity {
                             sb.append(mnames[i]);
                         }
                     }
+                    boolean wasEmpty = cur.trim().isEmpty();
                     etModels.setText(sb.toString());
-                    if (sb.length() > 0) {
+                    // 仅在用户此前未填模型时同步「识图」默认值，避免覆盖手动设置
+                    if (wasEmpty && sb.length() > 0) {
                         swVision.setChecked(p.vision);
-                        swAudio.setChecked(p.audio);
                     }
                 })
                 .setNeutralButton("查看官网", (d, w) -> {

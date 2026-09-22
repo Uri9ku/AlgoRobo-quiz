@@ -17,6 +17,9 @@
             android:layout_marginStart="6dp" android:scaleType="centerInside" android:src="@drawable/ic_tool_wrongbook"
             android:tint="@color/text_sub" android:padding="3dp"
             android:background="?attr/selectableItemBackgroundBorderless" android:contentDescription="错题本" />
+        <CheckBox android:id="@+id/cbAnalysisSelect" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginStart="6dp" android:buttonTint="@color/primary" android:visibility="gone"
+            android:contentDescription="选择" />
     </LinearLayout>
 
     <!-- 题型 + 知识点（知识点复用刷题页的标签样式，在题型右侧） -->
@@ -43,19 +46,23 @@
     <LinearLayout android:id="@+id/analysisOptionImages" android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_marginTop="8dp" android:orientation="vertical" android:visibility="gone" />
 
+    <!-- 你的答案一行；正确答案与回答结果另起一行放在下方 -->
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginTop="12dp" android:orientation="horizontal">
+        android:layout_marginTop="12dp" android:orientation="vertical">
         <TextView android:id="@+id/tvAnalysisUser" android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:text="你的答案：A" android:textSize="13sp" android:textColor="@color/text_main"
             android:paddingStart="8dp" android:paddingEnd="8dp" android:paddingTop="4dp" android:paddingBottom="4dp"
             android:background="@drawable/bg_tag_gray" />
-        <TextView android:id="@+id/tvAnalysisCorrectAns" android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_marginStart="10dp" android:text="正确答案：C" android:textSize="13sp" android:textColor="@color/answer_correct_text"
-            android:paddingStart="8dp" android:paddingEnd="8dp" android:paddingTop="4dp" android:paddingBottom="4dp"
-            android:background="@drawable/bg_tag_blue" />
-        <TextView android:id="@+id/tvAnalysisResult" android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_marginStart="8dp" android:includeFontPadding="false" android:text="回答正确" android:textSize="13sp" android:textColor="@color/answer_correct_text"
-            android:paddingStart="8dp" android:paddingEnd="8dp" android:paddingTop="4dp" android:paddingBottom="4dp" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:orientation="horizontal" android:gravity="center_vertical">
+            <TextView android:id="@+id/tvAnalysisCorrectAns" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="正确答案：C" android:textSize="13sp" android:textColor="@color/answer_correct_text"
+                android:paddingStart="8dp" android:paddingEnd="8dp" android:paddingTop="4dp" android:paddingBottom="4dp"
+                android:background="@drawable/bg_tag_blue" />
+            <TextView android:id="@+id/tvAnalysisResult" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginStart="8dp" android:includeFontPadding="false" android:text="回答正确" android:textSize="13sp" android:textColor="@color/answer_correct_text"
+                android:paddingStart="8dp" android:paddingEnd="8dp" android:paddingTop="4dp" android:paddingBottom="4dp" />
+        </LinearLayout>
     </LinearLayout>
 
     <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginTop="12dp" android:background="@color/divider" />
