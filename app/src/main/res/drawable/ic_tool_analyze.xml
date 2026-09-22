@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 全部解析（AI 智能解析）：主星 + 小星 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M11,2.2 L12.75,8.25 L18.8,10 L12.75,11.75 L11,17.8 L9.25,11.75 L3.2,10 L9.25,8.25 Z" />
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M18,14.2 L18.8,16.9 L21.5,17.7 L18.8,18.5 L18,21.2 L17.2,18.5 L14.5,17.7 L17.2,16.9 Z" />
+</vector>

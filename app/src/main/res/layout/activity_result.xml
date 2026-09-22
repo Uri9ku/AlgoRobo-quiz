@@ -10,21 +10,32 @@
 <!-- 答对/答错居中；隐藏实操题靠最右，不参与居中 -->
 <FrameLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp">
 <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center" android:orientation="horizontal" android:gravity="center_vertical">
-<FrameLayout android:id="@+id/correctBox" android:layout_width="wrap_content" android:layout_height="32dp" android:clipChildren="true" android:clipToPadding="true">
-<TextView android:id="@+id/tvCorrect" android:layout_width="wrap_content" android:layout_height="match_parent" android:layout_gravity="center" android:gravity="center" android:includeFontPadding="false" android:text="" android:textSize="14sp" android:textColor="@color/text_on_primary" android:paddingStart="6dp" android:paddingEnd="6dp" android:background="@drawable/bg_result_correct"/>
+<!-- 答对：标签固定，只有数字做滑动切换 -->
+<LinearLayout android:layout_width="wrap_content" android:layout_height="32dp" android:orientation="horizontal" android:gravity="center_vertical" android:paddingStart="8dp" android:paddingEnd="8dp" android:background="@drawable/bg_result_correct">
+<TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="答对" android:textSize="14sp" android:textColor="@color/text_on_primary" android:includeFontPadding="false"/>
+<FrameLayout android:id="@+id/correctBox" android:layout_width="wrap_content" android:layout_height="match_parent" android:layout_marginStart="5dp" android:clipChildren="true" android:clipToPadding="true">
+<TextView android:id="@+id/tvCorrect" android:layout_width="wrap_content" android:layout_height="match_parent" android:layout_gravity="center" android:gravity="center" android:includeFontPadding="false" android:text="" android:textSize="14sp" android:textColor="@color/text_on_primary"/>
 </FrameLayout>
-<FrameLayout android:id="@+id/wrongBox" android:layout_width="wrap_content" android:layout_height="32dp" android:layout_marginStart="12dp" android:clipChildren="true" android:clipToPadding="true">
-<TextView android:id="@+id/tvWrong" android:layout_width="wrap_content" android:layout_height="match_parent" android:layout_gravity="center" android:gravity="center" android:includeFontPadding="false" android:text="" android:textSize="14sp" android:textColor="@color/text_on_primary" android:paddingStart="6dp" android:paddingEnd="6dp" android:background="@drawable/bg_result_wrong"/>
+</LinearLayout>
+<LinearLayout android:layout_width="wrap_content" android:layout_height="32dp" android:layout_marginStart="12dp" android:orientation="horizontal" android:gravity="center_vertical" android:paddingStart="8dp" android:paddingEnd="8dp" android:background="@drawable/bg_result_wrong">
+<TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="答错" android:textSize="14sp" android:textColor="@color/text_on_primary" android:includeFontPadding="false"/>
+<FrameLayout android:id="@+id/wrongBox" android:layout_width="wrap_content" android:layout_height="match_parent" android:layout_marginStart="5dp" android:clipChildren="true" android:clipToPadding="true">
+<TextView android:id="@+id/tvWrong" android:layout_width="wrap_content" android:layout_height="match_parent" android:layout_gravity="center" android:gravity="center" android:includeFontPadding="false" android:text="" android:textSize="14sp" android:textColor="@color/text_on_primary"/>
 </FrameLayout>
+</LinearLayout>
 </LinearLayout>
 <CheckBox android:id="@+id/cbHidePractical" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="end|center_vertical" android:text="隐藏实操题" android:textSize="13sp" android:textColor="@color/text_on_primary" android:buttonTint="@color/text_on_primary"/>
 </FrameLayout>
 </LinearLayout>
 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="20dp" android:layout_marginStart="12dp" android:layout_marginEnd="12dp" android:layout_marginTop="-20dp" android:background="@drawable/bg_card_chalk">
 <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center">
+<LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+<!-- 正确率：只有数字做滑动切换，百分号固定 -->
 <FrameLayout android:id="@+id/accuracyBox" android:layout_width="wrap_content" android:layout_height="30dp" android:clipChildren="true" android:clipToPadding="true">
 <TextView android:id="@+id/tvAccuracy" android:layout_width="wrap_content" android:layout_height="match_parent" android:layout_gravity="center" android:gravity="center" android:includeFontPadding="false" android:text="" android:textSize="20sp" android:textStyle="bold" android:textColor="@color/primary"/>
 </FrameLayout>
+<TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="%" android:textSize="20sp" android:textStyle="bold" android:textColor="@color/primary" android:includeFontPadding="false"/>
+</LinearLayout>
 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="正确率" android:textSize="12sp" android:textColor="@color/text_sub"/>
 </LinearLayout>
 <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center">

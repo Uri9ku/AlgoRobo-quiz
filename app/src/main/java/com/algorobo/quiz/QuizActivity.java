@@ -40,7 +40,7 @@ public class QuizActivity extends AppCompatActivity {
     private String source = "all"; // all / wrong / custom / paper:<key>
 
     private TextView tvQuestionType, tvQuestion, tvKnowledgeTag, tvScore;
-    private TextView btnStat;
+    private TextView tvSource, btnStat;
     private ImageView ivStemImage;
     /** 题干混排容器（文字/图片按 docx 顺序）。 */
     private LinearLayout stemContainer;
@@ -123,6 +123,7 @@ public class QuizActivity extends AppCompatActivity {
         tvQuestionType = findViewById(R.id.tvQuestionType);
         tvQuestion = findViewById(R.id.tvQuestion);
         tvKnowledgeTag = findViewById(R.id.tvKnowledgeTag);
+        tvSource = findViewById(R.id.tvSource);
         tvScore = findViewById(R.id.tvScore);
         btnStat = findViewById(R.id.btnStat);
         btnStat.setOnClickListener(v -> showQuestionStat());
@@ -232,16 +233,16 @@ public class QuizActivity extends AppCompatActivity {
         cancel.recycle();
     }
 
-    /** 判断触点是否落在题号索引条等横向滚动区域内（该区域保留自身横向滚动）。 */
+    /** 判断触点是否落在横向滚动区域（题号索引条、题型标签条），这些区域保留自身横向滚动。 */
     private boolean isInHorizontalScroller(MotionEvent ev) {
-        android.view.View bar = findViewById(R.id.indexScroll);
-        if (bar == null || bar.getVisibility() != android.view.View.VISIBLE) {
-            return false;
-        }
+        return isPointInView(ev, findViewById(R.id.indexScroll))
+                || isPointInView(ev, findViewById(R.id.typeScroll));
+    }
+
+    private boolean isPointInView(MotionEvent ev, android.view.View v) {
+        if (v == null || v.getVisibility() != android.view.View.VISIBLE) return false;
         android.graphics.Rect rect = new android.graphics.Rect();
-        if (!bar.getGlobalVisibleRect(rect)) {
-            return false;
-        }
+        if (!v.getGlobalVisibleRect(rect)) return false;
         float x = ev.getRawX();
         float y = ev.getRawY();
         return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
@@ -380,6 +381,7 @@ public class QuizActivity extends AppCompatActivity {
         // 题型标签：优先显示 docx 中的原始题型名称（如「编程题」），否则回退到内部题型
         tvQuestionType.setText(q.typeLabel != null && !q.typeLabel.isEmpty() ? q.typeLabel : q.type);
         renderKnowledgeTag(q);
+        renderSourceTag(q);
         renderScore(q);
         tvQuestion.setText((index + 1) + ". " + q.stem);
         renderStemImage(q);
@@ -492,9 +494,73 @@ public class QuizActivity extends AppCompatActivity {
                         .setPositiveButton("知道了", null)
                         .show());
     }
+    /** 错题本刷题：显示「错题来源」标签，点击弹出胶囊框展示该题来源（试卷名 + 第几题）。 */
+    private void renderSourceTag(Question q) {
+        if (!"wrong".equals(source)) {
+            tvSource.setVisibility(View.GONE);
+            return;
+        }
+        final String info = buildSourceInfo(q);
+        if (info == null || info.isEmpty()) {
+            tvSource.setVisibility(View.GONE);
+            return;
+        }
+        tvSource.setText("错题来源");
+        tvSource.setVisibility(View.VISIBLE);
+        tvSource.setOnClickListener(v -> showSourcePopup(tvSource, info));
+    }
+
+    /** 由题目的唯一 key「scope#题号」还原来源描述。 */
+    private String buildSourceInfo(Question q) {
+        String uid = q.uid;
+        if (uid == null) return null;
+        int h = uid.lastIndexOf('#');
+        if (h <= 0 || h == uid.length() - 1) return null;
+        String key = uid.substring(0, h);
+        int idx = -1;
+        try {
+            idx = Integer.parseInt(uid.substring(h + 1));
+        } catch (Exception ignore) {
+        }
+        String title = null;
+        if ("builtin".equals(key)) {
+            title = "内置题库";
+        } else if ("custom".equals(key)) {
+            title = "自定义题库";
+        } else {
+            title = RobotExamBank.getCustomTitle(this, key);
+            if (title == null || title.isEmpty()) {
+                RobotExamBank.Paper p = RobotExamBank.getPaper(this, key);
+                if (p != null) title = p.title;
+            }
+        }
+        if (title == null || title.isEmpty()) return null;
+        return idx > 0 ? (title + " · 第 " + idx + " 题") : title;
+    }
+
+    /** 胶囊框：圆形圆角气泡，展示错题来源。 */
+    private void showSourcePopup(View anchor, String text) {
+        TextView tv = new TextView(this);
+        tv.setText(text);
+        tv.setTextSize(13);
+        tv.setTextColor(getColor(R.color.text_main));
+        tv.setGravity(Gravity.CENTER);
+        tv.setPadding(dp(16), dp(10), dp(16), dp(10));
+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+        bg.setColor(getColor(R.color.card_bg));
+        bg.setCornerRadius(dp(24));
+        bg.setStroke(dp(1), getColor(R.color.divider));
+        tv.setBackground(bg);
+        PopupWindow pw = new PopupWindow(tv, ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT, true);
+        pw.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        pw.setOutsideTouchable(true);
+        pw.setFocusable(true);
+        pw.showAsDropDown(anchor, 0, dp(6));
+    }
+
     // 展示题目分值：score > 0 时显示"分值：N分"，否则隐藏
-    private void renderScore(Question q) {
-        if (q.score > 0) {
+    private void renderScore(Question q) {        if (q.score > 0) {
             tvScore.setText(q.score + "分");
             tvScore.setVisibility(View.VISIBLE);
         } else {

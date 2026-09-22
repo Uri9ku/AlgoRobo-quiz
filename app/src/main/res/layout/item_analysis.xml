@@ -4,8 +4,20 @@
     android:orientation="vertical" android:padding="16dp" android:background="@drawable/bg_card"
     android:layout_marginStart="16dp" android:layout_marginEnd="16dp" android:layout_marginTop="12dp">
 
-    <TextView android:id="@+id/tvAnalysisIndex" android:layout_width="wrap_content" android:layout_height="wrap_content"
-        android:text="第 1 题" android:textSize="13sp" android:textColor="@color/primary" android:textStyle="bold" />
+    <!-- 题号行：右侧复用刷题页的「收藏 / 错题本」图标与逻辑 -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical">
+        <TextView android:id="@+id/tvAnalysisIndex" android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:text="第 1 题" android:textSize="13sp" android:textColor="@color/primary" android:textStyle="bold" />
+        <ImageView android:id="@+id/btnAnalysisFavorite" android:layout_width="30dp" android:layout_height="30dp"
+            android:scaleType="centerInside" android:src="@drawable/ic_tool_favorite"
+            android:tint="@color/text_sub" android:padding="3dp"
+            android:background="?attr/selectableItemBackgroundBorderless" android:contentDescription="收藏" />
+        <ImageView android:id="@+id/btnAnalysisWrongbook" android:layout_width="30dp" android:layout_height="30dp"
+            android:layout_marginStart="6dp" android:scaleType="centerInside" android:src="@drawable/ic_tool_wrongbook"
+            android:tint="@color/text_sub" android:padding="3dp"
+            android:background="?attr/selectableItemBackgroundBorderless" android:contentDescription="错题本" />
+    </LinearLayout>
 
     <!-- 题型 + 知识点（知识点复用刷题页的标签样式，在题型右侧） -->
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"

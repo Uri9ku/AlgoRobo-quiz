@@ -73,10 +73,11 @@ public class ResultActivity extends AppCompatActivity {
         android.widget.FrameLayout correctBox = findViewById(R.id.correctBox);
         android.widget.FrameLayout wrongBox = findViewById(R.id.wrongBox);
         android.widget.FrameLayout accuracyBox = findViewById(R.id.accuracyBox);
+        // 只有数字做切换动画：答对/答错、百分号等文字保持不动
         CountSlideAnim.play(scoreBox, tvScore, tvScore.getText().toString(), String.valueOf(score));
-        CountSlideAnim.play(correctBox, tvCorrect, tvCorrect.getText().toString(), "答对 " + correct);
-        CountSlideAnim.play(wrongBox, tvWrong, tvWrong.getText().toString(), "答错 " + wrong);
-        CountSlideAnim.play(accuracyBox, tvAccuracy, tvAccuracy.getText().toString(), score + "%");
+        CountSlideAnim.play(correctBox, tvCorrect, tvCorrect.getText().toString(), String.valueOf(correct));
+        CountSlideAnim.play(wrongBox, tvWrong, tvWrong.getText().toString(), String.valueOf(wrong));
+        CountSlideAnim.play(accuracyBox, tvAccuracy, tvAccuracy.getText().toString(), String.valueOf(score));
     }
 
     /** 主观题判定：实操题/简答题/附件题（含解析得到的“编程题/搭建题”等均归入实操题）。 */

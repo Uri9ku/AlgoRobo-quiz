@@ -9,6 +9,7 @@ import android.content.res.Resources;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.util.TypedValue;
@@ -22,6 +23,7 @@ import android.view.ViewParent;
 import android.view.ViewTreeObserver;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -34,11 +36,10 @@ import java.util.Locale;
 /**
  * 全局「开发者模式」悬浮控件。
  * <p>
- * - 每个页面（Activity）右上/右侧默认显示一个可拖动悬浮球「开发者模式」；
- * - 点击悬浮球进入开发者模式：点击页面任意控件即可选中，选中控件被红色阴影覆盖，
- *   并弹出可拖动的信息面板（控件ID、类名、文本、尺寸、内外边距、背景、文字样式、层级路径等）；
- * - 面板上的滑块可在「父控件 ←→ 子控件」之间切换当前选中的控件；面板带「复制信息」按钮；
- * - 再次点击悬浮球退出开发者模式。
+ * - 由设置页开关控制是否显示（关闭后不挂载浮层）；
+ * - 点击悬浮球进入开发者模式：点页面任意控件即可选中，选中控件被红色阴影覆盖，
+ *   弹出可拖动、可缩放高度的信息面板：左列=原始信息，右列=对应中文说明（过长可横向滑动），
+ *   每行右侧有单独「复制」按钮；底部滑块可在父/子控件之间切换；再次点击悬浮球退出。
  */
 public final class DevModeOverlay {
 
@@ -47,20 +48,17 @@ public final class DevModeOverlay {
 
     private static final String PREFS = "dev_overlay";
 
-    /** 是否处于开发者模式（会话内保持，切换页面不丢失）。 */
     private static boolean active;
-    /** 当前 resumd 的 Activity。 */
     private static Activity host;
-    /** 依附在 android.R.id.content 上的浮层容器。 */
     private static FrameLayout overlay;
-    /** 页面根布局：用于命中测试与手势转发。 */
     private static View contentRoot;
 
     private static SpyView spy;
     private static HighlightView highlight;
-    private static View panel;
+    private static LinearLayout panel;
+    private static ScrollView panelScroll;
+    private static LinearLayout rowsContainer;
     private static TextView bubble;
-    private static TextView infoView;
     private static TextView levelView;
     private static SeekBar levelBar;
     private static ViewTreeObserver.OnPreDrawListener preDraw;
@@ -68,11 +66,14 @@ public final class DevModeOverlay {
     private static View selected;
     private static final List<View> chain = new ArrayList<>();
     private static boolean updatingBar;
+    private static String allRowsText = "";
 
     private static int bubbleX = Integer.MIN_VALUE, bubbleY = Integer.MIN_VALUE;
     private static int panelX = Integer.MIN_VALUE, panelY = Integer.MIN_VALUE;
+    /** 信息区高度（px），跨页面保留。 */
+    private static int listHeight = -1;
 
-    // ===================== 生命周期入口（由 App 注册的回调调用） =====================
+    // ===================== 生命周期入口 =====================
 
     public static void onActivityResumed(Activity a) {
         host = a;
@@ -86,13 +87,26 @@ public final class DevModeOverlay {
         }
     }
 
+    /** 设置页开关变化时调用。 */
+    public static void onSettingChanged(Activity a) {
+        host = a;
+        if (!DataStore.isDevModeEnabled(a)) {
+            if (active) setActive(false);
+            detach();
+        } else if (overlay == null) {
+            attach(a);
+        }
+    }
+
     public static boolean isActive() {
         return active;
     }
 
-    // ===================== 挂载 / 卸载浮层 =====================
+    // ===================== 挂载 / 卸载 =====================
 
     private static void attach(Activity a) {
+        if (overlay != null) return;
+        if (!DataStore.isDevModeEnabled(a)) return;
         ViewGroup content = a.findViewById(android.R.id.content);
         if (content == null || content.getChildCount() == 0) return;
         contentRoot = content.getChildAt(0);
@@ -108,7 +122,6 @@ public final class DevModeOverlay {
         bubble.setGravity(Gravity.CENTER);
         bubble.setPadding(dp(a, 10), dp(a, 6), dp(a, 10), dp(a, 6));
         bubble.setAlpha(0.88f);
-        // 悬浮球必须始终盖在信息面板之上（API21+ 绘制顺序看 elevation）
         bubble.setElevation(dp(a, 24));
         overlay.addView(bubble, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -117,6 +130,8 @@ public final class DevModeOverlay {
 
         if (active) enableDevViews(a);
         overlay.post(() -> placeBubble(a, false));
+        // 首次布局完成后再校正一次并写回，避免异常位置被反复读取
+        overlay.postDelayed(() -> placeBubble(a, true), 400);
     }
 
     private static void detach() {
@@ -129,8 +144,9 @@ public final class DevModeOverlay {
         spy = null;
         highlight = null;
         panel = null;
+        panelScroll = null;
+        rowsContainer = null;
         bubble = null;
-        infoView = null;
         levelView = null;
         levelBar = null;
         selected = null;
@@ -162,7 +178,7 @@ public final class DevModeOverlay {
                         if (moved && overlay != null) {
                             bubbleX = (int) (baseX + dx);
                             bubbleY = (int) (baseY + dy);
-                            clampBubble(overlay.getWidth(), overlay.getHeight());
+                            clampBubble(a, overlay.getWidth(), overlay.getHeight());
                             bubble.setX(bubbleX);
                             bubble.setY(bubbleY);
                         }
@@ -193,21 +209,34 @@ public final class DevModeOverlay {
             bubbleY = sp.getInt("by", Integer.MIN_VALUE);
         }
         if (bubbleX == Integer.MIN_VALUE) {
-            bubbleX = w - bubble.getWidth() - dp(c, 4);
+            bubbleX = w - dp(c, 90) - dp(c, 4);
             bubbleY = (int) (h * 0.68f);
         }
-        clampBubble(w, h);
+        // 历史保存的位置可能落在窗口外（那样点击会被系统手势区吃掉），这里做合法性校正
+        int maxY = Math.max(0, h - dp(c, 60));
+        if (bubbleY < 0 || bubbleY > maxY) bubbleY = (int) (h * 0.68f);
+        if (bubbleX < 0 || bubbleX > Math.max(0, w - dp(c, 40))) bubbleX = w - dp(c, 90) - dp(c, 4);
+        clampBubble(c, w, h);
         bubble.setX(bubbleX);
         bubble.setY(bubbleY);
         if (save) prefs(c).edit().putInt("bx", bubbleX).putInt("by", bubbleY).apply();
+        // 布局完成后再夹一次：避免测量前 getWidth()=0 导致位置落到窗口外（那样点击会被系统吃掉）
+        overlay.post(() -> {
+            if (bubble == null || overlay == null) return;
+            clampBubble(c, overlay.getWidth(), overlay.getHeight());
+            bubble.setX(bubbleX);
+            bubble.setY(bubbleY);
+        });
     }
 
-    private static void clampBubble(int w, int h) {
+    /** 把悬浮球限制在窗口内（底部留出系统手势区），保证它一定能被点到。 */
+    private static void clampBubble(Context c, int w, int h) {
         if (bubble == null || w <= 0 || h <= 0) return;
-        int bw = Math.max(1, bubble.getWidth());
-        int bh = Math.max(1, bubble.getHeight());
-        bubbleX = Math.max(0, Math.min(bubbleX, w - bw));
-        bubbleY = Math.max(0, Math.min(bubbleY, h - bh));
+        int bw = bubble.getWidth() > 0 ? bubble.getWidth() : dp(c, 90);
+        int bh = bubble.getHeight() > 0 ? bubble.getHeight() : dp(c, 26);
+        int bottomInset = dp(c, 8);
+        bubbleX = Math.max(0, Math.min(bubbleX, Math.max(0, w - bw)));
+        bubbleY = Math.max(0, Math.min(bubbleY, Math.max(0, h - bh - bottomInset)));
     }
 
     private static void updateBubbleStyle() {
@@ -245,7 +274,7 @@ public final class DevModeOverlay {
         overlay.addView(highlight, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        panel = LayoutInflater.from(a).inflate(R.layout.dev_panel, overlay, false);
+        panel = (LinearLayout) LayoutInflater.from(a).inflate(R.layout.dev_panel, overlay, false);
         panel.setVisibility(View.GONE);
         panel.setElevation(dp(a, 8));
         overlay.addView(panel, new FrameLayout.LayoutParams(
@@ -253,6 +282,14 @@ public final class DevModeOverlay {
 
         if (bubble != null) bubble.bringToFront();
         bindPanel(a);
+        overlay.post(() -> {
+            if (panel == null) return;
+            ViewGroup.LayoutParams lp = panel.getLayoutParams();
+            lp.width = Math.min(Math.max(0, overlay.getWidth() - dp(a, 16)), dp(a, 460));
+            panel.setLayoutParams(lp);
+            applyPanelHeight();
+            placePanel();
+        });
 
         preDraw = new ViewTreeObserver.OnPreDrawListener() {
             @Override
@@ -276,7 +313,8 @@ public final class DevModeOverlay {
         spy = null;
         highlight = null;
         panel = null;
-        infoView = null;
+        panelScroll = null;
+        rowsContainer = null;
         levelView = null;
         levelBar = null;
     }
@@ -291,7 +329,8 @@ public final class DevModeOverlay {
     // ===================== 信息面板 =====================
 
     private static void bindPanel(final Activity a) {
-        infoView = panel.findViewById(R.id.devInfo);
+        panelScroll = panel.findViewById(R.id.devInfoScroll);
+        rowsContainer = panel.findViewById(R.id.devInfoRows);
         levelView = panel.findViewById(R.id.devLevel);
         levelBar = panel.findViewById(R.id.devLevelBar);
 
@@ -317,7 +356,16 @@ public final class DevModeOverlay {
 
         panel.findViewById(R.id.devClose).setOnClickListener(v -> clearSelection());
         panel.findViewById(R.id.devClear).setOnClickListener(v -> clearSelection());
-        panel.findViewById(R.id.devCopy).setOnClickListener(v -> copyInfo(a));
+        panel.findViewById(R.id.devCopy).setOnClickListener(v ->
+                copyToClipboard(a, "已复制全部信息", allRowsText));
+        panel.findViewById(R.id.devCopyLocator).setOnClickListener(v -> {
+            if (selected == null) return;
+            StringBuilder sb = new StringBuilder();
+            for (String[] r : locatorRows(selected)) {
+                sb.append(r[0]).append("：").append(r[1]).append('\n');
+            }
+            copyToClipboard(a, "已复制定位符", sb.toString());
+        });
 
         // 拖动标题栏移动弹窗
         View header = panel.findViewById(R.id.devHeader);
@@ -355,6 +403,109 @@ public final class DevModeOverlay {
                 }
             }
         });
+
+        setupResize(a);
+    }
+
+    /** 拉动面板最上/最下边调整信息区高度。 */
+    private static void setupResize(final Activity a) {
+        final int minH = dp(a, 56);
+        View top = panel.findViewById(R.id.devResizeTop);
+        View bottom = panel.findViewById(R.id.devResizeBottom);
+
+        top.setOnTouchListener(new View.OnTouchListener() {
+            float startY;
+            int startH;
+            float startPanelY;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent e) {
+                switch (e.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        startY = e.getRawY();
+                        startH = Math.max(minH, listHeight);
+                        startPanelY = panel.getY();
+                        return true;
+                    case MotionEvent.ACTION_MOVE: {
+                        int dy = (int) (e.getRawY() - startY);
+                        int newH = clampListHeight(startH - dy, minH);
+                        int realDy = startH - newH;
+                        listHeight = newH;
+                        applyPanelHeight();
+                        float y = Math.max(0, Math.min(startPanelY + realDy,
+                                Math.max(0, overlay.getHeight() - panel.getHeight())));
+                        panel.setY(y);
+                        panelY = (int) y;
+                        return true;
+                    }
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        panelX = (int) panel.getX();
+                        panelY = (int) panel.getY();
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+        });
+
+        bottom.setOnTouchListener(new View.OnTouchListener() {
+            float startY;
+            int startH;
+
+            @Override
+            public boolean onTouch(View v, MotionEvent e) {
+                switch (e.getActionMasked()) {
+                    case MotionEvent.ACTION_DOWN:
+                        startY = e.getRawY();
+                        startH = Math.max(minH, listHeight);
+                        return true;
+                    case MotionEvent.ACTION_MOVE: {
+                        int dy = (int) (e.getRawY() - startY);
+                        listHeight = clampListHeight(startH + dy, minH);
+                        applyPanelHeight();
+                        return true;
+                    }
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL:
+                        panelY = (int) panel.getY();
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+        });
+    }
+
+    private static int clampListHeight(int h, int minH) {
+        int ctxPad = overlay == null ? 0 : dp(overlay.getContext(), 260);
+        int maxH = Math.max(minH, (overlay == null ? minH : overlay.getHeight()) - ctxPad);
+        return Math.max(minH, Math.min(h, maxH));
+    }
+
+    private static void applyPanelHeight() {
+        if (panelScroll == null) return;
+        if (listHeight <= 0) listHeight = dp(panelScroll.getContext(), 200);
+        ViewGroup.LayoutParams lp = panelScroll.getLayoutParams();
+        lp.height = listHeight;
+        panelScroll.setLayoutParams(lp);
+        clampPanelPos();
+    }
+
+    /** 面板高度变化后重新贴边，保证最下面的拖动条不会被挤出屏幕。 */
+    private static void clampPanelPos() {
+        if (panel == null || overlay == null) return;
+        panel.post(() -> {
+            if (panel == null || overlay == null) return;
+            float y = Math.max(0, Math.min(panel.getY(),
+                    Math.max(0, overlay.getHeight() - panel.getHeight())));
+            float x = Math.max(0, Math.min(panel.getX(),
+                    Math.max(0, overlay.getWidth() - panel.getWidth())));
+            panel.setY(y);
+            panel.setX(x);
+            panelY = (int) y;
+            panelX = (int) x;
+        });
     }
 
     private static void placePanel() {
@@ -363,7 +514,7 @@ public final class DevModeOverlay {
         if (w <= 0 || h <= 0) return;
         if (panelX == Integer.MIN_VALUE) {
             panelX = dp(panel.getContext(), 8);
-            panelY = dp(panel.getContext(), 110);
+            panelY = dp(panel.getContext(), 96);
         }
         panel.post(() -> {
             int x = Math.max(0, Math.min(panelX, Math.max(0, w - panel.getWidth())));
@@ -385,13 +536,12 @@ public final class DevModeOverlay {
         if (panel != null) panel.setVisibility(View.GONE);
     }
 
-    private static void copyInfo(Context c) {
-        if (infoView == null) return;
-        CharSequence txt = infoView.getText();
+    private static void copyToClipboard(Context c, String toast, CharSequence txt) {
+        if (c == null) return;
         ClipboardManager cm = (ClipboardManager) c.getSystemService(Context.CLIPBOARD_SERVICE);
         if (cm == null) return;
         cm.setPrimaryClip(ClipData.newPlainText("控件信息", txt == null ? "" : txt));
-        Toast.makeText(c, "已复制控件信息", Toast.LENGTH_SHORT).show();
+        Toast.makeText(c, toast, Toast.LENGTH_SHORT).show();
     }
 
     // ===================== 选中逻辑 =====================
@@ -423,20 +573,51 @@ public final class DevModeOverlay {
         showInfo(v, idx);
         if (panel != null && panel.getVisibility() != View.VISIBLE) {
             panel.setVisibility(View.VISIBLE);
+            applyPanelHeight();
             placePanel();
         }
     }
 
     private static void showInfo(View v, int index) {
-        if (infoView != null) infoView.setText(buildInfo(v));
         if (levelView != null) {
             String tip = chain.size() > 1 ? "（拖动滑块切换父/子控件）" : "（无父级可切换）";
             levelView.setText("层级 " + (index + 1) + "/" + chain.size() + " · "
                     + v.getClass().getSimpleName() + " " + tip);
         }
+        renderRows(v);
     }
 
-    /** 从点击处向下找最深处包含该屏幕坐标的可见控件。 */
+    /** 渲染两列信息：左列原信息、右列中文说明，每行带单独复制按钮。 */
+    private static void renderRows(View v) {
+        if (rowsContainer == null) return;
+        Context c = host != null ? host : v.getContext();
+        List<String[]> rows = new ArrayList<>();
+        rows.addAll(locatorRows(v));
+        rows.addAll(infoRows(v));
+
+        rowsContainer.removeAllViews();
+        LayoutInflater inf = LayoutInflater.from(c);
+        StringBuilder all = new StringBuilder();
+        for (String[] r : rows) {
+            View rowView = inf.inflate(R.layout.dev_row, rowsContainer, false);
+            TextView left = rowView.findViewById(R.id.devRowLeft);
+            TextView right = rowView.findViewById(R.id.devRowRight);
+            left.setText(r[1]);
+            right.setText(r[0] + "：" + r[2]);
+            final String copyText = r[1];
+            rowView.findViewById(R.id.devRowCopy).setOnClickListener(x ->
+                    copyToClipboard(c, "已复制：" + r[0], copyText));
+            rowsContainer.addView(rowView);
+            all.append(r[0]).append("：").append(r[1]).append('\n')
+                    .append("    说明：").append(r[2]).append('\n');
+        }
+        allRowsText = all.toString();
+    }
+
+    private static String[] row(String label, String raw, String cn) {
+        return new String[]{label, raw, cn};
+    }
+
     private static View findDeepest(View v, float sx, float sy) {
         if (v == null || v.getVisibility() != View.VISIBLE) return null;
         int[] loc = new int[2];
@@ -453,7 +634,6 @@ public final class DevModeOverlay {
         return v;
     }
 
-    /** 由页面根到目标控件的层级链（0 = 最外层）。 */
     private static List<View> buildChain(View target) {
         List<View> out = new ArrayList<>();
         if (target == null) return out;
@@ -469,127 +649,265 @@ public final class DevModeOverlay {
         return out;
     }
 
-    // ===================== 控件信息文本 =====================
+    // ===================== 定位符（左列=表达式，右列=中文说明） =====================
 
-    private static String buildInfo(View v) {
-        Resources r = v.getResources();
-        StringBuilder sb = new StringBuilder();
-
-        sb.append("控件类：").append(v.getClass().getName()).append('\n');
-        sb.append("控件ID：").append(idText(v)).append('\n');
-        sb.append("控件名字：").append(nameText(v)).append('\n');
-        sb.append("可见性：").append(visibilityText(v.getVisibility()))
-                .append("   透明=").append(round(v.getAlpha())).append('\n');
-        sb.append(String.format(Locale.US, "尺寸：%d x %d px （%s x %s dp）%s\n",
-                v.getWidth(), v.getHeight(), dpText(r, v.getWidth()), dpText(r, v.getHeight()),
-                measureText(v)));
+    private static List<String[]> locatorRows(View v) {
+        List<String[]> rows = new ArrayList<>();
+        String text = textOf(v);
+        String desc = descOf(v);
+        String id = resourceId(v);
+        String xpath = xpathOf(v);
         int[] loc = new int[2];
         v.getLocationOnScreen(loc);
-        sb.append("屏幕位置：x=").append(loc[0]).append("  y=").append(loc[1]).append('\n');
-        sb.append(String.format(Locale.US, "内边距：left=%d top=%d right=%d bottom=%d\n",
-                v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), v.getPaddingBottom()));
+
+        if (id != null) {
+            rows.add(row("推荐定位", "id=" + id, "首选：按资源ID定位，最稳定（自动化/埋点/回捞都用它）"));
+        } else if (text != null) {
+            rows.add(row("推荐定位", "text=\"" + oneLine(text) + "\"", "首选：按控件文本定位（同页文本通常唯一）"));
+        } else if (desc != null) {
+            rows.add(row("推荐定位", "content-desc=\"" + desc + "\"", "首选：按无障碍描述定位"));
+        } else {
+            rows.add(row("推荐定位", "xpath=" + xpath, "既无 ID 也无文本，只能用结构路径定位"));
+        }
+        if (text != null) {
+            rows.add(row("定位-text", "text=\"" + oneLine(text) + "\"", "按文本精确匹配（换行已转义为 \\n）"));
+            if (text.length() > 16) {
+                rows.add(row("定位-textContains", "textContains=\"" + oneLine(text.substring(0, 16)) + "\"",
+                        "文本过长时只匹配前 16 个字（Automator textContains）"));
+            }
+        }
+        if (desc != null) {
+            rows.add(row("定位-description", "content-desc=\"" + desc + "\"", "按 contentDescription 精确匹配"));
+        }
+        if (id != null) {
+            rows.add(row("定位-id", "id=" + id, "按资源ID匹配"));
+            rows.add(row("定位-xpath(id)", "//" + v.getClass().getName()
+                    + "[@resource-id='" + id + "']", "用 ID 写的 XPath，最短最稳"));
+        }
+        rows.add(row("定位-class", v.getClass().getName(), "控件类名（uiautomator 中的 android.widget.xxx 形式）"));
+        rows.add(row("定位-xpath", xpath, "结构路径：从最近带 id 的祖先起算，同类兄弟按下标"));
+        rows.add(row("定位-bounds", String.format(Locale.US, "[%d,%d][%d,%d]",
+                        loc[0], loc[1], loc[0] + v.getWidth(), loc[1] + v.getHeight()),
+                "屏幕绝对像素范围，可配合坐标点击"));
+        rows.add(row("复现点击", "adb shell input tap " + (loc[0] + v.getWidth() / 2)
+                + " " + (loc[1] + v.getHeight() / 2), "用命令复现一次点击"));
+        return rows;
+    }
+
+    // ===================== 控件信息（左列=原信息，右列=中文说明） =====================
+
+    private static List<String[]> infoRows(View v) {
+        Resources r = v.getResources();
+        float density = r.getDisplayMetrics().density;
+        List<String[]> rows = new ArrayList<>();
+
+        rows.add(row("控件类", v.getClass().getName(), widgetCn(v.getClass().getName())));
+
+        int id = v.getId();
+        if (id == View.NO_ID) {
+            rows.add(row("控件ID", "无（未设置 android:id）", "没写 android:id，无法用资源ID定位，可用文本或 XPath"));
+        } else {
+            String name = null;
+            try {
+                name = r.getResourceName(id);
+            } catch (Exception ignore) {
+            }
+            rows.add(row("控件ID", name == null ? ("0x" + Integer.toHexString(id)) : name,
+                    "资源ID，findViewById 与自动化定位都用它"));
+        }
+
+        rows.add(row("控件名字", nameRaw(v), nameCn(v)));
+        rows.add(row("可见性", visibilityRaw(v.getVisibility()), visibilityCn(v.getVisibility())));
+        rows.add(row("透明度", fmt(v.getAlpha()),
+                v.getAlpha() >= 1f ? "完全不透明" : (v.getAlpha() <= 0f ? "完全透明（看不见）" : "半透明")));
+
+        int[] loc = new int[2];
+        v.getLocationOnScreen(loc);
+        rows.add(row("尺寸", v.getWidth() + " x " + v.getHeight() + " px",
+                String.format(Locale.US, "等于 %.1f x %.1f dp（本机密度 %.1f）%s",
+                        v.getWidth() / density, v.getHeight() / density, density, measureCn(v))));
+        rows.add(row("屏幕位置", "x=" + loc[0] + " y=" + loc[1], "相对屏幕左上角的像素坐标（含状态栏）"));
+        rows.add(row("内边距", String.format(Locale.US, "%d,%d,%d,%d",
+                        v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), v.getPaddingBottom()),
+                "内容与控件边界之间的距离（左,上,右,下）"));
 
         ViewGroup.LayoutParams lp = v.getLayoutParams();
         if (lp instanceof ViewGroup.MarginLayoutParams) {
             ViewGroup.MarginLayoutParams m = (ViewGroup.MarginLayoutParams) lp;
-            sb.append(String.format(Locale.US, "外边距：left=%d top=%d right=%d bottom=%d\n",
-                    m.leftMargin, m.topMargin, m.rightMargin, m.bottomMargin));
+            rows.add(row("外边距", String.format(Locale.US, "%s,%s,%s,%s",
+                            marginText(m.leftMargin), marginText(m.topMargin),
+                            marginText(m.rightMargin), marginText(m.bottomMargin)),
+                    "与父容器或兄弟控件之间的距离（左,上,右,下）"));
         }
         if (lp != null) {
-            sb.append("布局参数：").append(lp.getClass().getSimpleName());
-            if (lp instanceof FrameLayout.LayoutParams) {
-                sb.append("  gravity=").append(gravityText(((FrameLayout.LayoutParams) lp).gravity));
-            } else if (lp instanceof LinearLayout.LayoutParams) {
-                sb.append("  weight=").append(((LinearLayout.LayoutParams) lp).weight);
+            rows.add(row("布局参数", lpRaw(lp), lpCn(lp)));
+        }
+
+        rows.add(row("背景", bgRaw(v), bgCn(v)));
+
+        if (v instanceof TextView) {
+            TextView t = (TextView) v;
+            float sp = t.getTextSize() / r.getDisplayMetrics().scaledDensity;
+            rows.add(row("字号", String.format(Locale.US, "%.1f sp（%.0f px）", sp, t.getTextSize()),
+                    "sp 会跟随系统字体缩放，px 为实际渲染像素"));
+            rows.add(row("文字颜色", colorText(t.getCurrentTextColor()), "ARGB 十六进制，前两位是透明度（FF=不透明）"));
+            rows.add(row("字形", typefaceRaw(t.getTypeface()), "文字粗细与斜体样式"));
+            rows.add(row("文本对齐", gravityRaw(t.getGravity()), "文本在控件内的对齐方式：" + gravityCn(t.getGravity())));
+            rows.add(row("行间距", ((int) t.getLineSpacingExtra()) + " px", "行与行之间额外的像素间距"));
+            if (t.getMaxLines() > 0) {
+                rows.add(row("最大行数", String.valueOf(t.getMaxLines()), "超过后按省略号截断"));
             }
-            if (lp.width == ViewGroup.LayoutParams.MATCH_PARENT) sb.append("  width=match_parent");
-            else if (lp.width == ViewGroup.LayoutParams.WRAP_CONTENT) sb.append("  width=wrap_content");
-            if (lp.height == ViewGroup.LayoutParams.MATCH_PARENT) sb.append("  height=match_parent");
-            else if (lp.height == ViewGroup.LayoutParams.WRAP_CONTENT) sb.append("  height=wrap_content");
-            sb.append('\n');
+            if (t.getEllipsize() != null) {
+                rows.add(row("省略方式", t.getEllipsize().name(), "文本超长时的截断方式"));
+            }
+            if (t.getHint() != null) {
+                rows.add(row("提示 hint", String.valueOf(t.getHint()), "输入框为空时显示的灰色提示文字"));
+            }
         }
 
-        sb.append("背景：").append(backgroundText(v)).append('\n');
-        if (v instanceof TextView) sb.append(styleText((TextView) v));
-
-        sb.append("属性：clickable=").append(v.isClickable())
-                .append("  enabled=").append(v.isEnabled())
-                .append("  focusable=").append(v.isFocusable())
-                .append("  selected=").append(v.isSelected()).append('\n');
-        if (v.getContentDescription() != null && v.getContentDescription().length() > 0) {
-            sb.append("contentDescription：").append(v.getContentDescription()).append('\n');
+        rows.add(row("属性", attrRaw(v), attrCn(v)));
+        CharSequence cd = v.getContentDescription();
+        if (cd != null && cd.length() > 0) {
+            rows.add(row("无障碍描述", String.valueOf(cd), "contentDescription：读屏与自动化识别控件用"));
         }
-        if (v.getTag() != null) sb.append("tag：").append(v.getTag()).append('\n');
-        sb.append("elevation：").append(round(v.getElevation())).append(" px\n");
-        sb.append("层级路径：").append(pathText(v)).append('\n');
-        return sb.toString();
+        if (v.getTag() != null) {
+            rows.add(row("标签 tag", String.valueOf(v.getTag()), "开发时挂在控件上的自定义数据"));
+        }
+        rows.add(row("阴影高度", ((int) v.getElevation()) + " px",
+                "elevation：值越大越靠上绘制（同容器内比较）"));
+        rows.add(row("层级路径", pathText(v), "从页面根布局到当前控件的层级链（父 › 子）"));
+        return rows;
     }
 
-    private static String idText(View v) {
-        int id = v.getId();
-        if (id == View.NO_ID) return "无（未设置 android:id）";
-        String hex = "0x" + Integer.toHexString(id);
-        String name = null;
-        try {
-            name = v.getResources().getResourceName(id);
-        } catch (Exception ignore) {
-        }
-        return name == null ? hex : name + "  （" + hex + "）";
-    }
-
-    private static String nameText(View v) {
+    private static String nameRaw(View v) {
         if (v instanceof TextView) {
             CharSequence t = ((TextView) v).getText();
-            if (t != null && t.length() > 0) return "\"" + t.toString().replace("\n", "\\n") + "\"";
+            if (t != null && t.length() > 0) return "\"" + oneLine(t.toString()) + "\"";
         }
         CharSequence cd = v.getContentDescription();
-        if (cd != null && cd.length() > 0) return "\"" + cd + "\"（contentDescription）";
-        if (v instanceof ViewGroup) {
-            return "(容器，共 " + ((ViewGroup) v).getChildCount() + " 个子控件)";
-        }
+        if (cd != null && cd.length() > 0) return "\"" + cd + "\"";
+        if (v instanceof ViewGroup) return "(容器，" + ((ViewGroup) v).getChildCount() + " 个子控件)";
         return "(无文本)";
     }
 
-    private static String styleText(TextView t) {
-        Resources r = t.getResources();
-        float density = r.getDisplayMetrics().scaledDensity;
-        StringBuilder sb = new StringBuilder();
-        sb.append(String.format(Locale.US, "文字样式：字号 %.1f sp （%.0f px）  颜色 #%08X",
-                t.getTextSize() / density, t.getTextSize(), t.getCurrentTextColor())).append('\n');
-        sb.append("字形：").append(typefaceText(t.getTypeface()))
-                .append("  gravity=").append(gravityText(t.getGravity()));
-        if (t.getMaxLines() > 0) sb.append("  maxLines=").append(t.getMaxLines());
-        if (t.getEllipsize() != null) sb.append("  ellipsize=").append(t.getEllipsize());
-        sb.append('\n');
-        if (t.getHint() != null) sb.append("hint：").append(t.getHint()).append('\n');
-        sb.append("行间距：").append(round(t.getLineSpacingExtra())).append(" px\n");
+    private static String nameCn(View v) {
+        if (v instanceof TextView) {
+            CharSequence t = ((TextView) v).getText();
+            if (t != null && t.length() > 0) return "控件显示的文本内容";
+        }
+        CharSequence cd = v.getContentDescription();
+        if (cd != null && cd.length() > 0) return "取自无障碍描述（没有可见文本）";
+        if (v instanceof ViewGroup) return "容器类控件，本身没有文本";
+        return "该控件没有文本内容";
+    }
+
+    private static String visibilityRaw(int vis) {
+        switch (vis) {
+            case View.VISIBLE:
+                return "VISIBLE";
+            case View.INVISIBLE:
+                return "INVISIBLE";
+            case View.GONE:
+                return "GONE";
+            default:
+                return String.valueOf(vis);
+        }
+    }
+
+    private static String visibilityCn(int vis) {
+        switch (vis) {
+            case View.VISIBLE:
+                return "可见：正常显示且占位";
+            case View.INVISIBLE:
+                return "不可见：仍然占位（保留布局空间）";
+            case View.GONE:
+                return "已隐藏：不占位（布局中相当于不存在）";
+            default:
+                return "未知可见性";
+        }
+    }
+
+    private static String measureCn(View v) {        try {
+            int w = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
+            int h = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
+            v.measure(w, h);
+            int mw = v.getMeasuredWidth(), mh = v.getMeasuredHeight();
+            if (mw != v.getWidth() || mh != v.getHeight()) {
+                return "；内容实际需要 " + mw + " x " + mh + " px";
+            }
+        } catch (Exception ignore) {
+        }
+        return "";
+    }
+
+    /** 未设置的外边距在某些布局里是 Integer.MIN_VALUE，这里按 0 展示。 */
+    private static String marginText(int v) {
+        if (v == Integer.MIN_VALUE || v < -100000) return "0";
+        return String.valueOf(v);
+    }
+
+    private static String lpRaw(ViewGroup.LayoutParams lp) {
+        StringBuilder sb = new StringBuilder(lp.getClass().getSimpleName());
+        if (lp instanceof FrameLayout.LayoutParams) {
+            sb.append(" gravity=").append(gravityRaw(((FrameLayout.LayoutParams) lp).gravity));
+        } else if (lp instanceof LinearLayout.LayoutParams) {
+            sb.append(" weight=").append(((LinearLayout.LayoutParams) lp).weight);
+        }
+        sb.append(sizeText(" width=", lp.width)).append(sizeText(" height=", lp.height));
         return sb.toString();
     }
 
-    private static String typefaceText(android.graphics.Typeface tf) {
-        if (tf == null) return "默认";
-        if (tf.isBold() && tf.isItalic()) return "粗体 + 斜体";
-        if (tf.isBold()) return "粗体";
-        if (tf.isItalic()) return "斜体";
-        return "常规";
+    private static String sizeText(String prefix, int value) {
+        if (value == ViewGroup.LayoutParams.MATCH_PARENT) return prefix + "match_parent";
+        if (value == ViewGroup.LayoutParams.WRAP_CONTENT) return prefix + "wrap_content";
+        return prefix + value + "px";
     }
 
-    private static String backgroundText(View v) {
+    private static String lpCn(ViewGroup.LayoutParams lp) {
+        StringBuilder sb = new StringBuilder();
+        if (lp instanceof FrameLayout.LayoutParams) {
+            int g = ((FrameLayout.LayoutParams) lp).gravity;
+            if (g != 0) sb.append("在父容器中的对齐：").append(gravityCn(g)).append("；");
+        } else if (lp instanceof LinearLayout.LayoutParams) {
+            float w = ((LinearLayout.LayoutParams) lp).weight;
+            if (w > 0) sb.append("按权重 ").append(w).append(" 分配剩余空间；");
+        }
+        if (lp.width == ViewGroup.LayoutParams.MATCH_PARENT) sb.append("宽度撑满父容器；");
+        else if (lp.width == ViewGroup.LayoutParams.WRAP_CONTENT) sb.append("宽度由内容决定；");
+        else sb.append("宽度固定 ").append(lp.width).append(" px；");
+        if (lp.height == ViewGroup.LayoutParams.MATCH_PARENT) sb.append("高度撑满父容器");
+        else if (lp.height == ViewGroup.LayoutParams.WRAP_CONTENT) sb.append("高度由内容决定");
+        else sb.append("高度固定 ").append(lp.height).append(" px");
+        return sb.toString();
+    }
+
+    private static String bgRaw(View v) {
         Drawable bg = v.getBackground();
         if (bg == null) return "无";
-        String res = null;
+        String res = backgroundRes(v);
+        if (bg instanceof ColorDrawable) {
+            String color = colorText(((ColorDrawable) bg).getColor());
+            return res == null ? color : color + "  （" + res + "）";
+        }
+        return (res == null ? bg.getClass().getName() : res);
+    }
+
+    private static String bgCn(View v) {
+        Drawable bg = v.getBackground();
+        if (bg == null) return "没有设置背景";
+        if (bg instanceof ColorDrawable) return "纯色背景（背景色）";
+        return "用图形/形状资源绘制背景（圆角、描边等多来自这里）";
+    }
+
+    private static String backgroundRes(View v) {
         try {
             Field f = View.class.getDeclaredField("mBackgroundResource");
             f.setAccessible(true);
             int rid = (int) f.get(v);
-            if (rid != 0) res = shortRes(v.getResources().getResourceName(rid));
+            if (rid != 0) return shortRes(v.getResources().getResourceName(rid));
         } catch (Exception ignore) {
         }
-        if (bg instanceof ColorDrawable) {
-            String color = String.format(Locale.US, "#%08X", ((ColorDrawable) bg).getColor());
-            return color + (res == null ? "" : "  （" + res + "）");
-        }
-        return (res == null ? bg.getClass().getName() : res) + "  （" + bg.getClass().getSimpleName() + "）";
+        return null;
     }
 
     private static String shortRes(String full) {
@@ -602,18 +920,59 @@ public final class DevModeOverlay {
         return full;
     }
 
-    private static String measureText(View v) {
-        int w = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
-        int h = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
-        try {
-            v.measure(w, h);
-            int mw = v.getMeasuredWidth(), mh = v.getMeasuredHeight();
-            if (mw != v.getWidth() || mh != v.getHeight()) {
-                return "  内容尺寸=" + mw + " x " + mh + " px";
+    private static String attrRaw(View v) {
+        return "clickable=" + v.isClickable() + " enabled=" + v.isEnabled()
+                + " focusable=" + v.isFocusable() + " selected=" + v.isSelected();
+    }
+
+    private static String attrCn(View v) {
+        return (v.isClickable() ? "可点击" : "不可点击") + "、"
+                + (v.isEnabled() ? "已启用" : "已禁用") + "、"
+                + (v.isFocusable() ? "可获得焦点" : "不可获焦") + "、"
+                + (v.isSelected() ? "处于选中态" : "未选中");
+    }
+
+    private static String typefaceRaw(Typeface tf) {
+        if (tf == null) return "默认";
+        if (tf.isBold() && tf.isItalic()) return "粗体 + 斜体";
+        if (tf.isBold()) return "粗体";
+        if (tf.isItalic()) return "斜体";
+        return "常规";
+    }
+
+    private static String gravityRaw(int g) {
+        if (g == 0) return "无";
+        StringBuilder sb = new StringBuilder();
+        if ((g & Gravity.CENTER) == Gravity.CENTER) {
+            sb.append("center");
+        } else {
+            if ((g & Gravity.LEFT) != 0) sb.append("left");
+            else if ((g & Gravity.RIGHT) != 0) sb.append("right");
+            else if ((g & Gravity.CENTER_HORIZONTAL) != 0) sb.append("center_horizontal");
+            if ((g & Gravity.TOP) != 0) sb.append(sb.length() > 0 ? "|top" : "top");
+            else if ((g & Gravity.BOTTOM) != 0) sb.append(sb.length() > 0 ? "|bottom" : "bottom");
+            else if ((g & Gravity.CENTER_VERTICAL) != 0) {
+                sb.append(sb.length() > 0 ? "|center_vertical" : "center_vertical");
             }
-        } catch (Exception ignore) {
         }
-        return "";
+        return sb.length() == 0 ? ("0x" + Integer.toHexString(g)) : sb.toString();
+    }
+
+    private static String gravityCn(int g) {
+        if (g == 0) return "未设置（默认）";
+        if ((g & Gravity.CENTER) == Gravity.CENTER) return "水平垂直都居中";
+        StringBuilder sb = new StringBuilder();
+        if ((g & Gravity.LEFT) != 0) sb.append("靠左");
+        else if ((g & Gravity.RIGHT) != 0) sb.append("靠右");
+        else if ((g & Gravity.CENTER_HORIZONTAL) != 0) sb.append("水平居中");
+        if ((g & Gravity.TOP) != 0) sb.append(sb.length() > 0 ? "、" : "").append("靠上");
+        else if ((g & Gravity.BOTTOM) != 0) sb.append(sb.length() > 0 ? "、" : "").append("靠下");
+        else if ((g & Gravity.CENTER_VERTICAL) != 0) sb.append(sb.length() > 0 ? "、" : "").append("垂直居中");
+        return sb.length() == 0 ? ("0x" + Integer.toHexString(g)) : sb.toString();
+    }
+
+    private static String colorText(int color) {
+        return String.format(Locale.US, "#%08X", color);
     }
 
     private static String pathText(View v) {
@@ -636,44 +995,168 @@ public final class DevModeOverlay {
         return sb.toString();
     }
 
-    private static String visibilityText(int vis) {
-        switch (vis) {
-            case View.VISIBLE:
-                return "VISIBLE（可见）";
-            case View.INVISIBLE:
-                return "INVISIBLE（占位不可见）";
-            case View.GONE:
-                return "GONE（不占位）";
-            default:
-                return String.valueOf(vis);
+    private static String textOf(View v) {
+        if (v instanceof TextView) {
+            CharSequence t = ((TextView) v).getText();
+            if (t != null && t.length() > 0) return t.toString();
+        }
+        return null;
+    }
+
+    private static String descOf(View v) {
+        CharSequence cd = v.getContentDescription();
+        return (cd != null && cd.length() > 0) ? cd.toString() : null;
+    }
+
+    /** 有 android:id 时返回完整资源名，否则 null。 */
+    private static String resourceId(View v) {
+        int id = v.getId();
+        if (id == View.NO_ID) return null;
+        try {
+            return v.getResources().getResourceName(id);
+        } catch (Exception e) {
+            return null;
         }
     }
 
-    private static String gravityText(int g) {
-        if (g == 0) return "无";
-        StringBuilder sb = new StringBuilder();
-        if ((g & Gravity.CENTER) == Gravity.CENTER) {
-            sb.append("center");
-        } else {
-            if ((g & Gravity.LEFT) != 0) sb.append("left");
-            else if ((g & Gravity.RIGHT) != 0) sb.append("right");
-            else if ((g & Gravity.CENTER_HORIZONTAL) != 0) sb.append("center_horizontal");
-            if ((g & Gravity.TOP) != 0) sb.append(sb.length() > 0 ? "|top" : "top");
-            else if ((g & Gravity.BOTTOM) != 0) sb.append(sb.length() > 0 ? "|bottom" : "bottom");
-            else if ((g & Gravity.CENTER_VERTICAL) != 0) {
-                sb.append(sb.length() > 0 ? "|center_vertical" : "center_vertical");
+    /** 从「最近的带 id 祖先」开始的 uiautomator XPath。 */
+    private static String xpathOf(View v) {
+        List<View> c = buildChain(v);
+        int start = 0;
+        for (int i = c.size() - 1; i >= 0; i--) {
+            if (resourceId(c.get(i)) != null) {
+                start = i;
+                break;
             }
         }
-        if (sb.length() == 0) sb.append("0x").append(Integer.toHexString(g));
+        StringBuilder sb = new StringBuilder();
+        for (int i = start; i < c.size(); i++) {
+            View it = c.get(i);
+            sb.append("//").append(it.getClass().getName());
+            String rid = resourceId(it);
+            if (rid != null) {
+                sb.append("[@resource-id='").append(rid).append("']");
+            } else {
+                ViewParent p = it.getParent();
+                if (p instanceof ViewGroup) {
+                    ViewGroup g = (ViewGroup) p;
+                    int idx = 1;
+                    for (int j = 0; j < g.getChildCount(); j++) {
+                        View sib = g.getChildAt(j);
+                        if (sib == it) break;
+                        if (sib.getClass() == it.getClass()) idx++;
+                    }
+                    if (idx > 1) sb.append('[').append(idx).append(']');
+                }
+            }
+        }
         return sb.toString();
     }
 
-    private static String dpText(Resources r, int px) {
-        return String.format(Locale.US, "%.1f", px / r.getDisplayMetrics().density);
+    private static String oneLine(String s) {
+        return s.replace("\n", "\\n").replace("\"", "'");
     }
 
-    private static String round(float f) {
+    private static String fmt(float f) {
         return String.format(Locale.US, "%.2f", f);
+    }
+
+    /** 控件类名 → 中文含义。 */
+    private static String widgetCn(String fullClass) {
+        String n = fullClass;
+        int dot = n.lastIndexOf('.');
+        if (dot >= 0) n = n.substring(dot + 1);
+        if (n.startsWith("AppCompat")) n = n.substring("AppCompat".length());
+        if (n.startsWith("Material")) n = n.substring("Material".length());
+        switch (n) {
+            case "LinearLayout":
+                return "线性布局容器（子控件按横向或纵向依次排列）";
+            case "FrameLayout":
+                return "帧布局容器（子控件层叠，默认左上对齐）";
+            case "RelativeLayout":
+                return "相对布局容器（子控件按相互位置关系排列）";
+            case "GridLayout":
+                return "网格布局容器（按行列网格排列）";
+            case "TableLayout":
+                return "表格布局容器";
+            case "ConstraintLayout":
+                return "约束布局容器（按约束关系定位子控件）";
+            case "RecyclerView":
+                return "可复用列表控件（滚动显示大量条目）";
+            case "ListView":
+                return "列表控件（纵向滚动显示条目）";
+            case "GridView":
+                return "网格列表控件（按网格排列条目）";
+            case "ScrollView":
+                return "竖向滚动容器";
+            case "HorizontalScrollView":
+                return "横向滚动容器";
+            case "NestedScrollView":
+                return "可嵌套的竖向滚动容器";
+            case "ViewPager":
+            case "ViewPager2":
+                return "左右翻页容器";
+            case "DrawerLayout":
+                return "侧滑菜单容器";
+            case "CardView":
+                return "卡片容器（圆角 + 阴影）";
+            case "TextView":
+                return "文本显示控件";
+            case "Button":
+                return "按钮控件";
+            case "ImageButton":
+                return "图片按钮";
+            case "ImageView":
+                return "图片显示控件";
+            case "EditText":
+                return "文本输入框";
+            case "CheckBox":
+                return "复选框";
+            case "RadioButton":
+                return "单选框";
+            case "RadioGroup":
+                return "单选组容器";
+            case "Switch":
+                return "开关控件";
+            case "SwitchCompat":
+                return "开关控件";
+            case "ToggleButton":
+                return "开关按钮";
+            case "SeekBar":
+                return "拖动条（滑块）";
+            case "ProgressBar":
+                return "进度条";
+            case "RatingBar":
+                return "评分条";
+            case "Spinner":
+                return "下拉选择框";
+            case "Toolbar":
+                return "顶部工具栏";
+            case "WebView":
+                return "网页控件";
+            case "Space":
+                return "占位空白控件";
+            case "View":
+                return "基础视图（常用于分隔线/色块）";
+            case "ViewGroup":
+                return "容器基类";
+            case "ViewStub":
+                return "懒加载占位控件";
+            case "SurfaceView":
+                return "独立绘制表面控件";
+            case "TextureView":
+                return "纹理视图（可参与动画变换）";
+            case "VideoView":
+                return "视频播放控件";
+            case "TabLayout":
+                return "标签栏";
+            case "Chip":
+                return "标签按钮";
+            case "FloatingActionButton":
+                return "悬浮操作按钮（右下角圆形按钮）";
+            default:
+                return "（未收录的控件类型：" + n + "）";
+        }
     }
 
     private static int dp(Context c, int v) {
@@ -686,10 +1169,6 @@ public final class DevModeOverlay {
 
     // ===================== 触点拦截层 =====================
 
-    /**
-     * 覆盖全屏的透明层：单击 → 选中控件；滑动 → 把整个手势转发给页面根布局，
-     * 保证开发者模式下依然可以滚动列表/页面。
-     */
     private static class SpyView extends View {
         private final int slop;
         private float downX, downY;
@@ -785,7 +1264,6 @@ public final class DevModeOverlay {
             invalidate();
         }
 
-        /** 目标滚动/移动后，矩形变化才重绘。 */
         void refresh() {
             if (target == null) return;
             last.set(rect);

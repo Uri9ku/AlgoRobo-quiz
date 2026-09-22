@@ -213,6 +213,15 @@ public class SettingsActivity extends AppCompatActivity {
             @Override public void onStopTrackingTouch(SeekBar seekBar) {}
         });
 
+        // 开发者模式悬浮球：关闭后每个页面都不再显示悬浮球
+        SwitchCompat swDevMode = findViewById(R.id.swDevMode);
+        swDevMode.setChecked(DataStore.isDevModeEnabled(this));
+        swDevMode.setOnCheckedChangeListener((btn, checked) -> {
+            DataStore.setDevModeEnabled(this, checked);
+            DevModeOverlay.onSettingChanged(this);
+            showToast(checked ? "已开启开发者模式悬浮球" : "已关闭开发者模式悬浮球");
+        });
+
         initAiConfig();
     }
 

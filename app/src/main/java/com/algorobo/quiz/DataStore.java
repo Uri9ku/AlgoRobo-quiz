@@ -484,11 +484,18 @@ public class DataStore {
         sp(c).edit().putBoolean("setting_badge_visible", on).apply();
     }
 
+    /** 是否开启「开发者模式」悬浮球（关闭后每个页面都不显示），默认开启。 */
+    public static boolean isDevModeEnabled(Context c) {
+        return sp(c).getBoolean("setting_dev_mode", true);
+    }
+    public static void setDevModeEnabled(Context c, boolean on) {
+        sp(c).edit().putBoolean("setting_dev_mode", on).apply();
+    }
+
     /** 角标数字变化动画时长（毫秒），越小越快，默认 300。 */
     public static int getBadgeAnimDuration(Context c) {
         return sp(c).getInt("setting_badge_anim_ms", 300);
     }
-
     public static void setBadgeAnimDuration(Context c, int ms) {
         sp(c).edit().putInt("setting_badge_anim_ms", ms).apply();
     }

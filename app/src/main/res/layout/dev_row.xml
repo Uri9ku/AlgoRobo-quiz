@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 开发者模式信息面板中的一行：左列=原信息，右列=中文说明，最右=单独复制按钮 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingTop="3dp"
+    android:paddingBottom="3dp">
+
+    <HorizontalScrollView
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:scrollbars="none"
+        android:overScrollMode="never">
+
+        <TextView
+            android:id="@+id/devRowLeft"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:singleLine="true"
+            android:text=""
+            android:textSize="11sp"
+            android:textColor="@color/text_main"
+            android:fontFamily="monospace" />
+    </HorizontalScrollView>
+
+    <HorizontalScrollView
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="6dp"
+        android:scrollbars="none"
+        android:overScrollMode="never">
+
+        <TextView
+            android:id="@+id/devRowRight"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:singleLine="true"
+            android:text=""
+            android:textSize="11sp"
+            android:textColor="@color/primary" />
+    </HorizontalScrollView>
+
+    <TextView
+        android:id="@+id/devRowCopy"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingStart="8dp"
+        android:paddingEnd="2dp"
+        android:paddingTop="2dp"
+        android:paddingBottom="2dp"
+        android:text="复制"
+        android:textSize="11sp"
+        android:textColor="@color/answer_correct_text" />
+</LinearLayout>
