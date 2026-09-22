@@ -17,22 +17,22 @@
                 android:text="共 15 题" android:textSize="14sp" android:textColor="@color/text_on_primary_70" android:padding="4dp" />
         </LinearLayout>
 
-        <!-- 工具栏（风格与刷题页工具栏一致：图标 + 文字） -->
+        <!-- 工具栏（仅图标，风格与刷题页工具栏一致） -->
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="horizontal" android:gravity="center"
-            android:paddingStart="8dp" android:paddingEnd="8dp" android:paddingBottom="10dp">
-            <TextView android:id="@+id/btnAnalysisAllAi" android:layout_width="0dp" android:layout_height="40dp"
-                android:layout_weight="1" android:gravity="center" android:text="全部解析"
-                android:textSize="14sp" android:textStyle="bold" android:textColor="@android:color/white"
-                android:drawableStart="@drawable/ic_tool_analyze" android:drawablePadding="6dp"
-                android:drawableTint="@android:color/white"
-                android:background="?attr/selectableItemBackgroundBorderless" />
-            <TextView android:id="@+id/btnAnalysisExpandAll" android:layout_width="0dp" android:layout_height="40dp"
-                android:layout_weight="1" android:gravity="center" android:text="全部收起"
-                android:textSize="14sp" android:textStyle="bold" android:textColor="@android:color/white"
-                android:drawableStart="@drawable/ic_tool_collapse" android:drawablePadding="6dp"
-                android:drawableTint="@android:color/white"
-                android:background="?attr/selectableItemBackgroundBorderless" />
+            android:paddingStart="8dp" android:paddingEnd="8dp" android:paddingBottom="8dp">
+            <ImageView android:id="@+id/btnAnalysisAllAi" android:layout_width="0dp" android:layout_height="40dp"
+                android:layout_weight="1" android:scaleType="centerInside" android:src="@drawable/ic_tool_analyze"
+                android:padding="8dp" android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="全部解析" />
+            <ImageView android:id="@+id/btnAnalysisExpandAll" android:layout_width="0dp" android:layout_height="40dp"
+                android:layout_weight="1" android:scaleType="centerInside" android:src="@drawable/ic_tool_collapse"
+                android:padding="8dp" android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="全部展开收起" />
+            <ImageView android:id="@+id/btnAnalysisDraft" android:layout_width="0dp" android:layout_height="40dp"
+                android:layout_weight="1" android:scaleType="centerInside" android:src="@drawable/ic_tool_draft"
+                android:padding="8dp" android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="草稿纸" />
         </LinearLayout>
     </LinearLayout>
 

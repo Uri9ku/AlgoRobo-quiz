@@ -59,6 +59,7 @@ public class QuizActivity extends AppCompatActivity {
     private LinearLayout questionContent;
 
     private ImageView btnToolTime, btnToolWrongbook, btnToolDownload, btnToolSheet, btnToolMore;
+    private ImageView btnToolCard;
 
     private LinearLayout analysisPanel;
     private TextView tvResultText, tvAnswerText, tvAnalysisText;
@@ -155,6 +156,7 @@ public class QuizActivity extends AppCompatActivity {
         btnToolWrongbook = findViewById(R.id.btnToolWrongbook);
         btnToolDownload = findViewById(R.id.btnToolDownload);
         btnToolSheet = findViewById(R.id.btnToolSheet);
+        btnToolCard = findViewById(R.id.btnToolCard);
         btnToolMore = findViewById(R.id.btnToolMore);
 
         // 操作容器：用于放置判断按钮 / 多选确认按钮
@@ -171,6 +173,7 @@ public class QuizActivity extends AppCompatActivity {
         btnToolWrongbook.setOnClickListener(v -> addToWrongBook());
         btnToolDownload.setOnClickListener(v -> showDraftPaper());
         btnToolSheet.setOnClickListener(v -> showAnswerSheet());
+        btnToolCard.setOnClickListener(v -> shareQuestionCard());
         btnToolMore.setOnClickListener(v -> showMorePanel());
 
         scrollQuestion = findViewById(R.id.scrollQuestion);
@@ -1224,68 +1227,133 @@ public class QuizActivity extends AppCompatActivity {
         pw.showAsDropDown(btnStat, 0, dp(6));
     }
     private void showDraftPaper() {
-        Dialog d = new Dialog(this);
-        d.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        View v = getLayoutInflater().inflate(R.layout.dialog_draft_paper, null);
-        d.setContentView(v);
-        DrawPadView drawPad = v.findViewById(R.id.drawPad);
-        TextView btnDraftClear = v.findViewById(R.id.btnDraftClear);
-        TextView btnDraftSave = v.findViewById(R.id.btnDraftSave);
-        TextView btnDraftClose = v.findViewById(R.id.btnDraftClose);
-        View draftRoot = v.findViewById(R.id.draftRoot);
-        SeekBar sbDraftAlpha = v.findViewById(R.id.sbDraftAlpha);
-        TextView tvDraftAlphaValue = v.findViewById(R.id.tvDraftAlphaValue);
-        // 打开时恢复上次设置的草稿纸透明度
-        final int[] alphaPercent = {DataStore.getDraftAlpha(this)};
-        applyDraftAlpha(draftRoot, tvDraftAlphaValue, sbDraftAlpha, alphaPercent[0]);
-        sbDraftAlpha.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                alphaPercent[0] = progress;
-                applyDraftAlpha(draftRoot, tvDraftAlphaValue, seekBar, progress);
-            }
-            @Override public void onStartTrackingTouch(SeekBar seekBar) {}
-            @Override public void onStopTrackingTouch(SeekBar seekBar) {
-                DataStore.setDraftAlpha(QuizActivity.this, seekBar.getProgress());
-            }
-        });
-        // 打开时恢复本题已有草稿
-        ArrayList<DrawPadView.StrokeData> saved = draftByQuestion.get(index);
-        if (saved != null) {
-            drawPad.restoreStrokes(saved);
-        }
-        btnDraftClear.setOnClickListener(x -> drawPad.clear());
-        btnDraftSave.setOnClickListener(x -> {
-            draftByQuestion.put(index, drawPad.getStrokeData());
-            showToast("草稿已保存");
-        });
-        btnDraftClose.setOnClickListener(x -> {
-            // 关闭时自动保存本题草稿
-            draftByQuestion.put(index, drawPad.getStrokeData());
-            DataStore.setDraftAlpha(this, alphaPercent[0]);
-            d.dismiss();
-        });
-        Window w = d.getWindow();
-        if (w != null) {
-            w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-            w.setGravity(Gravity.BOTTOM);
-            w.setBackgroundDrawableResource(android.R.color.transparent);
-        }
-        d.show();
+        // 草稿纸弹窗与全部解析页共用（DraftPaper 统一实现）
+        DraftPaper.show(this, draftByQuestion.get(index),
+                strokes -> draftByQuestion.put(index, new ArrayList<>(strokes)));
     }
 
-    /** 按百分比设置草稿纸底色不透明度：0% 完全透明（只看笔迹），100% 完全不透明。 */
-    private void applyDraftAlpha(View draftRoot, TextView valueView, SeekBar seekBar, int percent) {
-        if (percent < 0) percent = 0;
-        if (percent > 100) percent = 100;
-        int alpha = Math.round(percent * 255f / 100f);
-        if (draftRoot != null) {
-            draftRoot.setBackgroundColor(android.graphics.Color.argb(alpha, 255, 255, 255));
-        }
-        if (valueView != null) {
-            valueView.setText(percent + "%");
-        }
-        if (seekBar != null && seekBar.getProgress() != percent) {
-            seekBar.setProgress(percent);
+    /** 生成该题的「题目卡片」图片，并调起系统分享。 */
+    private void shareQuestionCard() {
+        final Question q = questions.get(index);
+        try {
+            View card = getLayoutInflater().inflate(R.layout.view_question_card, null);
+            TextView cardType = card.findViewById(R.id.cardType);
+            TextView cardIndex = card.findViewById(R.id.cardIndex);
+            TextView cardKnowledge = card.findViewById(R.id.cardKnowledge);
+            TextView cardStem = card.findViewById(R.id.cardStem);
+            ImageView cardStemImage = card.findViewById(R.id.cardStemImage);
+            LinearLayout cardOptionImages = card.findViewById(R.id.cardOptionImages);
+            TextView cardOptions = card.findViewById(R.id.cardOptions);
+            TextView cardAnswer = card.findViewById(R.id.cardAnswer);
+            TextView cardAnalysis = card.findViewById(R.id.cardAnalysis);
+
+            cardType.setText(q.typeLabel != null && !q.typeLabel.isEmpty()
+                    ? q.typeLabel : (q.type == null ? "" : q.type));
+            cardIndex.setText("第 " + (index + 1) + " 题");
+            String kp = null;
+            if (q.knowledgePoints != null && q.knowledgePoints.length > 0) kp = q.knowledgePoints[0];
+            if (kp != null && !kp.trim().isEmpty()) {
+                int slash = kp.lastIndexOf(" / ");
+                cardKnowledge.setText(slash >= 0 ? kp.substring(slash + 3) : kp);
+                cardKnowledge.setVisibility(View.VISIBLE);
+            }
+            cardStem.setText(q.stem == null ? "" : q.stem);
+
+            android.graphics.Bitmap stemBmp = loadMediaBitmap(q.stemImg);
+            if (stemBmp != null) {
+                cardStemImage.setVisibility(View.VISIBLE);
+                cardStemImage.setImageBitmap(stemBmp);
+            }
+
+            StringBuilder opt = new StringBuilder();
+            if (q.options != null) {
+                for (int i = 0; i < q.options.length; i++) {
+                    opt.append((char) ('A' + i)).append(". ").append(q.options[i]);
+                    if (i < q.options.length - 1) opt.append('\n');
+                }
+            }
+            cardOptions.setText(opt.toString());
+
+            if (q.optionImgs != null) {
+                int n = q.options == null ? 0 : q.options.length;
+                int count = 0;
+                for (int i = 0; i < n; i++) {
+                    String img = i < q.optionImgs.length ? q.optionImgs[i] : null;
+                    if (img == null || img.isEmpty()) continue;
+                    android.graphics.Bitmap b = loadMediaBitmap(img);
+                    if (b == null) continue;
+                    LinearLayout row = new LinearLayout(this);
+                    row.setOrientation(LinearLayout.HORIZONTAL);
+                    row.setGravity(Gravity.CENTER_VERTICAL);
+                    LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                    rlp.topMargin = dp(8);
+                    row.setLayoutParams(rlp);
+                    TextView lab = new TextView(this);
+                    lab.setText(String.valueOf((char) ('A' + i)));
+                    lab.setGravity(Gravity.CENTER);
+                    lab.setTextColor(getColor(R.color.text_main));
+                    lab.setTextSize(13);
+                    lab.setBackgroundResource(R.drawable.bg_tag_light);
+                    LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(dp(26), dp(26));
+                    tlp.rightMargin = dp(10);
+                    row.addView(lab, tlp);
+                    ImageView iv = new ImageView(this);
+                    iv.setImageBitmap(b);
+                    iv.setAdjustViewBounds(true);
+                    iv.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                    LinearLayout.LayoutParams ilp = new LinearLayout.LayoutParams(
+                            0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+                    row.addView(iv, ilp);
+                    cardOptionImages.addView(row);
+                    count++;
+                }
+                cardOptionImages.setVisibility(count > 0 ? View.VISIBLE : View.GONE);
+            }
+
+            String answerText = q.isJudge()
+                    ? (q.judgeAnswer == null ? "" : q.judgeAnswer)
+                    : (q.hasAnswer ? String.valueOf((char) ('A' + q.answerIndex)) : "");
+            cardAnswer.setText(answerText.isEmpty() ? "（暂无标准答案）" : ("正确答案：" + answerText));
+            String analysis = q.analysis;
+            if (analysis == null || analysis.trim().isEmpty()) {
+                analysis = DataStore.getAiAnalysis(this, q.uniqueKey());
+            }
+            if (analysis != null && !analysis.trim().isEmpty()) {
+                if (analysis.length() > 600) analysis = analysis.substring(0, 600) + "…";
+                cardAnalysis.setText("解析：" + analysis);
+                cardAnalysis.setVisibility(View.VISIBLE);
+            }
+
+            // 按固定宽度测量后绘制成位图
+            int widthPx = dp(540);
+            int wSpec = View.MeasureSpec.makeMeasureSpec(widthPx, View.MeasureSpec.EXACTLY);
+            int hSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
+            card.measure(wSpec, hSpec);
+            card.layout(0, 0, card.getMeasuredWidth(), card.getMeasuredHeight());
+            int heightPx = Math.max(1, card.getMeasuredHeight());
+            android.graphics.Bitmap bmp = android.graphics.Bitmap.createBitmap(
+                    widthPx, heightPx, android.graphics.Bitmap.Config.ARGB_8888);
+            android.graphics.Canvas canvas = new android.graphics.Canvas(bmp);
+            canvas.drawColor(0xFFFFFFFF);
+            card.draw(canvas);
+
+            java.io.File dir = new java.io.File(getFilesDir(), "share");
+            if (!dir.exists()) dir.mkdirs();
+            java.io.File out = new java.io.File(dir, "question_" + System.currentTimeMillis() + ".png");
+            java.io.FileOutputStream fos = new java.io.FileOutputStream(out);
+            bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, fos);
+            fos.close();
+
+            android.net.Uri uri = androidx.core.content.FileProvider.getUriForFile(
+                    this, getPackageName() + ".fileprovider", out);
+            android.content.Intent it = new android.content.Intent(android.content.Intent.ACTION_SEND);
+            it.setType("image/png");
+            it.putExtra(android.content.Intent.EXTRA_STREAM, uri);
+            it.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(android.content.Intent.createChooser(it, "分享题目卡片"));
+        } catch (Exception e) {
+            showToast("生成题目卡片失败：" + e.getMessage());
         }
     }
 

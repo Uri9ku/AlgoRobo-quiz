@@ -27,7 +27,7 @@ public class AllAnalysisActivity extends AppCompatActivity {
     private AnalysisAdapter adapter;
     private LinearLayout indexContainer;
     private HorizontalScrollView indexScroll;
-    private TextView btnAnalysisAllAi, btnAnalysisExpandAll;
+    private ImageView btnAnalysisAllAi, btnAnalysisExpandAll, btnAnalysisDraft;
     /** 解析区全局展开状态（工具栏「全部收起/全部展开」控制）。 */
     private boolean allExpanded = true;
     private int currentIndexPos = -1;
@@ -56,14 +56,16 @@ public class AllAnalysisActivity extends AppCompatActivity {
         indexScroll = findViewById(R.id.analysisIndexScroll);
         btnAnalysisAllAi = findViewById(R.id.btnAnalysisAllAi);
         btnAnalysisExpandAll = findViewById(R.id.btnAnalysisExpandAll);
+        btnAnalysisDraft = findViewById(R.id.btnAnalysisDraft);
 
         rv = findViewById(R.id.rvAnalysis);
         rv.setLayoutManager(new LinearLayoutManager(this));
         adapter = new AnalysisAdapter();
         rv.setAdapter(adapter);
 
-        btnAnalysisAllAi.setOnClickListener(v -> analyzeAll());
+        btnAnalysisAllAi.setOnClickListener(v -> confirmAnalyzeAll());
         btnAnalysisExpandAll.setOnClickListener(v -> toggleAllExpand());
+        btnAnalysisDraft.setOnClickListener(v -> DraftPaper.show(this, null, null));
         updateExpandButton();
 
         renderAnalysisIndex();
@@ -158,6 +160,26 @@ public class AllAnalysisActivity extends AppCompatActivity {
 
     // ===================== 工具栏 =====================
 
+    /** 全部解析：先弹窗二次确认，再对没有解析的题目批量生成 AI 解析。 */
+    private void confirmAnalyzeAll() {
+        int need = 0;
+        for (AnswerRecord r : records) {
+            if (r.analysis != null && !r.analysis.trim().isEmpty()) continue;
+            if (hasAiCache(r)) continue;
+            need++;
+        }
+        if (need == 0) {
+            toast("所有题目都已有解析");
+            return;
+        }
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("全部解析")
+                .setMessage("将对 " + need + " 道没有解析的题目生成 AI 解析，是否继续？")
+                .setNegativeButton("取消", null)
+                .setPositiveButton("开始解析", (d, w) -> analyzeAll())
+                .show();
+    }
+
     /** 全部解析：对所有「没有正式解析且没有 AI 缓存」的题目批量生成 AI 解析。 */
     private void analyzeAll() {
         final List<AnswerRecord> need = new ArrayList<>();
@@ -211,9 +233,8 @@ public class AllAnalysisActivity extends AppCompatActivity {
 
     private void updateExpandButton() {
         if (btnAnalysisExpandAll == null) return;
-        btnAnalysisExpandAll.setText(allExpanded ? "全部收起" : "全部展开");
-        btnAnalysisExpandAll.setCompoundDrawablesRelativeWithIntrinsicBounds(
-                allExpanded ? R.drawable.ic_tool_collapse : R.drawable.ic_tool_expand, 0, 0, 0);
+        btnAnalysisExpandAll.setImageResource(allExpanded
+                ? R.drawable.ic_tool_collapse : R.drawable.ic_tool_expand);
     }
 
     // ===================== 工具方法（供 Adapter 与工具栏共用） =====================
