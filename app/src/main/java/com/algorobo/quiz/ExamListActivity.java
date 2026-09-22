@@ -101,7 +101,7 @@ public class ExamListActivity extends AppCompatActivity {
         btnRemoveExams = findViewById(R.id.btnRemoveExams);
         fabAddExam = findViewById(R.id.fabAddExam);
 
-        TextView btnBack = findViewById(R.id.btnExamBack);
+        View btnBack = findViewById(R.id.btnExamBack);
         btnBack.setOnClickListener(v -> finish());
 
         adapter = new BaseAdapter() {

@@ -165,29 +165,41 @@ public class DataStore {
         sp(c).edit().putStringSet("checkin_days", s).apply();
     }
 
-    public static void recordAnswer(Context c, String qid, boolean correct, String type) {
+    /**
+     * 记录一次作答。
+     * 全局/按日/按题型统计只在「首次作答」时累加，复刷仅累计复刷次数，避免重复刷题污染全局正确率。
+     * 单题维度(qstat_{qid})仍保留全部尝试次数（用于展示"已做 N 次"）。
+     * 返回 true 表示这是该题的首次作答（已计入统计）。
+     */
+    public static boolean recordAnswer(Context c, String qid, boolean correct, String type) {
         SharedPreferences p = sp(c);
-        int total = p.getInt("stat_total", 0);
-        int right = p.getInt("stat_right", 0);
-        p.edit().putInt("stat_total", total + 1).apply();
-        if (correct) p.edit().putInt("stat_right", right + 1).apply();
+        boolean firstTime = (qid == null || qid.isEmpty()) || !p.contains(firstKey(qid));
+        if (firstTime) {
+            int total = p.getInt("stat_total", 0);
+            int right = p.getInt("stat_right", 0);
+            p.edit().putInt("stat_total", total + 1).apply();
+            if (correct) p.edit().putInt("stat_right", right + 1).apply();
 
-        String today = today();
-        String key = "day_" + today;
-        int dayTotal = p.getInt(key + "_t", 0);
-        int dayRight = p.getInt(key + "_r", 0);
-        p.edit().putInt(key + "_t", dayTotal + 1).apply();
-        if (correct) p.edit().putInt(key + "_r", dayRight + 1).apply();
+            String today = today();
+            String key = "day_" + today;
+            int dayTotal = p.getInt(key + "_t", 0);
+            int dayRight = p.getInt(key + "_r", 0);
+            p.edit().putInt(key + "_t", dayTotal + 1).apply();
+            if (correct) p.edit().putInt(key + "_r", dayRight + 1).apply();
 
-        // 按题型累加统计（正确率柱状图用）
-        if (type != null && !type.isEmpty()) {
-            String tk = "type_" + type;
-            int tTotal = p.getInt(tk + "_t", 0);
-            int tRight = p.getInt(tk + "_r", 0);
-            p.edit().putInt(tk + "_t", tTotal + 1).apply();
-            if (correct) p.edit().putInt(tk + "_r", tRight + 1).apply();
+            // 按题型累加统计（正确率柱状图用）
+            if (type != null && !type.isEmpty()) {
+                String tk = "type_" + type;
+                int tTotal = p.getInt(tk + "_t", 0);
+                int tRight = p.getInt(tk + "_r", 0);
+                p.edit().putInt(tk + "_t", tTotal + 1).apply();
+                if (correct) p.edit().putInt(tk + "_r", tRight + 1).apply();
+            }
+        } else {
+            // 复刷：只累计复刷计数
+            p.edit().putInt("stat_repeat", p.getInt("stat_repeat", 0) + 1).apply();
         }
-        // 按题统计（qid 维度）
+        // 按题统计（qid 维度）：始终累加（含复刷）
         if (qid != null && !qid.isEmpty()) {
             String qk = "qstat_" + qid;
             int qTotal = p.getInt(qk + "_t", 0);
@@ -195,6 +207,83 @@ public class DataStore {
             p.edit().putInt(qk + "_t", qTotal + 1).apply();
             if (correct) p.edit().putInt(qk + "_r", qRight + 1).apply();
         }
+        if (firstTime) maybeAutoCheckin(c);
+        return firstTime;
+    }
+
+    /** 复刷累计次数（不计入正确率的重复作答）。 */
+    public static int getRepeatCount(Context c) { return sp(c).getInt("stat_repeat", 0); }
+
+    /** 一次性迁移：把历史明文的 API Key（单配置字段 + 多配置 JSON）加密为密文存放。 */
+    public static void migrateLegacySecrets(Context c) {
+        try {
+            String legacy = sp(c).getString("setting_ai_api_key", "");
+            if (legacy != null && !legacy.isEmpty() && !SecretStore.isEncrypted(legacy)) {
+                sp(c).edit().putString("setting_ai_api_key", SecretStore.encrypt(legacy)).apply();
+            }
+            // 触发多配置的明文→密文迁移（getAiConfigs 内部在检测到明文时会回写）
+            getAiConfigs(c);
+        } catch (Exception e) {
+            android.util.Log.e("DataStore", "migrateLegacySecrets failed", e);
+        }
+    }
+
+    // ==================== 打卡判定 ====================
+    // 每日打卡自动判定阈值：当天首次作答达到 N 题自动打卡，范围 10~100，默认 20
+    public static int getCheckinThreshold(Context c) {
+        int v = sp(c).getInt("setting_checkin_threshold", 20);
+        if (v < 10) v = 10;
+        if (v > 100) v = 100;
+        return v;
+    }
+    public static void setCheckinThreshold(Context c, int n) {
+        if (n < 10) n = 10;
+        if (n > 100) n = 100;
+        sp(c).edit().putInt("setting_checkin_threshold", n).apply();
+    }
+
+    // ==================== 错题本：错误次数/最近做错（用于排序） ====================
+    /** 错题重做排序方式：default=默认顺序，errcount=错误次数多优先，recent=最近做错优先。 */
+    public static String getWrongSort(Context c) {
+        return sp(c).getString("setting_wrong_sort", "default");
+    }
+    public static void setWrongSort(Context c, String order) {
+        sp(c).edit().putString("setting_wrong_sort", order == null ? "default" : order).apply();
+    }
+
+    private static String wrongCountKey(String uid) { return "wrongcount_" + uid; }
+    private static String wrongTimeKey(String uid) { return "wrongtime_" + uid; }
+
+    /** 记录一次「答错」（无论该题是否第一次进错题本）：累计错误次数、刷新最近做错时间。 */
+    public static void noteWrong(Context c, String uid) {
+        if (uid == null || uid.isEmpty()) return;
+        SharedPreferences p = sp(c);
+        p.edit()
+                .putInt(wrongCountKey(uid), p.getInt(wrongCountKey(uid), 0) + 1)
+                .putLong(wrongTimeKey(uid), System.currentTimeMillis())
+                .apply();
+    }
+
+    /** 该题累计答错次数（含已移出错题本的题）。 */
+    public static int getWrongCount(Context c, String uid) {
+        return sp(c).getInt(wrongCountKey(uid), 0);
+    }
+
+    /** 该题最近一次答错的时间戳（毫秒，0 表示从未记录）。 */
+    public static long getWrongTime(Context c, String uid) {
+        return sp(c).getLong(wrongTimeKey(uid), 0L);
+    }
+
+    /** 打卡判定：当天「首次作答」达到阈值 N 时自动记为打卡（手动打卡仍然可用）。返回 true 表示本次自动打卡成功。 */
+    public static boolean maybeAutoCheckin(Context c) {
+        int threshold = getCheckinThreshold(c);
+        String today = today();
+        Set<String> days = getCheckinDays(c);
+        if (days.contains(today)) return false;
+        int dayFirst = sp(c).getInt("day_" + today + "_t", 0);
+        if (dayFirst < threshold) return false;
+        addCheckin(c, today);
+        return true;
     }
 
     public static int[] getQuestionStat(Context c, String qid) {
@@ -206,7 +295,8 @@ public class DataStore {
     public static int getTotal(Context c) { return sp(c).getInt("stat_total", 0); }
     public static int getRight(Context c) { return sp(c).getInt("stat_right", 0); }
 
-    // 返回各题型的 {总答题数, 答对数}，题型顺序与 QuestionBank 一致
+    // 返回各题型的 {总答题数, 答对数}。
+    // 题型来源：内置题库的题型 + 已落库统计过的所有 type_* 键（含导入真题/docx 解析出的自定义题型）。
     public static Map<String, int[]> getTypeStats(Context c) {
         java.util.Map<String, int[]> map = new java.util.LinkedHashMap<>();
         java.util.Set<String> types = new java.util.LinkedHashSet<>();
@@ -214,6 +304,12 @@ public class DataStore {
             if (q.type != null && !q.type.isEmpty()) types.add(q.type);
         }
         SharedPreferences p = sp(c);
+        // 扫描实际统计过（写过 type_ 前缀键）的题型：含导入真题的题型
+        for (String k : p.getAll().keySet()) {
+            if (k.startsWith("type_") && k.endsWith("_t")) {
+                types.add(k.substring("type_".length(), k.length() - 2));
+            }
+        }
         for (String type : types) {
             String tk = "type_" + type;
             map.put(type, new int[]{ p.getInt(tk + "_t", 0), p.getInt(tk + "_r", 0) });
@@ -313,10 +409,15 @@ public class DataStore {
         sp(c).edit().putString("setting_ai_model", model).apply();
     }
     public static String getAiApiKey(Context c) {
-        return sp(c).getString("setting_ai_api_key", "");
+        String stored = sp(c).getString("setting_ai_api_key", "");
+        // 历史明文迁移：读到未加密的旧值时立即加密写回
+        if (stored != null && !stored.isEmpty() && !SecretStore.isEncrypted(stored)) {
+            sp(c).edit().putString("setting_ai_api_key", SecretStore.encrypt(stored)).apply();
+        }
+        return SecretStore.decrypt(stored);
     }
     public static void setAiApiKey(Context c, String key) {
-        sp(c).edit().putString("setting_ai_api_key", key == null ? "" : key.trim()).apply();
+        sp(c).edit().putString("setting_ai_api_key", SecretStore.encrypt(key == null ? "" : key.trim())).apply();
     }
     public static String getAiBaseUrl(Context c) {
         return sp(c).getString("setting_ai_base_url", "");
@@ -330,8 +431,21 @@ public class DataStore {
     private static final String KEY_AI_CONFIGS = "ai_configs_json";
     private static final String KEY_AI_CURRENT = "ai_current_config";
 
-    /** 读取所有 AI 配置列表。 */
+    /** 读取所有 AI 配置列表（apiKey 已解密，密文持久化；历史明文会在读取时自动迁移加密）。 */
     public static List<AiApi.Config> getAiConfigs(Context c) {
+        List<AiApi.Config> list = loadAiConfigs(c);
+        boolean migrate = false;
+        for (AiApi.Config cfg : list) {
+            String stored = cfg.apiKey == null ? "" : cfg.apiKey;
+            if (stored.isEmpty()) continue;
+            cfg.apiKey = SecretStore.decrypt(stored);   // 解密为明文
+            if (!SecretStore.isEncrypted(stored)) migrate = true; // 历史明文 → 需回写加密
+        }
+        if (migrate) saveAiConfigs(c, list); // saveAiConfigs 内部统一加密
+        return list;
+    }
+
+    private static List<AiApi.Config> loadAiConfigs(Context c) {
         String json = sp(c).getString(KEY_AI_CONFIGS, null);
         if (json == null || json.isEmpty()) {
             List<AiApi.Config> list = new ArrayList<>();
@@ -353,7 +467,7 @@ public class DataStore {
         }
     }
 
-    /** 从旧的单配置字段迁移得到默认配置（保持兼容）。 */
+    /** 从旧的单配置字段迁移得到默认配置（保持兼容）。apiKey 由调用方负责解密（defaultConfig 内 key 为明文迁移源）。 */
     private static AiApi.Config defaultConfig(Context c) {
         String model = getAiModel(c);
         String provider = "custom";
@@ -371,9 +485,18 @@ public class DataStore {
         return new AiApi.Config("默认配置", provider, endpoint, key, models);
     }
 
-    /** 持久化所有 AI 配置列表。 */
+    /** 持久化所有 AI 配置列表（apiKey 加密后存储）。 */
     public static void saveAiConfigs(Context c, List<AiApi.Config> configs) {
-        String json = gson.toJson(configs == null ? new ArrayList<AiApi.Config>() : configs);
+        List<AiApi.Config> encrypted = new ArrayList<>();
+        if (configs != null) {
+            for (AiApi.Config src : configs) {
+                AiApi.Config copy = new AiApi.Config(src.name, src.provider, src.endpoint,
+                        SecretStore.encrypt(src.apiKey == null ? "" : src.apiKey.trim()),
+                        src.models, src.vision);
+                encrypted.add(copy);
+            }
+        }
+        String json = gson.toJson(encrypted);
         sp(c).edit().putString(KEY_AI_CONFIGS, json).apply();
     }
 
@@ -406,6 +529,20 @@ public class DataStore {
 
     public static void setAiRole(Context c, String role) {
         sp(c).edit().putString("setting_ai_role", role == null ? "" : role).apply();
+    }
+
+    /** 在线导入时并发下载/解析的真题套数，默认 3，范围 1~10。 */
+    public static int getImportConcurrency(Context c) {
+        int v = sp(c).getInt("setting_import_concurrency", 3);
+        if (v < 1) v = 1;
+        if (v > 10) v = 10;
+        return v;
+    }
+
+    public static void setImportConcurrency(Context c, int v) {
+        if (v < 1) v = 1;
+        if (v > 10) v = 10;
+        sp(c).edit().putInt("setting_import_concurrency", v).apply();
     }
 
     // ==================== 题库下载目录 ====================

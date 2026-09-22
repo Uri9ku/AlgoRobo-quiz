@@ -201,10 +201,12 @@ public class MainActivity extends AppCompatActivity {
             roots = RobotCatalog.buildCatalogTree(this, qs);
         } else if (qs.isEmpty()) {
             TextView empty = new TextView(this);
-            empty.setText("该科目暂无知识点：请先在「真题练习」导入真题（题目需带知识点标签）");
+            empty.setText("该科目暂无知识点：请先在「真题练习」导入真题（题目需带知识点标签）\n\n点此去真题导入 →");
             empty.setTextSize(13);
             empty.setTextColor(getColor(R.color.text_sub));
             empty.setPadding(dp(12), dp(16), dp(12), dp(16));
+            empty.setOnClickListener(v -> startActivity(PageTitle.intent(this, ExamListActivity.class,
+                    findViewById(R.id.labelPractice))));
             llGreenContainer.addView(empty);
             return;
         } else {
@@ -435,6 +437,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         bindBadges();
+        // 交卷后进度已清除 / 中途退出则恢复：每次回首页都重新判断
+        bindResume();
         // 导入/删除真题后，知识点聚合需要重新生成
         renderGreenContainer();
     }

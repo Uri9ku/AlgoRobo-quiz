@@ -23,8 +23,7 @@
 <TextView android:id="@+id/tvWrong" android:layout_width="wrap_content" android:layout_height="match_parent" android:layout_gravity="center" android:gravity="center" android:includeFontPadding="false" android:text="" android:textSize="14sp" android:textColor="@color/text_on_primary"/>
 </FrameLayout>
 </LinearLayout>
-</LinearLayout>
-<CheckBox android:id="@+id/cbHidePractical" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="end|center_vertical" android:text="隐藏实操题" android:textSize="13sp" android:textColor="@color/text_on_primary" android:buttonTint="@color/text_on_primary"/>
+                </LinearLayout>
 </FrameLayout>
 </LinearLayout>
 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="20dp" android:layout_marginStart="12dp" android:layout_marginEnd="12dp" android:layout_marginTop="-20dp" android:background="@drawable/bg_card_chalk">
@@ -45,6 +44,8 @@
 </LinearLayout>
 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="16dp" android:paddingBottom="20dp">
 <TextView android:id="@+id/btnResultHome" android:layout_width="0dp" android:layout_height="46dp" android:layout_weight="1" android:layout_marginEnd="8dp" android:gravity="center" android:text="返回首页" android:textSize="15sp" android:textColor="@color/primary" android:background="@drawable/bg_btn_outline_press"/>
-<TextView android:id="@+id/btnResultAgain" android:layout_width="0dp" android:layout_height="46dp" android:layout_weight="1" android:layout_marginStart="8dp" android:gravity="center" android:text="全部解析" android:textSize="15sp" android:textColor="@android:color/white" android:background="@drawable/bg_btn_primary_press"/>
+<!-- 隐藏/显示实操题：按钮式，文本区分状态 -->
+<TextView android:id="@+id/btnResultHidePractical" android:layout_width="0dp" android:layout_height="46dp" android:layout_weight="1.3" android:layout_marginEnd="8dp" android:gravity="center" android:text="隐藏实操题" android:textSize="14sp" android:textColor="@color/primary" android:background="@drawable/bg_btn_outline_press"/>
+<TextView android:id="@+id/btnResultAgain" android:layout_width="0dp" android:layout_height="46dp" android:layout_weight="1" android:gravity="center" android:text="全部解析" android:textSize="15sp" android:textColor="@android:color/white" android:background="@drawable/bg_btn_primary_press"/>
 </LinearLayout>
 </LinearLayout>

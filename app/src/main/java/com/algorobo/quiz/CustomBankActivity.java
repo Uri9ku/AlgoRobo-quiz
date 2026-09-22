@@ -42,7 +42,7 @@ public class CustomBankActivity extends AppCompatActivity {
         etAnalysis = findViewById(R.id.etAnalysis);
         optionsInputContainer = findViewById(R.id.optionsInputContainer);
 
-        TextView btnCustomBankBack = findViewById(R.id.btnCustomBankBack);
+        View btnCustomBankBack = findViewById(R.id.btnCustomBankBack);
         TextView btnSaveOne = findViewById(R.id.btnSaveOne);
         TextView btnSaveDone = findViewById(R.id.btnSaveDone);
         LinearLayout btnImportFile = findViewById(R.id.btnImportFile);

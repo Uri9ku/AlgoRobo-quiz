@@ -13,13 +13,13 @@
         android:padding="16dp"
         android:background="@drawable/bg_result_header_chalk">
 
-        <TextView
+        <ImageView
             android:id="@+id/btnKnowledgeBack"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="‹ 返回"
-            android:textSize="18sp"
-            android:textColor="@color/text_on_primary" />
+            android:src="@drawable/ic_back"
+            android:contentDescription="返回"
+            android:padding="4dp" />
 
         <TextView
             android:id="@+id/tvPageTitle"
@@ -41,17 +41,37 @@
             android:textColor="@color/text_on_primary" />
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/tvKnowledgeEmpty"
+    <LinearLayout
+        android:id="@+id/knowledgeEmptyBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="120dp"
+        android:orientation="vertical"
         android:gravity="center"
-        android:text="暂无知识点\n点击右上角「＋ 新增」创建"
-        android:textSize="14sp"
-        android:lineSpacingExtra="4dp"
-        android:textColor="@color/text_sub"
-        android:visibility="gone" />
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tvKnowledgeEmpty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="120dp"
+            android:gravity="center"
+            android:text="暂无知识点\n可点击右上角「＋ 新增」创建，或「去真题导入」获取带知识点的题目"
+            android:textSize="14sp"
+            android:lineSpacingExtra="4dp"
+            android:textColor="@color/text_sub" />
+
+        <TextView
+            android:id="@+id/btnGoImportExam"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:paddingVertical="12dp"
+            android:paddingHorizontal="24dp"
+            android:text="去真题导入"
+            android:textSize="14sp"
+            android:textColor="@android:color/white"
+            android:background="@drawable/bg_btn_primary" />
+    </LinearLayout>
 
     <ListView
         android:id="@+id/lvKnowledge"

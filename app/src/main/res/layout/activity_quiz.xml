@@ -4,7 +4,7 @@
     <!-- 顶部工具栏 -->
     <LinearLayout android:id="@+id/topBar" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/bg_result_header_chalk">
         <LinearLayout android:id="@+id/topBarInner" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:orientation="horizontal" android:gravity="center_vertical" android:padding="12dp">
-            <TextView android:id="@+id/btnBack" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="‹ 返回" android:textSize="16sp" android:textColor="@android:color/white" android:padding="4dp"/>
+            <ImageView android:id="@+id/btnBack" android:layout_width="wrap_content" android:layout_height="wrap_content" android:src="@drawable/ic_back" android:contentDescription="返回" android:padding="4dp"/>
             <TextView android:id="@+id/tvPaperTitle" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center_vertical" android:text="" android:textSize="15sp" android:textStyle="bold" android:maxLines="1" android:singleLine="true" android:ellipsize="end" android:paddingStart="6dp" android:paddingEnd="6dp" android:textColor="@android:color/white" android:fontFamily="sans-serif-medium"/>        </LinearLayout>
 
         <!-- 工具栏图标：收藏 / 加入错题本 / 草稿纸 / 答题卡 / 更多 -->

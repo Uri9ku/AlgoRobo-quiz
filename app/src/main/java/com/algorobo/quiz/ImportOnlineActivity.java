@@ -459,8 +459,9 @@ public class ImportOnlineActivity extends AppCompatActivity {
             Toast.makeText(this, "请先勾选要导入的真题", Toast.LENGTH_SHORT).show();
             return;
         }
-        // 导入期间：底部工具栏隐藏（避免重复触发导入），但列表仍可勾选（可先选好下一批）
+        // 导入期间：底部工具栏隐藏（避免重复触发导入），勾选框也隐藏
         importing = true;
+        selectMode = false;
         for (RobotExamUpdater.ReleaseAsset ra : chosen) {
             ImportManager.State st = ImportManager.state(ra.key);
             st.percent = 0;

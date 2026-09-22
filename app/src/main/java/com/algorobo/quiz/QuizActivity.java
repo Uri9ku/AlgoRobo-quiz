@@ -65,6 +65,8 @@ public class QuizActivity extends AppCompatActivity {
     private TextView tvResultText, tvAnswerText, tvAnalysisText;
     private TextView btnShowAnalysis;
     private TextView btnAiAnalysis;
+    /** AI 解析请求进行中标记：防止连点重复发起请求。 */
+    private volatile boolean aiLoading;
     private TextView tvAiAnalysis;
     private MarkdownUtil markdownRenderer;
     private LinearLayout analysisImagesContainer;
@@ -326,6 +328,18 @@ public class QuizActivity extends AppCompatActivity {
             for (RobotExamBank.Paper p : RobotExamBank.getCachedPapersList(this)) {
                 for (Question q : p.questions) {
                     if (ids.contains(q.uniqueKey())) result.add(q);
+                }
+            }
+            // 错题重做排序：按「错误次数」或「最近做错」，默认保持原顺序
+            if ("wrong".equals(src)) {
+                String order = DataStore.getWrongSort(this);
+                if ("errcount".equals(order)) {
+                    Collections.sort(result, (a, b) -> DataStore.getWrongCount(this, b.uniqueKey())
+                            - DataStore.getWrongCount(this, a.uniqueKey()));
+                } else if ("recent".equals(order)) {
+                    Collections.sort(result, (a, b) -> Long.compare(
+                            DataStore.getWrongTime(this, b.uniqueKey()),
+                            DataStore.getWrongTime(this, a.uniqueKey())));
                 }
             }
             return result;
@@ -684,8 +698,9 @@ public class QuizActivity extends AppCompatActivity {
         answered[index] = true;
         questionDurations[index] = elapsed - questionStartTimes[index];
         boolean correct = isCurrentCorrect();
-        DataStore.recordAnswer(this, q.uniqueKey(), correct, q.type);
+        boolean firstAnswer = DataStore.recordAnswer(this, q.uniqueKey(), correct, q.type);
         DataStore.setFirstAnswer(this, q.uniqueKey(), -1);
+        if (!firstAnswer) showToast("复刷不重复计入统计");
         if (correct) handleCorrectAnswer(q); else handleWrongAnswer(q);
         if (brushMode) {
             highlightChosenOnly(q);
@@ -729,8 +744,9 @@ public class QuizActivity extends AppCompatActivity {
         answered[index] = true;
         questionDurations[index] = elapsed - questionStartTimes[index];
         boolean correct = isCurrentCorrect();
-        DataStore.recordAnswer(this, q.uniqueKey(), correct, q.type);
+        boolean firstAnswer = DataStore.recordAnswer(this, q.uniqueKey(), correct, q.type);
         DataStore.setFirstAnswer(this, q.uniqueKey(), opt);
+        if (!firstAnswer) showToast("复刷不重复计入统计");
         if (correct) handleCorrectAnswer(q); else handleWrongAnswer(q);
         if (brushMode) {
             highlightChosenOnly(q);
@@ -770,7 +786,9 @@ public class QuizActivity extends AppCompatActivity {
         answered[index] = true;
         questionDurations[index] = elapsed - questionStartTimes[index];
         boolean correct = isCurrentCorrect();
-        DataStore.recordAnswer(this, q.uniqueKey(), correct, q.type);
+        boolean firstAnswer = DataStore.recordAnswer(this, q.uniqueKey(), correct, q.type);
+        DataStore.setFirstAnswer(this, q.uniqueKey(), -1); // 多选题仅记录"已首次作答"
+        if (!firstAnswer) showToast("复刷不重复计入统计");
         if (correct) handleCorrectAnswer(q); else handleWrongAnswer(q);
         if (brushMode) {
             highlightChosenOnly(q);
@@ -787,8 +805,9 @@ public class QuizActivity extends AppCompatActivity {
         answered[index] = true;
         questionDurations[index] = elapsed - questionStartTimes[index];
         boolean correct = isCurrentCorrect();
-        DataStore.recordAnswer(this, q.uniqueKey(), correct, q.type);
+        boolean firstAnswer = DataStore.recordAnswer(this, q.uniqueKey(), correct, q.type);
         DataStore.setFirstAnswer(this, q.uniqueKey(), val);
+        if (!firstAnswer) showToast("复刷不重复计入统计");
         if (correct) handleCorrectAnswer(q); else handleWrongAnswer(q);
         if (brushMode) {
             highlightChosenOnly(q);
@@ -1058,6 +1077,11 @@ public class QuizActivity extends AppCompatActivity {
     }
 
     private void runAiAnalysis(Question q, boolean correct, boolean force) {
+        // 防连点：已有 AI 请求在途时忽略新的触发
+        if (aiLoading) {
+            showToast("AI 解析生成中，请稍候…");
+            return;
+        }
         // 缓存优先：已生成过且不强制重解析时直接展示
         if (!force && hasAiAnalysisCached(q)) {
             showAiAnalysis(DataStore.getAiAnalysis(this, q.uniqueKey()));
@@ -1069,11 +1093,18 @@ public class QuizActivity extends AppCompatActivity {
             return;
         }
         String userAnswerText = formatUserAnswer(q);
+        aiLoading = true;
+        // 置灰按钮，让用户清楚看到请求在途
+        btnAiAnalysis.setAlpha(0.4f);
+        btnAiAnalysis.setEnabled(false);
         tvAiAnalysis.setVisibility(View.VISIBLE);
-        tvAiAnalysis.setText("AI 解析生成中…");
+        tvAiAnalysis.setText(markdownRenderer.render("**⏳ AI 解析生成中…**（请求进行中，请勿重复点击）"));
         new Thread(() -> {
             AiApi.Result r = AiApi.analyzeQuestion(this, cfg, q, userAnswerText, correct);
             runOnUiThread(() -> {
+                aiLoading = false;
+                btnAiAnalysis.setAlpha(1f);
+                btnAiAnalysis.setEnabled(true);
                 if (r != null && r.ok) {
                     DataStore.setAiAnalysis(this, q.uniqueKey(), r.text);
                     showAiAnalysis(r.text);
@@ -1204,11 +1235,16 @@ public class QuizActivity extends AppCompatActivity {
         }
     }
 
-    // 答错时的错题本处理：检查「自动加入」开关，开启时将题加入错题本并重置做对次数
+    // 答错时的错题本处理：检查「自动加入」开关；新增入本时重置做对计数，
+    // 已在错题本中的题只累计错误次数/刷新时间，避免重复写入
     private void handleWrongAnswer(Question q) {
         if (!DataStore.isAutoWrong(this)) return;
-        DataStore.addWrong(this, q.uniqueKey());
-        DataStore.resetCorrectCount(this, q.uniqueKey());
+        String uid = q.uniqueKey();
+        DataStore.noteWrong(this, uid);
+        if (!DataStore.getWrongIds(this).contains(uid)) {
+            DataStore.addWrong(this, uid);
+            DataStore.resetCorrectCount(this, uid);
+        }
     }
 
     private void renderWithAnimation(boolean toNext) {

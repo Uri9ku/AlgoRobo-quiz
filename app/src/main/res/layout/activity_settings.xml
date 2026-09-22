@@ -7,9 +7,9 @@
     <LinearLayout android:id="@+id/settingsTopBar" android:layout_width="match_parent" android:layout_height="wrap_content"
         android:orientation="horizontal" android:gravity="center_vertical"
         android:background="@drawable/bg_result_header_chalk" android:padding="12dp">
-        <TextView android:id="@+id/btnBackSettings" android:layout_width="wrap_content"
-            android:layout_height="wrap_content" android:text="‹ 返回"
-            android:textSize="16sp" android:textColor="@android:color/white" android:padding="4dp"/>
+        <ImageView android:id="@+id/btnBackSettings" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:src="@drawable/ic_back"
+            android:contentDescription="返回" android:padding="4dp"/>
         <TextView android:id="@+id/tvPageTitle" android:layout_width="0dp" android:layout_height="wrap_content"
             android:layout_weight="1" android:gravity="center" android:text="设置"
             android:textSize="17sp" android:textStyle="bold" android:textColor="@android:color/white"/>
@@ -47,6 +47,27 @@
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:text=" ›" android:textSize="18sp" android:textColor="@color/text_sub"/>
                 </LinearLayout>
+            </LinearLayout>
+
+            <!-- 打卡判定 -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:padding="16dp" android:background="@drawable/bg_card">
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="打卡判定" android:textSize="16sp" android:textColor="@color/text_main"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp" android:text="每天答满 N 题（新题）自动打卡，范围 10~100"
+                        android:textSize="12sp" android:textColor="@color/text_sub"/>
+                </LinearLayout>
+                <EditText android:id="@+id/etCheckinThreshold"
+                    android:layout_width="80dp" android:layout_height="wrap_content"
+                    android:gravity="center" android:inputType="number"
+                    android:maxLength="3" android:textSize="14sp" android:textColor="@color/primary"
+                    android:textStyle="bold"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text=" 题" android:textSize="14sp" android:textColor="@color/text_sub"/>
             </LinearLayout>
 
             <!-- Toast 显示时长 -->
@@ -244,6 +265,26 @@
                     android:layout_width="wrap_content" android:layout_height="wrap_content"/>
             </LinearLayout>
 
+            <!-- 错题排序 -->
+            <LinearLayout android:id="@+id/btnWrongSort" android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:padding="16dp" android:background="@drawable/bg_card">
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="错题排序" android:textSize="16sp" android:textColor="@color/text_main"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp" android:text="错题重做时的题目顺序"
+                        android:textSize="12sp" android:textColor="@color/text_sub"/>
+                </LinearLayout>
+                <TextView android:id="@+id/tvWrongSortValue" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="默认顺序"
+                    android:textSize="14sp" android:textColor="@color/primary"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text=" ›" android:textSize="18sp" android:textColor="@color/text_sub"/>
+            </LinearLayout>
+
 
 
             <!-- 分组：刷题 -->
@@ -263,6 +304,22 @@
                         android:textSize="12sp" android:textColor="@color/text_sub"/>
                 </LinearLayout>
                 <androidx.appcompat.widget.SwitchCompat android:id="@+id/swKnowledgeTag"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            </LinearLayout>
+
+            <!-- 自动下一题（归入「刷题」分类） -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:padding="16dp" android:background="@drawable/bg_card" android:layout_marginTop="12dp">
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="自动下一题" android:textSize="16sp" android:textColor="@color/text_main"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp" android:text="做对题目自动切换下一题，做错不自动切换"
+                        android:textSize="12sp" android:textColor="@color/text_sub"/>
+                </LinearLayout>
+                <androidx.appcompat.widget.SwitchCompat android:id="@+id/swAutoNext"
                     android:layout_width="wrap_content" android:layout_height="wrap_content"/>
             </LinearLayout>
 
@@ -351,9 +408,9 @@
                     android:text=" ›" android:textSize="18sp" android:textColor="@color/text_sub"/>
             </LinearLayout>
 
-            <!-- 分组：题库下载目录 -->
+            <!-- 分组：下载 -->
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginTop="20dp" android:text="题库下载目录" android:textSize="14sp"
+                android:layout_marginTop="20dp" android:text="下载" android:textSize="14sp"
                 android:textStyle="bold" android:textColor="@color/text_main" android:layout_marginBottom="8dp"/>
 
             <!-- 当前目录 + 操作 -->
@@ -404,6 +461,36 @@
                         android:paddingHorizontal="14dp" android:text="授予权限" android:textSize="13sp"
                         android:textColor="@color/primary" android:background="@drawable/bg_tag_blue"/>
                 </LinearLayout>
+
+                <View android:layout_width="match_parent" android:layout_height="1dp"
+                    android:layout_marginTop="14dp" android:background="@color/bg_page"/>
+
+                <!-- 并发下载与解析数 -->
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp" android:orientation="horizontal" android:gravity="center_vertical">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="并发下载与解析数" android:textSize="16sp" android:textColor="@color/text_main"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:text="在线导入时同时下载/解析的真题套数（1~10）"
+                            android:textSize="12sp" android:textColor="@color/text_sub"/>
+                    </LinearLayout>
+                    <TextView android:id="@+id/tvImportConcurrencyValue" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:text="3 套" android:textSize="14sp"
+                        android:textColor="@color/primary"/>
+                </LinearLayout>
+                <SeekBar android:id="@+id/sbImportConcurrency" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginTop="8dp" android:max="9"/>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="1" android:textSize="11sp"
+                        android:textColor="@color/text_sub"/>
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:gravity="end" android:text="10" android:textSize="11sp"
+                        android:textColor="@color/text_sub"/>
+                </LinearLayout>
             </LinearLayout>
 
             <!-- 自动下载原题 -->
@@ -428,21 +515,29 @@
                 android:layout_marginTop="20dp" android:text="更多" android:textSize="14sp"
                 android:textStyle="bold" android:textColor="@color/text_main" android:layout_marginBottom="8dp"/>
 
-            <!-- 自动翻页 -->
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:orientation="horizontal" android:gravity="center_vertical"
+            <!-- 备份与导出（学习数据） -->
+            <LinearLayout android:id="@+id/cardBackup" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:orientation="vertical"
                 android:padding="16dp" android:background="@drawable/bg_card">
-                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
-                    android:layout_weight="1" android:orientation="vertical">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="自动下一题" android:textSize="16sp" android:textColor="@color/text_main"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp" android:text="做对题目自动切换下一题，做错不自动切换"
-                        android:textSize="12sp" android:textColor="@color/text_sub"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="备份与导出" android:textSize="16sp" android:textColor="@color/text_main"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="题目/错题/收藏/统计/设置为本地存储，卸载即丢失；导出 JSON 备份可在换机后导入。API Key 因设备级加密不随备份导出"
+                    android:textSize="12sp" android:textColor="@color/text_sub"/>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:layout_marginTop="12dp">
+                    <TextView android:id="@+id/btnBackupExport" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:paddingVertical="10dp"
+                        android:paddingHorizontal="18dp" android:text="导出备份" android:textSize="14sp"
+                        android:textColor="@android:color/white" android:background="@drawable/bg_btn_primary"/>
+                    <TextView android:id="@+id/btnBackupImport" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:paddingVertical="10dp"
+                        android:paddingHorizontal="18dp" android:layout_marginStart="12dp"
+                        android:text="导入备份" android:textSize="14sp" android:textColor="@color/text_main"
+                        android:background="@drawable/bg_btn_outline"/>
                 </LinearLayout>
-                <androidx.appcompat.widget.SwitchCompat android:id="@+id/swAutoNext"
-                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-                </LinearLayout>
+            </LinearLayout>
 
             <!-- 数量角标（错题本 / 收藏题） -->
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"

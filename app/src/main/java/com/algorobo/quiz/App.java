@@ -12,6 +12,8 @@ public class App extends Application {
         applyStoredDarkMode();
         // 一次性清理旧版 uid 缺陷残留（同卷共用一个 key）
         DataStore.purgeLegacyPaperKeys(this);
+        // 后台把历史明文的 API Key 迁移为 AndroidKeyStore 加密存储
+        new Thread(() -> DataStore.migrateLegacySecrets(this)).start();
         // 全局「开发者模式」悬浮控件：跟随每个页面的生命周期挂载/卸载
         registerActivityLifecycleCallbacks(new ActivityLifecycleCallbacks() {
             @Override

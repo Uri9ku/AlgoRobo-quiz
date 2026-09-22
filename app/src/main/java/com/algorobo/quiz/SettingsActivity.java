@@ -65,6 +65,13 @@ public class SettingsActivity extends AppCompatActivity {
 
         findViewById(R.id.btnBackSettings).setOnClickListener(v -> finish());
 
+        // 打卡判定：每天答满 N 题（首次作答）自动打卡，输入仅数字，范围 10~100
+        setupCheckinThreshold();
+
+        // 备份与导出：学习数据 JSON 导出/导入（API Key 不随备份导出）
+        findViewById(R.id.btnBackupExport).setOnClickListener(v -> onBackupExport());
+        findViewById(R.id.btnBackupImport).setOnClickListener(v -> onBackupImport());
+
         // 点击标题行折叠/展开滑动条（三个数字类设置卡片）
         setupCollapse(R.id.cardToastHeader, R.id.cardToastBody);
         setupCollapse(R.id.cardAnimHeader, R.id.cardAnimBody);
@@ -152,6 +159,10 @@ public class SettingsActivity extends AppCompatActivity {
             showToast("自动加入错题本已" + (checked ? "开启" : "关闭"));
         });
 
+        // 错题排序：默认 / 错误次数多优先 / 最近做错优先
+        updateWrongSortValue();
+        findViewById(R.id.btnWrongSort).setOnClickListener(v -> showWrongSortDialog());
+
         // AI 自动解析开关
         swAutoAiAnalysis.setOnCheckedChangeListener((btn, checked) -> {
             DataStore.setAutoAiAnalysis(SettingsActivity.this, checked);
@@ -169,6 +180,29 @@ public class SettingsActivity extends AppCompatActivity {
         swKnowledgeTag.setOnCheckedChangeListener((btn, checked) -> {
             DataStore.setKnowledgeTagVisible(this, checked);
             showToast(checked ? "已显示知识点标签" : "已隐藏知识点标签");
+        });
+
+        // 下载分类：并发下载与解析数（1~10，默认 3）
+        SeekBar sbConcurrency = findViewById(R.id.sbImportConcurrency);
+        TextView tvConcurrencyValue = findViewById(R.id.tvImportConcurrencyValue);
+        int curConcurrency = DataStore.getImportConcurrency(this);
+        sbConcurrency.setProgress(curConcurrency - 1);
+        tvConcurrencyValue.setText(curConcurrency + " 套");
+        sbConcurrency.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                int v = progress + 1;
+                tvConcurrencyValue.setText(v + " 套");
+                DataStore.setImportConcurrency(SettingsActivity.this, v);
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+            }
         });
 
         // 下载目录标题点击折叠/展开按钮区
@@ -495,8 +529,34 @@ public class SettingsActivity extends AppCompatActivity {
         sbFontSize.setProgress(Math.max(0, Math.min(12, (int) fontSp - 14)));
     }
 
-    private void showAutoAiAnalysisModeDialog() {
-        final String[] labels = {"对错都生成解析", "只对错题解析"};
+    // ==================== 错题排序 ====================
+
+    private void showWrongSortDialog() {
+        final String[] labels = {"默认顺序", "错误次数多优先", "最近做错优先"};
+        final String[] values = {"default", "errcount", "recent"};
+        String cur = DataStore.getWrongSort(this);
+        int idx = 0;
+        for (int i = 0; i < values.length; i++) if (values[i].equals(cur)) { idx = i; break; }
+        new AlertDialog.Builder(this)
+                .setTitle("错题排序")
+                .setSingleChoiceItems(labels, idx, (d, which) -> {
+                    DataStore.setWrongSort(this, values[which]);
+                    updateWrongSortValue();
+                    showToast("错题排序：" + labels[which]);
+                    d.dismiss();
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    private void updateWrongSortValue() {
+        TextView tv = findViewById(R.id.tvWrongSortValue);
+        if (tv == null) return;
+        String cur = DataStore.getWrongSort(this);
+        tv.setText("errcount".equals(cur) ? "错误次数多优先" : ("recent".equals(cur) ? "最近做错优先" : "默认顺序"));
+    }
+
+    private void showAutoAiAnalysisModeDialog() {        final String[] labels = {"对错都生成解析", "只对错题解析"};
         final String[] values = {"all", "wrong"};
         String current = DataStore.getAutoAiAnalysisMode(this);
         int idx = current.equals("wrong") ? 1 : 0;
@@ -541,6 +601,71 @@ public class SettingsActivity extends AppCompatActivity {
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
     }
 
+    // ==================== 打卡判定 ====================
+
+    private static final int REQ_CREATE_BACKUP = 2001;
+    private static final int REQ_OPEN_BACKUP = 2002;
+
+    private void setupCheckinThreshold() {
+        final EditText et = findViewById(R.id.etCheckinThreshold);
+        et.setText(String.valueOf(DataStore.getCheckinThreshold(this)));
+        et.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        et.setSelection(et.getText().length());
+        // 校验输入：仅数字；范围 10~100，非法时提示并还原
+        et.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) return;
+            String s = et.getText().toString().trim();
+            if (s.isEmpty()) {
+                et.setText("20");
+                DataStore.setCheckinThreshold(this, 20);
+                showToast("打卡判定已重置为 20 题");
+                return;
+            }
+            int n;
+            try { n = Integer.parseInt(s); } catch (Exception e) { n = -1; }
+            if (n < 10 || n > 100) {
+                showToast("请输入 10~100 之间的数字");
+                et.setText(String.valueOf(DataStore.getCheckinThreshold(this)));
+                et.setSelection(et.getText().length());
+                return;
+            }
+            DataStore.setCheckinThreshold(this, n);
+            showToast("打卡判定已设为每天答满 " + n + " 题");
+        });
+    }
+
+    /** 导出备份：弹出系统「新建文档」选择器，保存为 JSON。 */
+    private void onBackupExport() {
+        try {
+            android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_CREATE_DOCUMENT);
+            i.addCategory(android.content.Intent.CATEGORY_OPENABLE);
+            i.setType("application/json");
+            i.putExtra(android.content.Intent.EXTRA_TITLE, BackupUtil.suggestedFileName());
+            startActivityForResult(i, REQ_CREATE_BACKUP);
+        } catch (Exception e) {
+            showToast("当前设备不支持导出文件");
+        }
+    }
+
+    /** 导入备份：弹出系统「打开文档」选择器，选择 JSON 后覆盖导入。 */
+    private void onBackupImport() {
+        new AlertDialog.Builder(this)
+                .setTitle("导入备份")
+                .setMessage("导入会覆盖本地的题目/错题/收藏/统计/设置（API Key 不受影响）。确定继续？")
+                .setPositiveButton("选择文件", (d, w) -> {
+                    try {
+                        android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT);
+                        i.addCategory(android.content.Intent.CATEGORY_OPENABLE);
+                        i.setType("application/json");
+                        startActivityForResult(i, REQ_OPEN_BACKUP);
+                    } catch (Exception e) {
+                        showToast("当前设备不支持导入文件");
+                    }
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
     // ==================== 题库下载目录 ====================
 
     /**
@@ -567,7 +692,15 @@ public class SettingsActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, android.content.Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQ_PICK_EXAM_DIR && resultCode == RESULT_OK && data != null) {
+        if (requestCode == REQ_CREATE_BACKUP && resultCode == RESULT_OK && data != null && data.getData() != null) {
+            int n = BackupUtil.export(this, data.getData());
+            if (n >= 0) showToast("已导出 " + n + " 项学习数据（不含 API Key）");
+            else showToast("导出失败，请重试");
+        } else if (requestCode == REQ_OPEN_BACKUP && resultCode == RESULT_OK && data != null && data.getData() != null) {
+            int n = BackupUtil.importBackup(this, data.getData());
+            if (n >= 0) showToast("已导入 " + n + " 项数据");
+            else showToast("导入失败：文件格式无效");
+        } else if (requestCode == REQ_PICK_EXAM_DIR && resultCode == RESULT_OK && data != null) {
             android.net.Uri treeUri = data.getData();
             if (treeUri != null) {
                 try {

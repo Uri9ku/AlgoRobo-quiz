@@ -175,9 +175,9 @@
                     <ImageView android:layout_width="52dp" android:layout_height="52dp"
                         android:src="@drawable/ic_grid_puzzle"
                         android:padding="12dp" android:background="@drawable/bg_grid_icon"
-                        android:contentDescription="自定义题库" />
+                        android:contentDescription="上传题目" />
                     <TextView android:id="@+id/labelCustomBank" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp" android:text="自定义题库" android:textSize="12sp" android:textColor="@color/text_main" />
+                        android:layout_marginTop="6dp" android:text="上传题目" android:textSize="12sp" android:textColor="@color/text_main" />
                 </LinearLayout>
 
                 <!-- 9 知识点专题 -->

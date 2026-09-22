@@ -14,6 +14,8 @@ public class ResultActivity extends AppCompatActivity {
     private int correctOriginal;
     private long durationSec;
     private List<AnswerRecord> records = new ArrayList<>();
+    /** 是否隐藏实操题（按钮切换）。 */
+    private boolean hidePractical = false;
 
     private TextView tvScore, tvCorrect, tvWrong, tvAccuracy, tvDuration;
 
@@ -39,8 +41,13 @@ public class ResultActivity extends AppCompatActivity {
         tvDuration = findViewById(R.id.tvDuration);
         tvDuration.setText(formatDuration(durationSec));
 
-        CheckBox cbHidePractical = findViewById(R.id.cbHidePractical);
-        cbHidePractical.setOnCheckedChangeListener((btn, checked) -> render(checked));
+        // 隐藏/显示实操题：按钮式，文本区分状态（点击后重算统计并播放数字动画）
+        final TextView btnHide = findViewById(R.id.btnResultHidePractical);
+        btnHide.setOnClickListener(v -> {
+            hidePractical = !hidePractical;
+            btnHide.setText(hidePractical ? "显示实操题" : "隐藏实操题");
+            render(hidePractical);
+        });
         render(false);
         findViewById(R.id.btnResultHome).setOnClickListener(v -> finish());
         findViewById(R.id.btnResultAgain).setOnClickListener(v -> {

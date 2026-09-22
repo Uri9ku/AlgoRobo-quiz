@@ -202,6 +202,10 @@ public class AiApi {
     /** 统一 chat 调用。systemRole 用于区分用途；temperature 控制随机性。 */
     private static Result chat(Config cfg, String endpoint, String systemRole, String userContent, float temperature) {
         boolean anthropic = endpoint != null && endpoint.contains("anthropic");
+        // 防 API Key 泄露：仅允许 https 直连（配置页保存时也会校验，这里是运行时兜底）
+        if (endpoint == null || !endpoint.trim().toLowerCase().startsWith("https://")) {
+            return new Result(false, "API 端点必须以 https:// 开头，为保护密钥已拦截明文 http 地址", 0);
+        }
         HttpURLConnection conn = null;
         try {
             URL url = new URL(endpoint);

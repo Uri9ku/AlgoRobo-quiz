@@ -8,8 +8,8 @@
 
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="horizontal" android:gravity="center_vertical" android:padding="16dp">
-            <TextView android:id="@+id/btnAnalysisBack" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="‹ 返回" android:textSize="16sp" android:textColor="@android:color/white" android:padding="4dp" />
+            <ImageView android:id="@+id/btnAnalysisBack" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:src="@drawable/ic_back" android:contentDescription="返回" android:padding="4dp" />
             <TextView android:id="@+id/tvAnalysisTitle" android:layout_width="0dp" android:layout_height="wrap_content"
                 android:layout_weight="1" android:gravity="center" android:text="全部解析" android:textSize="17sp"
                 android:textStyle="bold" android:textColor="@android:color/white" />
@@ -33,6 +33,11 @@
                 android:layout_weight="1" android:scaleType="centerInside" android:src="@drawable/ic_tool_draft"
                 android:padding="8dp" android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="草稿纸" />
+            <!-- 批量模式专用：批量错题 -->
+            <ImageView android:id="@+id/btnAnalysisBatchWrong" android:layout_width="0dp" android:layout_height="40dp"
+                android:layout_weight="1" android:scaleType="centerInside" android:src="@drawable/ic_tool_wrongbook"
+                android:padding="8dp" android:background="?attr/selectableItemBackgroundBorderless"
+                android:visibility="gone" android:contentDescription="批量加入错题本" />
         </LinearLayout>
     </LinearLayout>
 

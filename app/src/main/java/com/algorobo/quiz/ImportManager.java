@@ -41,10 +41,21 @@ public final class ImportManager {
     }
 
     private static final Map<String, State> STATES = new ConcurrentHashMap<>();
-    private static final ExecutorService POOL = Executors.newFixedThreadPool(MAX_PARALLEL);
+    private static ExecutorService pool;
+    private static int poolSize = 0;
     private static final AtomicInteger RUNNING = new AtomicInteger(0);
     private static volatile Runnable listener;
     private static Context appContext;
+
+    /** 按设置里的「并发下载与解析数」获取线程池（值变化时重建）。 */
+    private static synchronized ExecutorService poolFor(int size) {
+        if (pool == null || poolSize != size) {
+            if (pool != null) pool.shutdown();
+            pool = Executors.newFixedThreadPool(size);
+            poolSize = size;
+        }
+        return pool;
+    }
 
     public static State state(String key) {
         String k = key == null ? "" : key;
@@ -91,6 +102,7 @@ public final class ImportManager {
         notifyProgress("正在导入真题", "共 " + total + " 套 · 0/" + total, 0, total);
 
         final AtomicInteger finished = new AtomicInteger(0);
+        final ExecutorService executor = poolFor(DataStore.getImportConcurrency(appContext));
         for (final RobotExamUpdater.ReleaseAsset ra : assets) {
             final State st = state(ra.key);
             st.percent = 0;
@@ -98,7 +110,7 @@ public final class ImportManager {
             st.done = false;
             st.failMsg = null;
             st.active = true;
-            POOL.execute(() -> {
+            executor.execute(() -> {
                 String err = null;
                 int n = -1;
                 try {

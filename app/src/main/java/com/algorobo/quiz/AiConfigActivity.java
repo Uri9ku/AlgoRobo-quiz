@@ -210,6 +210,12 @@ public class AiConfigActivity extends AppCompatActivity {
             tvAiConfigStatus.setTextColor(getColor(R.color.danger));
             return;
         }
+        if (!isHttpsEndpoint(cfg.endpoint)) {
+            tvAiConfigStatus.setText("API 端点必须以 https:// 开头（保护 API Key 不被明文传输）");
+            tvAiConfigStatus.setTextColor(getColor(R.color.danger));
+            showToast("API 端点必须以 https:// 开头");
+            return;
+        }
         pbAiConfig.setVisibility(View.VISIBLE);
         tvAiConfigStatus.setText("正在测试连接…");
         tvAiConfigStatus.setTextColor(getColor(R.color.text_sub));
@@ -234,8 +240,23 @@ public class AiConfigActivity extends AppCompatActivity {
 
     private void onSaveConfig() {
         AiApi.Config cfg = collectFromUi();
+        if (!cfg.isComplete()) {
+            showToast("请先完善端点、密钥与模型名称");
+            return;
+        }
+        if (!isHttpsEndpoint(cfg.endpoint)) {
+            showToast("API 端点必须以 https:// 开头（保护 API Key 不被明文传输）");
+            return;
+        }
         persistConfig(cfg);
-        showToast("配置已保存");
+        showToast("配置已保存（API Key 已加密存储）");
+    }
+
+    /** Endpoint 安全校验：拒绝明文 http / 非 http(s) 地址。 */
+    private static boolean isHttpsEndpoint(String endpoint) {
+        if (endpoint == null) return false;
+        String s = endpoint.trim().toLowerCase();
+        return s.startsWith("https://");
     }
 
     private void persistConfig(AiApi.Config cfg) {

@@ -27,7 +27,7 @@ public class AllAnalysisActivity extends AppCompatActivity {
     private AnalysisAdapter adapter;
     private LinearLayout indexContainer;
     private HorizontalScrollView indexScroll;
-    private ImageView btnAnalysisAllAi, btnAnalysisExpandAll, btnAnalysisDraft;
+    private ImageView btnAnalysisAllAi, btnAnalysisExpandAll, btnAnalysisDraft, btnAnalysisBatchWrong;
     /** 解析区全局展开状态（工具栏「全部收起/全部展开」控制）。 */
     private boolean allExpanded = true;
     private int currentIndexPos = -1;
@@ -63,6 +63,7 @@ public class AllAnalysisActivity extends AppCompatActivity {
         btnAnalysisAllAi = findViewById(R.id.btnAnalysisAllAi);
         btnAnalysisExpandAll = findViewById(R.id.btnAnalysisExpandAll);
         btnAnalysisDraft = findViewById(R.id.btnAnalysisDraft);
+        btnAnalysisBatchWrong = findViewById(R.id.btnAnalysisBatchWrong);
 
         rv = findViewById(R.id.rvAnalysis);
         rv.setLayoutManager(new LinearLayoutManager(this));
@@ -70,17 +71,18 @@ public class AllAnalysisActivity extends AppCompatActivity {
         rv.setAdapter(adapter);
 
         btnAnalysisAllAi.setOnClickListener(v -> {
-            if (selectMode) toggleSelectAll();
+            if (selectMode) batchAnalyzeSelected();
             else confirmAnalyzeAll();
         });
         btnAnalysisExpandAll.setOnClickListener(v -> {
-            if (selectMode) batchFavorite();
+            if (selectMode) toggleSelectAll();
             else toggleAllExpand();
         });
         btnAnalysisDraft.setOnClickListener(v -> {
-            if (selectMode) batchWrong();
+            if (selectMode) batchFavorite();
             else DraftPaper.show(this, null, null);
         });
+        btnAnalysisBatchWrong.setOnClickListener(v -> batchWrong());
         updateExpandButton();
 
         renderAnalysisIndex();
@@ -262,6 +264,32 @@ public class AllAnalysisActivity extends AppCompatActivity {
             toast("所有题目都已有解析");
             return;
         }
+        analyzeRecords(need);
+    }
+
+    /** 批量模式：只解析勾选的题目（复用批量解析逻辑）。 */
+    private void batchAnalyzeSelected() {
+        final List<AnswerRecord> need = new ArrayList<>();
+        for (AnswerRecord r : records) {
+            if (r.uid == null || !selectedUids.contains(r.uid)) continue;
+            if (r.analysis != null && !r.analysis.trim().isEmpty()) continue;
+            if (hasAiCache(r)) continue;
+            need.add(r);
+        }
+        if (need.isEmpty()) {
+            toast("勾选的题目都已有解析");
+            return;
+        }
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("解析勾选题目")
+                .setMessage("将对勾选的 " + need.size() + " 道题生成 AI 解析，是否继续？")
+                .setNegativeButton("取消", null)
+                .setPositiveButton("开始解析", (d, w) -> analyzeRecords(need))
+                .show();
+    }
+
+    /** 对给定题目批量生成 AI 解析（跳过已有正式解析/AI 缓存的题目）。 */
+    private void analyzeRecords(final List<AnswerRecord> need) {
         AiApi.Config cfg = DataStore.getCurrentAiConfig(this);
         if (cfg == null || !cfg.isComplete()) {
             toast("请先在「AI 模型配置」里配置模型和 API Key");
@@ -309,16 +337,19 @@ public class AllAnalysisActivity extends AppCompatActivity {
     private void updateToolbar() {
         if (btnAnalysisAllAi == null) return;
         if (selectMode) {
-            // 批量模式：全选/取消全选 + 批量收藏 + 批量错题（草稿纸让位）
+            // 批量模式：解析勾选题 + 全选/取消全选 + 批量收藏 + 批量错题（草稿纸让位）
+            btnAnalysisAllAi.setImageResource(R.drawable.ic_tool_analyze);
+            btnAnalysisAllAi.setContentDescription("解析勾选的题目");
             boolean allSel = isAllSelected();
-            btnAnalysisAllAi.setImageResource(allSel
+            btnAnalysisExpandAll.setImageResource(allSel
                     ? R.drawable.ic_tool_deselect_all : R.drawable.ic_tool_select_all);
-            btnAnalysisAllAi.setContentDescription(allSel ? "取消全选" : "全选");
-            btnAnalysisExpandAll.setImageResource(R.drawable.ic_tool_favorite_filled);
-            btnAnalysisExpandAll.setContentDescription("批量加入收藏题");
-            btnAnalysisDraft.setImageResource(R.drawable.ic_tool_wrongbook);
-            btnAnalysisDraft.setContentDescription("批量加入错题本");
-            btnAnalysisDraft.setVisibility(View.VISIBLE);
+            btnAnalysisExpandAll.setContentDescription(allSel ? "取消全选" : "全选");
+            btnAnalysisDraft.setImageResource(R.drawable.ic_tool_favorite_filled);
+            btnAnalysisDraft.setContentDescription("批量加入收藏题");
+            if (btnAnalysisBatchWrong != null) {
+                btnAnalysisBatchWrong.setVisibility(View.VISIBLE);
+                btnAnalysisBatchWrong.setImageResource(R.drawable.ic_tool_wrongbook);
+            }
         } else {
             btnAnalysisAllAi.setImageResource(R.drawable.ic_tool_analyze);
             btnAnalysisAllAi.setContentDescription("全部解析");
@@ -327,8 +358,9 @@ public class AllAnalysisActivity extends AppCompatActivity {
             btnAnalysisExpandAll.setContentDescription("全部展开收起");
             btnAnalysisDraft.setImageResource(R.drawable.ic_tool_draft);
             btnAnalysisDraft.setContentDescription("草稿纸");
-            btnAnalysisDraft.setVisibility(View.VISIBLE);
+            if (btnAnalysisBatchWrong != null) btnAnalysisBatchWrong.setVisibility(View.GONE);
         }
+        if (btnAnalysisDraft != null) btnAnalysisDraft.setVisibility(View.VISIBLE);
     }
 
     private boolean isAllSelected() {

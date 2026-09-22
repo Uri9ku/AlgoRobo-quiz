@@ -31,6 +31,7 @@ public class KnowledgeActivity extends AppCompatActivity {
 
         lvKnowledge = findViewById(R.id.lvKnowledge);
         tvEmpty = findViewById(R.id.tvKnowledgeEmpty);
+        findViewById(R.id.btnGoImportExam).setOnClickListener(v -> goImportExam());
         adapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_list_item_1, items);
         lvKnowledge.setAdapter(adapter);
@@ -43,8 +44,16 @@ public class KnowledgeActivity extends AppCompatActivity {
         items.clear();
         items.addAll(KnowledgeStore.getAll(this));
         adapter.notifyDataSetChanged();
-        tvEmpty.setVisibility(items.isEmpty() ? View.VISIBLE : View.GONE);
-        lvKnowledge.setVisibility(items.isEmpty() ? View.GONE : View.VISIBLE);
+        boolean empty = items.isEmpty();
+        findViewById(R.id.knowledgeEmptyBox).setVisibility(empty ? View.VISIBLE : View.GONE);
+        lvKnowledge.setVisibility(empty ? View.GONE : View.VISIBLE);
+    }
+
+    /** 知识点为空时：跳转「真题练习」页面导入带知识点标签的真题。 */
+    private void goImportExam() {
+        android.content.Intent i = new android.content.Intent(this, ExamListActivity.class);
+        PageTitle.put(i, "真题练习");
+        startActivity(i);
     }
 
     private void showAddDialog() {

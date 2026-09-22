@@ -7,11 +7,11 @@
     <LinearLayout android:id="@+id/topBar" android:layout_width="match_parent" android:layout_height="wrap_content"
         android:orientation="horizontal" android:gravity="center_vertical"
         android:background="@drawable/bg_result_header_chalk" android:padding="12dp">
-        <TextView android:id="@+id/btnCustomBankBack" android:layout_width="wrap_content"
-            android:layout_height="wrap_content" android:text="‹ 返回"
-            android:textSize="16sp" android:textColor="@android:color/white" android:padding="4dp"/>
+        <ImageView android:id="@+id/btnCustomBankBack" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:src="@drawable/ic_back"
+            android:contentDescription="返回" android:padding="4dp"/>
         <TextView android:id="@+id/tvPageTitle" android:layout_width="0dp" android:layout_height="wrap_content"
-            android:layout_weight="1" android:gravity="center" android:text="自定义题库"
+            android:layout_weight="1" android:gravity="center" android:text="上传题目"
             android:textSize="17sp" android:textStyle="bold" android:textColor="@android:color/white"/>
         <TextView android:layout_width="40dp" android:layout_height="wrap_content"/>
     </LinearLayout>
