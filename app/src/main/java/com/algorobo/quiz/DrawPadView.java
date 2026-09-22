@@ -56,7 +56,7 @@ public class DrawPadView extends View {
     private void init() {
         float density = getResources().getDisplayMetrics().density;
         paint = new Paint();
-        paint.setColor(Color.BLACK);
+        paint.setColor(getResources().getColor(R.color.ink_default));
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(4 * density);
         paint.setStrokeCap(Paint.Cap.ROUND);

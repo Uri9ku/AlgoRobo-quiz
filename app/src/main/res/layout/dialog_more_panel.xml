@@ -7,63 +7,63 @@
     android:padding="20dp">
 
     <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="更多功能" android:textSize="16sp" android:textStyle="bold"
+        android:text="更多功能" android:textSize="@dimen/text_body_large" android:textStyle="bold"
         android:textColor="@color/text_main" android:gravity="center"/>
 
     <!-- 字号调整 -->
     <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginTop="16dp" android:text="字号调整" android:textSize="14sp"
+        android:layout_marginTop="16dp" android:text="字号调整" android:textSize="@dimen/text_body_medium"
         android:textColor="@color/text_sub"/>
     <LinearLayout android:id="@+id/fontScaleGroup" android:layout_width="match_parent"
         android:layout_height="wrap_content" android:layout_marginTop="8dp"
         android:orientation="horizontal" android:gravity="center">
         <TextView android:id="@+id/btnFontSmall" android:layout_width="0dp" android:layout_height="44dp"
-            android:layout_weight="1" android:gravity="center" android:text="Aa" android:textSize="15sp"
+            android:layout_weight="1" android:gravity="center" android:text="Aa" android:textSize="@dimen/text_title_small"
             android:textColor="@color/text_main" android:background="@drawable/bg_option_normal"/>
         <TextView android:id="@+id/btnFontMedium" android:layout_width="0dp" android:layout_height="44dp"
             android:layout_weight="1" android:layout_marginStart="8dp" android:layout_marginEnd="8dp"
-            android:gravity="center" android:text="Aa" android:textSize="18sp"
+            android:gravity="center" android:text="Aa" android:textSize="@dimen/text_title_large"
             android:textColor="@color/text_main" android:background="@drawable/bg_option_normal"/>
         <TextView android:id="@+id/btnFontLarge" android:layout_width="0dp" android:layout_height="44dp"
-            android:layout_weight="1" android:gravity="center" android:text="Aa" android:textSize="22sp"
+            android:layout_weight="1" android:gravity="center" android:text="Aa" android:textSize="@dimen/text_headline_medium"
             android:textColor="@color/text_main" android:background="@drawable/bg_option_normal"/>
     </LinearLayout>
 
     <!-- 日间/夜间切换 -->
     <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginTop="16dp" android:text="显示模式" android:textSize="14sp"
+        android:layout_marginTop="16dp" android:text="显示模式" android:textSize="@dimen/text_body_medium"
         android:textColor="@color/text_sub"/>
     <LinearLayout android:id="@+id/themeGroup" android:layout_width="match_parent"
         android:layout_height="wrap_content" android:layout_marginTop="8dp"
         android:orientation="horizontal" android:gravity="center">
         <TextView android:id="@+id/btnThemeDay" android:layout_width="0dp" android:layout_height="44dp"
-            android:layout_weight="1" android:gravity="center" android:text="日间" android:textSize="15sp"
+            android:layout_weight="1" android:gravity="center" android:text="日间" android:textSize="@dimen/text_title_small"
             android:textColor="@color/text_main" android:background="@drawable/bg_option_normal"/>
         <TextView android:id="@+id/btnThemeNight" android:layout_width="0dp" android:layout_height="44dp"
             android:layout_weight="1" android:layout_marginStart="8dp" android:gravity="center"
-            android:text="夜间" android:textSize="15sp" android:textColor="@color/text_main"
+            android:text="夜间" android:textSize="@dimen/text_title_small" android:textColor="@color/text_main"
             android:background="@drawable/bg_option_normal"/>
     </LinearLayout>
     <!-- 做题模式 -->
     <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginTop="16dp" android:text="做题模式" android:textSize="14sp"
+        android:layout_marginTop="16dp" android:text="做题模式" android:textSize="@dimen/text_body_medium"
         android:textColor="@color/text_sub"/>
     <LinearLayout android:id="@+id/modeGroup" android:layout_width="match_parent"
         android:layout_height="wrap_content" android:layout_marginTop="8dp"
         android:orientation="horizontal" android:gravity="center">
         <TextView android:id="@+id/btnModeRecite" android:layout_width="0dp" android:layout_height="44dp"
-            android:layout_weight="1" android:gravity="center" android:text="背题模式" android:textSize="15sp"
+            android:layout_weight="1" android:gravity="center" android:text="背题模式" android:textSize="@dimen/text_title_small"
             android:textColor="@color/text_main" android:background="@drawable/bg_option_normal"/>
         <TextView android:id="@+id/btnModeBrush" android:layout_width="0dp" android:layout_height="44dp"
             android:layout_weight="1" android:layout_marginStart="8dp" android:gravity="center"
-            android:text="刷题模式" android:textSize="15sp" android:textColor="@color/text_main"
+            android:text="刷题模式" android:textSize="@dimen/text_title_small" android:textColor="@color/text_main"
             android:background="@drawable/bg_option_normal"/>
     </LinearLayout>
     <!-- 知识点标签显示/隐藏 -->
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_marginTop="16dp" android:orientation="horizontal" android:gravity="center_vertical">
         <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-            android:layout_weight="1" android:text="显示知识点标签" android:textSize="14sp"
+            android:layout_weight="1" android:text="显示知识点标签" android:textSize="@dimen/text_body_medium"
             android:textColor="@color/text_sub"/>
         <androidx.appcompat.widget.SwitchCompat android:id="@+id/swKnowledgeTag"
             android:layout_width="wrap_content" android:layout_height="wrap_content"/>
@@ -73,15 +73,15 @@
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_marginTop="16dp" android:orientation="horizontal" android:gravity="center_vertical">
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="做题用时（本卷）" android:textSize="14sp" android:textColor="@color/text_sub"/>
+            android:text="做题用时（本卷）" android:textSize="@dimen/text_body_medium" android:textColor="@color/text_sub"/>
         <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1"/>
         <TextView android:id="@+id/tvTotalTime" android:layout_width="wrap_content"
-            android:layout_height="wrap_content" android:text="00:00" android:textSize="16sp"
+            android:layout_height="wrap_content" android:text="00:00" android:textSize="@dimen/text_body_large"
             android:textStyle="bold" android:textColor="@color/primary"/>
     </LinearLayout>
 
     <TextView android:id="@+id/btnMoreClose" android:layout_width="match_parent"
         android:layout_height="44dp" android:layout_marginTop="20dp" android:gravity="center"
-        android:text="关闭" android:textSize="15sp" android:textColor="@android:color/white"
+        android:text="关闭" android:textSize="@dimen/text_title_small" android:textColor="@android:color/white"
         android:background="@drawable/bg_option_correct"/>
 </LinearLayout>

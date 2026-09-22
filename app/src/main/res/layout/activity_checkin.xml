@@ -8,15 +8,15 @@ android:gravity="center_vertical" android:paddingHorizontal="12dp">
         <ImageView android:id="@+id/btnBack" android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:src="@drawable/ic_back" android:contentDescription="返回" android:padding="8dp"/>
         <TextView android:id="@+id/tvPageTitle" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-            android:gravity="center" android:text="每日打卡" android:textColor="@color/text_on_primary" android:textSize="18sp"/>
+            android:gravity="center" android:text="每日打卡" android:textColor="@color/text_on_primary" android:textSize="@dimen/text_title_large"/>
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="@color/text_on_primary"/>
     </LinearLayout>
     <TextView android:id="@+id/tvStreak" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:gravity="center" android:text="已连续打卡 0 天" android:textSize="16sp"
+        android:gravity="center" android:text="已连续打卡 0 天" android:textSize="@dimen/text_body_large"
         android:textColor="@color/text_main" android:padding="20dp"/>
     <Button android:id="@+id/btnCheckin" android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_marginHorizontal="24dp" android:text="今日打卡" android:textColor="@color/text_on_primary"
-        android:background="@drawable/bg_btn_primary" android:textSize="16sp"/>
+        android:background="@drawable/bg_btn_primary" android:textSize="@dimen/text_body_large"/>
     <TextView android:id="@+id/tvHint" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:gravity="center" android:text="" android:textSize="14sp" android:textColor="@color/text_sub" android:padding="16dp"/>
+        android:gravity="center" android:text="" android:textSize="@dimen/text_body_medium" android:textColor="@color/text_sub" android:padding="16dp"/>
 </LinearLayout>

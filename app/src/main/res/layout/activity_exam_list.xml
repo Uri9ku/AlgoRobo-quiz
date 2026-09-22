@@ -30,7 +30,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
                 android:text="真题练习"
-                android:textSize="18sp"
+                android:textSize="@dimen/text_title_large"
                 android:textStyle="bold"
                 android:textColor="@android:color/white" />
         </LinearLayout>
@@ -55,7 +55,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="搜索试卷名字"
-                    android:textSize="14sp"
+                    android:textSize="@dimen/text_body_medium"
                     android:paddingStart="12dp"
                     android:paddingEnd="12dp"
                     android:paddingTop="8dp"
@@ -78,7 +78,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="年份"
-                    android:textSize="13sp"
+                    android:textSize="@dimen/text_body_small"
                     android:textColor="@color/text_main"
                     android:background="@drawable/bg_filter"
                     android:drawableEnd="@drawable/ic_arrow_down"
@@ -93,7 +93,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:text="月份"
-                    android:textSize="13sp"
+                    android:textSize="@dimen/text_body_small"
                     android:textColor="@color/text_main"
                     android:background="@drawable/bg_filter"
                     android:drawableEnd="@drawable/ic_arrow_down"
@@ -108,7 +108,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:text="科目"
-                    android:textSize="13sp"
+                    android:textSize="@dimen/text_body_small"
                     android:textColor="@color/text_main"
                     android:background="@drawable/bg_filter"
                     android:drawableEnd="@drawable/ic_arrow_down"
@@ -123,7 +123,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:text="等级"
-                    android:textSize="13sp"
+                    android:textSize="@dimen/text_body_small"
                     android:textColor="@color/text_main"
                     android:background="@drawable/bg_filter"
                     android:drawableEnd="@drawable/ic_arrow_down"
@@ -138,7 +138,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:text="重置"
-                    android:textSize="13sp"
+                    android:textSize="@dimen/text_body_small"
                     android:textColor="@color/text_sub"
                     android:paddingStart="8dp"
                     android:paddingEnd="8dp" />
@@ -157,7 +157,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="全选"
-                    android:textSize="14sp"
+                    android:textSize="@dimen/text_body_medium"
                     android:textColor="@color/text_main" />
                 <TextView
                     android:id="@+id/btnMultiDownload"
@@ -165,7 +165,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="16dp"
                     android:text="下载所选"
-                    android:textSize="14sp"
+                    android:textSize="@dimen/text_body_medium"
                     android:textColor="@android:color/white"
                     android:background="@drawable/bg_btn_primary"
                     android:paddingStart="16dp"
@@ -178,7 +178,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
                     android:text="移除真题库"
-                    android:textSize="14sp"
+                    android:textSize="@dimen/text_body_medium"
                     android:textColor="@android:color/white"
                     android:background="@drawable/bg_btn_primary"
                     android:paddingStart="14dp"
@@ -191,7 +191,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="12dp"
                     android:text="取消"
-                    android:textSize="14sp"
+                    android:textSize="@dimen/text_body_medium"
                     android:textColor="@color/text_sub" />
             </LinearLayout>
         </LinearLayout>
@@ -213,7 +213,7 @@
         android:layout_marginEnd="20dp"
         android:layout_marginBottom="20dp"
         android:text="+"
-        android:textSize="28sp"
+        android:textSize="@dimen/text_display_large"
         android:textColor="@android:color/white"
         android:gravity="center"
         android:background="@drawable/bg_fab" />

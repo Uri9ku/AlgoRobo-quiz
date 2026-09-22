@@ -271,10 +271,10 @@ public class ImportOnlineActivity extends AppCompatActivity {
     private void styleRepoTab(TextView tab, boolean selected) {
         if (selected) {
             tab.setBackgroundResource(R.drawable.bg_category_selected);
-            tab.setTextColor(0xFFFFFFFF);
+            tab.setTextColor(getColor(R.color.white));
         } else {
             tab.setBackgroundResource(R.drawable.bg_category_normal);
-            tab.setTextColor(0xFF666666);
+            tab.setTextColor(getColor(R.color.tab_inactive_text));
         }
     }
 

@@ -40,6 +40,7 @@ public class SettingsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
         ThemeManager.applyStatusBar(this);
+        ThemeManager.applyTopBarColor(this, R.id.settingsTopBar);
         PageTitle.apply(this, R.id.tvPageTitle);
         tvToastValue = findViewById(R.id.tvToastValue);
         tvAnimValue = findViewById(R.id.tvAnimValue);
@@ -456,9 +457,9 @@ public class SettingsActivity extends AppCompatActivity {
             gd.setShape(android.graphics.drawable.GradientDrawable.OVAL);
             gd.setColor(android.graphics.Color.parseColor(ThemeManager.PRESET_COLORS[i]));
             if (i == current) {
-                gd.setStroke((int) (3 * getResources().getDisplayMetrics().density), android.graphics.Color.WHITE);
+                gd.setStroke((int) (3 * getResources().getDisplayMetrics().density), getColor(R.color.white));
             } else {
-                gd.setStroke((int) (1 * getResources().getDisplayMetrics().density), 0x33000000);
+                gd.setStroke((int) (1 * getResources().getDisplayMetrics().density), getColor(R.color.state_layer_dark));
             }
             child.setBackground(gd);
         }
@@ -467,13 +468,13 @@ public class SettingsActivity extends AppCompatActivity {
             android.graphics.drawable.GradientDrawable gd = new android.graphics.drawable.GradientDrawable();
             gd.setShape(android.graphics.drawable.GradientDrawable.OVAL);
             gd.setColor(ThemeManager.getThemeColor(this));
-            gd.setStroke((int) (3 * getResources().getDisplayMetrics().density), android.graphics.Color.WHITE);
+            gd.setStroke((int) (3 * getResources().getDisplayMetrics().density), getColor(R.color.white));
             customColorSwatch.setBackground(gd);
         } else {
             android.graphics.drawable.GradientDrawable gd = new android.graphics.drawable.GradientDrawable();
             gd.setShape(android.graphics.drawable.GradientDrawable.OVAL);
-            gd.setColor(android.graphics.Color.TRANSPARENT);
-            gd.setStroke((int) (1 * getResources().getDisplayMetrics().density), 0x33000000);
+            gd.setColor(getColor(R.color.transparent));
+            gd.setStroke((int) (1 * getResources().getDisplayMetrics().density), getColor(R.color.state_layer_dark));
             customColorSwatch.setBackground(gd);
         }
     }

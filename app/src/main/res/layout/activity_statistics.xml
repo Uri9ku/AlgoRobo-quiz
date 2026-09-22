@@ -10,22 +10,22 @@
             <ImageView android:id="@+id/btnBack" android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:src="@drawable/ic_back" android:contentDescription="返回" android:padding="8dp"/>
             <TextView android:id="@+id/tvPageTitle" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                android:gravity="center" android:text="学习统计" android:textColor="@color/text_on_primary" android:textSize="18sp"/>
+                android:gravity="center" android:text="学习统计" android:textColor="@color/text_on_primary" android:textSize="@dimen/text_title_large"/>
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textColor="@color/text_on_primary"/>
         </LinearLayout>
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="16dp">
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center" android:background="@drawable/bg_card_chalk" android:padding="16dp" android:layout_marginEnd="8dp">
-                <TextView android:id="@+id/tvTotal" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textSize="26sp" android:textColor="@color/primary" android:textStyle="bold"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="累计答题" android:textSize="12sp" android:textColor="@color/text_sub" android:layout_marginTop="4dp"/>
+                <TextView android:id="@+id/tvTotal" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textSize="@dimen/text_display_medium" android:textColor="@color/primary" android:textStyle="bold"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="累计答题" android:textSize="@dimen/text_label_medium" android:textColor="@color/text_sub" android:layout_marginTop="4dp"/>
             </LinearLayout>
             <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical" android:gravity="center" android:background="@drawable/bg_card_chalk" android:padding="16dp" android:layout_marginStart="8dp">
-                <TextView android:id="@+id/tvAccuracy" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0%" android:textSize="26sp" android:textColor="@color/primary" android:textStyle="bold"/>
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="总正确率" android:textSize="12sp" android:textColor="@color/text_sub" android:layout_marginTop="4dp"/>
+                <TextView android:id="@+id/tvAccuracy" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0%" android:textSize="@dimen/text_display_medium" android:textColor="@color/primary" android:textStyle="bold"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="总正确率" android:textSize="@dimen/text_label_medium" android:textColor="@color/text_sub" android:layout_marginTop="4dp"/>
             </LinearLayout>
         </LinearLayout>
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="近7天答题趋势" android:textSize="15sp" android:textColor="@color/text_main" android:paddingHorizontal="16dp" android:paddingTop="8dp"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="近7天答题趋势" android:textSize="@dimen/text_title_small" android:textColor="@color/text_main" android:paddingHorizontal="16dp" android:paddingTop="8dp"/>
         <com.algorobo.quiz.LineChartView android:id="@+id/lineChart" android:layout_width="match_parent" android:layout_height="200dp" android:layout_margin="16dp" android:background="@drawable/bg_card_chalk"/>
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="各题型正确率" android:textSize="15sp" android:textColor="@color/text_main" android:paddingHorizontal="16dp" android:paddingTop="8dp"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="各题型正确率" android:textSize="@dimen/text_title_small" android:textColor="@color/text_main" android:paddingHorizontal="16dp" android:paddingTop="8dp"/>
         <com.algorobo.quiz.BarChartView android:id="@+id/barChart" android:layout_width="match_parent" android:layout_height="220dp" android:layout_margin="16dp" android:background="@drawable/bg_card_chalk"/>
     </LinearLayout>
 </ScrollView>

@@ -12,7 +12,7 @@
             android:contentDescription="返回" android:padding="4dp"/>
         <TextView android:id="@+id/tvPageTitle" android:layout_width="0dp" android:layout_height="wrap_content"
             android:layout_weight="1" android:gravity="center" android:text="AI 模型配置"
-            android:textSize="17sp" android:textStyle="bold" android:textColor="@android:color/white"/>
+            android:textSize="@dimen/text_title_medium" android:textStyle="bold" android:textColor="@android:color/white"/>
         <TextView android:layout_width="40dp" android:layout_height="wrap_content"/>
     </LinearLayout>
 
@@ -22,7 +22,7 @@
 
             <!-- 选择模型配置 -->
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="选择模型配置" android:textSize="13sp" android:textColor="@color/text_sub"
+                android:text="选择模型配置" android:textSize="@dimen/text_body_small" android:textColor="@color/text_sub"
                 android:layout_marginBottom="8dp"/>
 
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -34,20 +34,20 @@
                     android:padding="4dp" android:background="?attr/selectableItemBackgroundBorderless">
                     <TextView android:id="@+id/tvCurrentConfig" android:layout_width="wrap_content"
                         android:layout_height="wrap_content" android:text="默认配置"
-                        android:textSize="16sp" android:textColor="@color/text_main"/>
+                        android:textSize="@dimen/text_body_large" android:textColor="@color/text_main"/>
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:layout_marginStart="6dp" android:text="▾"
-                        android:textSize="14sp" android:textColor="@color/text_sub"/>
+                        android:textSize="@dimen/text_body_medium" android:textColor="@color/text_sub"/>
                 </LinearLayout>
                 <TextView android:id="@+id/btnTestConnection" android:layout_width="wrap_content"
                     android:layout_height="wrap_content" android:paddingVertical="8dp" android:paddingHorizontal="16dp"
-                    android:text="测试连接" android:textSize="14sp" android:textColor="@android:color/white"
+                    android:text="测试连接" android:textSize="@dimen/text_body_medium" android:textColor="@android:color/white"
                     android:background="@drawable/bg_btn_primary"/>
             </LinearLayout>
 
             <!-- API 设置 -->
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginTop="20dp" android:text="API设置" android:textSize="13sp"
+                android:layout_marginTop="20dp" android:text="API设置" android:textSize="@dimen/text_body_small"
                 android:textColor="@color/text_sub" android:layout_marginBottom="8dp"/>
 
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -55,55 +55,55 @@
 
                 <!-- API 提供商 -->
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:text="API提供商" android:textSize="15sp" android:textColor="@color/text_main"/>
+                    android:text="API提供商" android:textSize="@dimen/text_title_small" android:textColor="@color/text_main"/>
                 <LinearLayout android:id="@+id/btnSelectProvider" android:layout_width="match_parent"
                     android:layout_height="wrap_content" android:layout_marginTop="8dp"
                     android:orientation="horizontal" android:gravity="center_vertical"
                     android:background="@drawable/bg_search" android:padding="12dp">
                     <TextView android:id="@+id/tvProviderValue" android:layout_width="0dp"
                         android:layout_height="wrap_content" android:layout_weight="1"
-                        android:text="Deepseek" android:textSize="14sp" android:textColor="@color/text_main"/>
+                        android:text="Deepseek" android:textSize="@dimen/text_body_medium" android:textColor="@color/text_main"/>
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:text="▾" android:textSize="14sp" android:textColor="@color/text_sub"/>
+                        android:text="▾" android:textSize="@dimen/text_body_medium" android:textColor="@color/text_sub"/>
                 </LinearLayout>
 
                 <!-- API 端点 -->
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp" android:text="API端点" android:textSize="15sp"
+                    android:layout_marginTop="16dp" android:text="API端点" android:textSize="@dimen/text_title_small"
                     android:textColor="@color/text_main"/>
                 <EditText android:id="@+id/etEndpoint" android:layout_width="match_parent"
                     android:layout_height="wrap_content" android:layout_marginTop="8dp"
-                    android:hint="https://api.deepseek.com/v1/chat/completions" android:textSize="14sp"
+                    android:hint="https://api.deepseek.com/v1/chat/completions" android:textSize="@dimen/text_body_medium"
                     android:textColor="@color/text_main" android:inputType="textUri"
                     android:background="@drawable/bg_search" android:padding="12dp"/>
 
                 <!-- API 密钥 -->
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp" android:text="API密钥" android:textSize="15sp"
+                    android:layout_marginTop="16dp" android:text="API密钥" android:textSize="@dimen/text_title_small"
                     android:textColor="@color/text_main"/>
                 <EditText android:id="@+id/etApiKey" android:layout_width="match_parent"
                     android:layout_height="wrap_content" android:layout_marginTop="8dp"
-                    android:hint="sk-..." android:textSize="14sp"
+                    android:hint="sk-..." android:textSize="@dimen/text_body_medium"
                     android:textColor="@color/text_main" android:inputType="textPassword"
                     android:background="@drawable/bg_search" android:padding="12dp"/>
 
                 <!-- 模型名称 -->
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp" android:text="模型名称" android:textSize="15sp"
+                    android:layout_marginTop="16dp" android:text="模型名称" android:textSize="@dimen/text_title_small"
                     android:textColor="@color/text_main"/>
                 <EditText android:id="@+id/etModels" android:layout_width="match_parent"
                     android:layout_height="wrap_content" android:layout_marginTop="8dp"
-                    android:hint="deepseek-v4-pro" android:textSize="14sp"
+                    android:hint="deepseek-v4-pro" android:textSize="@dimen/text_body_medium"
                     android:textColor="@color/text_main" android:inputType="text"
                     android:background="@drawable/bg_search" android:padding="12dp"/>
                 <TextView android:id="@+id/btnSelectModels" android:layout_width="wrap_content"
                     android:layout_height="wrap_content" android:layout_marginTop="8dp"
                     android:paddingVertical="8dp" android:paddingHorizontal="16dp"
-                    android:text="按提供商选择模型" android:textSize="13sp" android:textColor="@android:color/white"
+                    android:text="按提供商选择模型" android:textSize="@dimen/text_body_small" android:textColor="@android:color/white"
                     android:background="@drawable/bg_btn_primary"/>
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                     android:layout_marginTop="6dp" android:text="可用逗号分隔多个模型，如 gpt-4, claude-3"
-                    android:textSize="11sp" android:textColor="@color/text_sub"/>
+                    android:textSize="@dimen/text_label_small" android:textColor="@color/text_sub"/>
 
                 <!-- 模型支持识图 -->
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -111,11 +111,11 @@
                     <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
                         android:layout_weight="1" android:orientation="vertical">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="模型支持识图" android:textSize="15sp" android:textColor="@color/text_main"/>
+                            android:text="模型支持识图" android:textSize="@dimen/text_title_small" android:textColor="@color/text_main"/>
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:text="启用后，图片将直接发送给 AI 处理，而不是通过工具返回文本转写/描述"
-                            android:textSize="11sp" android:textColor="@color/text_sub"/>
+                            android:textSize="@dimen/text_label_small" android:textColor="@color/text_sub"/>
                     </LinearLayout>
                     <androidx.appcompat.widget.SwitchCompat android:id="@+id/swVision"
                         android:layout_width="wrap_content" android:layout_height="wrap_content"/>
@@ -128,24 +128,24 @@
                 <TextView android:id="@+id/btnSaveConfig" android:layout_width="0dp"
                     android:layout_height="wrap_content" android:layout_weight="1"
                     android:paddingVertical="12dp" android:gravity="center"
-                    android:text="保存配置" android:textSize="15sp" android:textColor="@android:color/white"
+                    android:text="保存配置" android:textSize="@dimen/text_title_small" android:textColor="@android:color/white"
                     android:background="@drawable/bg_btn_primary"/>
                 <TextView android:id="@+id/btnNewConfig" android:layout_width="0dp"
                     android:layout_height="wrap_content" android:layout_weight="1"
                     android:layout_marginStart="12dp" android:paddingVertical="12dp" android:gravity="center"
-                    android:text="+ 新建" android:textSize="15sp" android:textColor="@color/primary"
+                    android:text="+ 新建" android:textSize="@dimen/text_title_small" android:textColor="@color/primary"
                     android:background="@drawable/bg_btn_outline"/>
                 <TextView android:id="@+id/btnDeleteConfig" android:layout_width="0dp"
                     android:layout_height="wrap_content" android:layout_weight="1"
                     android:layout_marginStart="12dp" android:paddingVertical="12dp" android:gravity="center"
-                    android:text="删除" android:textSize="15sp" android:textColor="@color/danger"
+                    android:text="删除" android:textSize="@dimen/text_title_small" android:textColor="@color/danger"
                     android:background="@drawable/bg_btn_outline"/>
             </LinearLayout>
 
             <!-- 状态提示 -->
             <TextView android:id="@+id/tvAiConfigStatus" android:layout_width="match_parent"
                 android:layout_height="wrap_content" android:layout_marginTop="16dp"
-                android:text="" android:textSize="13sp" android:textColor="@color/text_sub"/>
+                android:text="" android:textSize="@dimen/text_body_small" android:textColor="@color/text_sub"/>
             <ProgressBar android:id="@+id/pbAiConfig" style="?android:attr/progressBarStyleHorizontal"
                 android:layout_width="match_parent" android:layout_height="wrap_content"
                 android:layout_marginTop="8dp" android:max="100" android:visibility="gone"/>

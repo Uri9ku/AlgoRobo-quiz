@@ -120,7 +120,7 @@ public final class DevModeOverlay {
 
         bubble = new TextView(a);
         bubble.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
-        bubble.setTextColor(0xFFFFFFFF);
+        bubble.setTextColor(a.getColor(R.color.dev_bubble_text));
         bubble.setGravity(Gravity.CENTER);
         bubble.setPadding(dp(a, 10), dp(a, 6), dp(a, 10), dp(a, 6));
         bubble.setAlpha(0.88f);
@@ -1186,7 +1186,7 @@ public final class DevModeOverlay {
         SpyView(Context c) {
             super(c);
             slop = ViewConfiguration.get(c).getScaledTouchSlop();
-            setBackgroundColor(0x01000000);
+            setBackgroundColor(c.getColor(R.color.dev_bubble_bg));
         }
 
         @Override
@@ -1258,11 +1258,11 @@ public final class DevModeOverlay {
             super(c);
             setLayerType(LAYER_TYPE_SOFTWARE, null);
             fill.setStyle(Paint.Style.FILL);
-            fill.setColor(0x3DFF3B30);
-            fill.setShadowLayer(dp(c, 6), 0, 0, 0xB3FF3B30);
+            fill.setColor(c.getColor(R.color.dev_highlight_fill));
+            fill.setShadowLayer(dp(c, 6), 0, 0, c.getColor(R.color.dev_highlight_shadow));
             stroke.setStyle(Paint.Style.STROKE);
             stroke.setStrokeWidth(dp(c, 2));
-            stroke.setColor(0xFFFF3B30);
+            stroke.setColor(c.getColor(R.color.dev_highlight_stroke));
             setClickable(false);
             setFocusable(false);
         }

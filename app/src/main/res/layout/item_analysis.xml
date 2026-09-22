@@ -8,7 +8,7 @@
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
         android:orientation="horizontal" android:gravity="center_vertical">
         <TextView android:id="@+id/tvAnalysisIndex" android:layout_width="0dp" android:layout_height="wrap_content"
-            android:layout_weight="1" android:text="第 1 题" android:textSize="13sp" android:textColor="@color/primary" android:textStyle="bold" />
+            android:layout_weight="1" android:text="第 1 题" android:textSize="@dimen/text_body_small" android:textColor="@color/primary" android:textStyle="bold" />
         <ImageView android:id="@+id/btnAnalysisFavorite" android:layout_width="30dp" android:layout_height="30dp"
             android:scaleType="centerInside" android:src="@drawable/ic_tool_favorite"
             android:tint="@color/text_sub" android:padding="3dp"
@@ -26,28 +26,28 @@
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_marginTop="6dp" android:orientation="horizontal" android:gravity="center_vertical">
         <TextView android:id="@+id/tvAnalysisType" android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="单选题" android:textSize="11sp" android:textColor="@color/text_sub"
+            android:text="单选题" android:textSize="@dimen/text_label_small" android:textColor="@color/text_sub"
             android:background="@drawable/bg_tag_gray" android:paddingStart="8dp" android:paddingEnd="8dp"
             android:paddingTop="2dp" android:paddingBottom="2dp" />
         <TextView android:id="@+id/tvAnalysisKnowledge" android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:layout_marginStart="8dp" android:maxWidth="180dp" android:maxLines="1" android:ellipsize="end"
-            android:text="知识点" android:textSize="11sp" android:textColor="@color/text_sub"
+            android:text="知识点" android:textSize="@dimen/text_label_small" android:textColor="@color/text_sub"
             android:background="@drawable/bg_tag_gray" android:paddingStart="8dp" android:paddingEnd="8dp"
             android:paddingTop="2dp" android:paddingBottom="2dp" android:visibility="gone" />
         <TextView android:id="@+id/tvAnalysisSource" android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:layout_marginStart="8dp" android:maxWidth="180dp" android:maxLines="1" android:ellipsize="end"
-            android:text="真题来源" android:textSize="11sp" android:textColor="@color/text_sub"
+            android:text="真题来源" android:textSize="@dimen/text_label_small" android:textColor="@color/text_sub"
             android:background="@drawable/bg_tag_gray" android:paddingStart="8dp" android:paddingEnd="8dp"
             android:paddingTop="2dp" android:paddingBottom="2dp" android:visibility="gone" />
     </LinearLayout>
 
     <TextView android:id="@+id/tvAnalysisStem" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginTop="10dp" android:text="" android:textSize="16sp" android:lineSpacingExtra="3dp" android:textColor="@color/text_main" />
+        android:layout_marginTop="10dp" android:text="" android:textSize="@dimen/text_body_large" android:lineSpacingExtra="3dp" android:textColor="@color/text_main" />
     <ImageView android:id="@+id/ivAnalysisStemImage" android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_marginTop="10dp" android:adjustViewBounds="true" android:maxHeight="240dp"
         android:scaleType="fitCenter" android:visibility="gone" android:contentDescription="题干图片" />
     <TextView android:id="@+id/tvAnalysisOptions" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginTop="8dp" android:text="" android:textSize="14sp" android:lineSpacingExtra="3dp" android:textColor="@color/text_main" />
+        android:layout_marginTop="8dp" android:text="" android:textSize="@dimen/text_body_medium" android:lineSpacingExtra="3dp" android:textColor="@color/text_main" />
     <LinearLayout android:id="@+id/analysisOptionImages" android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_marginTop="8dp" android:orientation="vertical" android:visibility="gone" />
 
@@ -55,17 +55,17 @@
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_marginTop="12dp" android:orientation="vertical">
         <TextView android:id="@+id/tvAnalysisUser" android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="你的答案：A" android:textSize="13sp" android:textColor="@color/text_main"
+            android:text="你的答案：A" android:textSize="@dimen/text_body_small" android:textColor="@color/text_main"
             android:paddingStart="8dp" android:paddingEnd="8dp" android:paddingTop="4dp" android:paddingBottom="4dp"
             android:background="@drawable/bg_tag_gray" />
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:layout_marginTop="8dp" android:orientation="horizontal" android:gravity="center_vertical">
             <TextView android:id="@+id/tvAnalysisCorrectAns" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="正确答案：C" android:textSize="13sp" android:textColor="@color/answer_correct_text"
+                android:text="正确答案：C" android:textSize="@dimen/text_body_small" android:textColor="@color/answer_correct_text"
                 android:paddingStart="8dp" android:paddingEnd="8dp" android:paddingTop="4dp" android:paddingBottom="4dp"
                 android:background="@drawable/bg_tag_blue" />
             <TextView android:id="@+id/tvAnalysisResult" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:layout_marginStart="8dp" android:includeFontPadding="false" android:text="回答正确" android:textSize="13sp" android:textColor="@color/answer_correct_text"
+                android:layout_marginStart="8dp" android:includeFontPadding="false" android:text="回答正确" android:textSize="@dimen/text_body_small" android:textColor="@color/answer_correct_text"
                 android:paddingStart="8dp" android:paddingEnd="8dp" android:paddingTop="4dp" android:paddingBottom="4dp" />
         </LinearLayout>
     </LinearLayout>
@@ -76,20 +76,20 @@
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
         android:layout_marginTop="10dp" android:orientation="horizontal" android:gravity="center_vertical">
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="解析" android:textSize="12sp" android:textColor="@color/text_sub" />
+            android:text="解析" android:textSize="@dimen/text_label_medium" android:textColor="@color/text_sub" />
         <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
         <TextView android:id="@+id/btnAnalysisAi" android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="AI解析" android:textSize="14sp" android:textColor="@color/primary"
+            android:text="AI解析" android:textSize="@dimen/text_body_medium" android:textColor="@color/primary"
             android:background="@drawable/bg_tag_blue" android:paddingStart="10dp" android:paddingEnd="10dp"
             android:paddingTop="3dp" android:paddingBottom="3dp" />
         <TextView android:id="@+id/btnAnalysisToggle" android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_marginStart="10dp" android:text="收起" android:textSize="14sp" android:textColor="@color/text_sub"
+            android:layout_marginStart="10dp" android:text="收起" android:textSize="@dimen/text_body_medium" android:textColor="@color/text_sub"
             android:paddingStart="8dp" android:paddingEnd="8dp" android:paddingTop="3dp" android:paddingBottom="3dp" />
     </LinearLayout>
 
     <TextView android:id="@+id/tvAnalysisDetail" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginTop="6dp" android:text="" android:textSize="14sp" android:lineSpacingExtra="3dp" android:textColor="@color/text_main" />
+        android:layout_marginTop="6dp" android:text="" android:textSize="@dimen/text_body_medium" android:lineSpacingExtra="3dp" android:textColor="@color/text_main" />
     <TextView android:id="@+id/tvAnalysisAiDetail" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginTop="8dp" android:text="" android:textSize="14sp" android:lineSpacingExtra="3dp"
+        android:layout_marginTop="8dp" android:text="" android:textSize="@dimen/text_body_medium" android:lineSpacingExtra="3dp"
         android:textColor="@color/text_main" android:visibility="gone" />
 </LinearLayout>

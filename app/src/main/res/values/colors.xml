@@ -1,9 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- macOS Vibrancy 暗色毛玻璃体系：三级深度灰阶 -->
-    <!-- 强调色：macOS 系统蓝 -->
+    <!--
+      浅色基准配色（values/）。深色覆盖见 values-night/colors.xml。
+      角色名映射见 colors_roles.xml；此处保留原有语义色名，保证既有布局无需改动。
+    -->
+
+    <!-- 强调色（品牌蓝） -->
     <color name="primary">#0A84FF</color>
     <color name="primary_dark">#0A84FF</color>
-    <color name="primary_light">#2C2C2E</color>
+    <!-- primary container（浅色下为淡蓝容器色） -->
+    <color name="primary_light">#DCE9FF</color>
     <color name="primary_gradient_end">#0A84FF</color>
 
     <!-- 通用 -->
@@ -11,60 +17,56 @@
     <color name="text_on_primary">#FFFFFF</color>
     <color name="text_on_primary_70">#CCFFFFFF</color>
 
-    <!-- 强调/语义色 -->
-    <color name="success">#30D158</color>
-    <color name="success_light">#1C2B1E</color>
-    <color name="danger">#FF453A</color>
-    <color name="danger_light">#2E1E1E</color>
-    <color name="warning">#FFD60A</color>
+    <!-- 强调/语义色（浅色下加深以保证对比度） -->
+    <color name="success">#1F9D45</color>
+    <color name="success_light">#E6F4EA</color>
+    <color name="danger">#D93A30</color>
+    <color name="danger_light">#FCE8E6</color>
+    <color name="warning">#C79000</color>
 
-    <!-- 强调蓝（macOS 系统强调色） -->
     <color name="accent">#0A84FF</color>
-    <!-- 禁用按钮背景（次深） -->
-    <color name="btn_disabled_bg">#2C2C2E</color>
+    <color name="btn_disabled_bg">#E5E5EA</color>
 
     <!-- 背景与文字 -->
-    <color name="bg_page">#1C1C1E</color>
-    <color name="text_main">#F2F2F2</color>
-    <color name="text_sub">#B3B3B3</color>
-    <color name="divider">#3A3A3C</color>
+    <color name="bg_page">#F2F2F7</color>
+    <color name="text_main">#1C1C1E</color>
+    <color name="text_sub">#6B6B70</color>
+    <color name="divider">#D8D8DC</color>
 
     <!-- 卡片 -->
-    <color name="card_bg">#2C2C2E</color>
+    <color name="card_bg">#FFFFFF</color>
 
     <!-- 答题卡格子 -->
-    <color name="sheet_blank_bg">#2C2C2E</color>
-    <color name="sheet_marked_bg">#3A2E14</color>
-    <color name="sheet_marked_stroke">#FFD60A</color>
-
-    <!-- 答题卡格子文字（未答/已答） -->
+    <color name="sheet_blank_bg">#F2F2F7</color>
+    <color name="sheet_marked_bg">#FFF4D6</color>
+    <color name="sheet_marked_stroke">#E8A800</color>
     <color name="sheet_cell_text_done">#FFFFFF</color>
-    <color name="sheet_cell_text_blank">#B3B3B3</color>
+    <color name="sheet_cell_text_blank">#8E8E93</color>
 
     <!-- 答题选项/解析语义色 -->
-    <color name="answer_correct">#30D158</color>
-    <color name="answer_correct_text">#30D158</color>
-    <color name="answer_wrong">#FF453A</color>
-    <color name="answer_wrong_text">#FF453A</color>
+    <color name="answer_correct">#1F9D45</color>
+    <color name="answer_correct_text">#1F9D45</color>
+    <color name="answer_wrong">#D93A30</color>
+    <color name="answer_wrong_text">#D93A30</color>
 
     <!-- 图表颜色 -->
     <color name="chart_line">#0A84FF</color>
-    <color name="chart_text">#B3B3B3</color>
-    <color name="chart_grid">#3A3A3C</color>
-    <color name="chart_percent_text">#F2F2F2</color>
+    <color name="chart_text">#6B6B70</color>
+    <color name="chart_grid">#D8D8DC</color>
+    <color name="chart_percent_text">#1C1C1E</color>
 
     <!-- 首页三区框架配色 -->
     <color name="frame_blue">#0A84FF</color>
-    <color name="frame_blue_bg">#2C2C2E</color>
-    <color name="frame_yellow">#FFD60A</color>
-    <color name="frame_yellow_bg">#2C2C2E</color>
-    <color name="frame_green">#30D158</color>
-    <color name="frame_green_bg">#2C2C2E</color>
+    <color name="frame_blue_bg">#FFFFFF</color>
+    <color name="frame_yellow">#C79000</color>
+    <color name="frame_yellow_bg">#FFFFFF</color>
+    <color name="frame_green">#1F9D45</color>
+    <color name="frame_green_bg">#FFFFFF</color>
 
-    <!-- 夜间模式配色（统一为 macOS 暗色） -->
+    <!-- 历史 *_dark 别名（保留兼容，深色值） -->
     <color name="bg_page_dark">#1C1C1E</color>
     <color name="card_bg_dark">#2C2C2E</color>
-    <color name="text_main_dark">#E5E7EB</color>
+    <color name="text_main_dark">#F2F2F2</color>
     <color name="text_sub_dark">#B3B3B3</color>
     <color name="divider_dark">#3A3A3C</color>
 </resources>

@@ -148,7 +148,7 @@ public class AllAnalysisActivity extends AppCompatActivity {
             boolean has = hasAnyAnalysis(records.get(i));
             if (i == pos) {
                 dot.setBackgroundResource(R.drawable.bg_index_current);
-                dot.setTextColor(getColor(android.R.color.white));
+                dot.setTextColor(getColor(R.color.white));
             } else {
                 dot.setBackgroundResource(has ? R.drawable.bg_index_done : R.drawable.bg_index_blank);
                 dot.setTextColor(has ? getColor(R.color.accent) : getColor(R.color.text_main));
@@ -852,13 +852,13 @@ public class AllAnalysisActivity extends AppCompatActivity {
             ImageView iv = new ImageView(AllAnalysisActivity.this);
             iv.setImageBitmap(bmp);
             iv.setScaleType(ImageView.ScaleType.FIT_CENTER);
-            iv.setBackgroundColor(0xFF000000);
+            iv.setBackgroundColor(getColor(R.color.scrim_black));
             iv.setOnClickListener(v -> d.dismiss());
             d.setContentView(iv);
             Window w = d.getWindow();
             if (w != null) {
                 w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-                w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0xFF000000));
+                w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(getColor(R.color.scrim_black)));
             }
             d.show();
         }

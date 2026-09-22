@@ -1,5 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 深色模式颜色覆盖：macOS Vibrancy 三级深度灰阶 -->
+    <!-- 深色配色：macOS Vibrancy 三级灰阶（原配色保持不变） -->
+
     <color name="primary">#0A84FF</color>
     <color name="primary_dark">#0A84FF</color>
     <color name="primary_light">#2C2C2E</color>
@@ -11,9 +13,7 @@
     <color name="danger_light">#2E1E1E</color>
     <color name="warning">#FFD60A</color>
 
-    <!-- 强调蓝（macOS 系统强调色） -->
     <color name="accent">#0A84FF</color>
-    <!-- 禁用按钮背景（最深） -->
     <color name="btn_disabled_bg">#2C2C2E</color>
 
     <color name="bg_page">#1C1C1E</color>
@@ -41,9 +41,9 @@
     <color name="sheet_marked_bg">#3A2E14</color>
     <color name="sheet_marked_stroke">#FFD60A</color>
 
-    <!-- 答题卡格子文字（未答/已答） -->
     <color name="sheet_cell_text_done">#FFFFFF</color>
     <color name="sheet_cell_text_blank">#B3B3B3</color>
+
     <!-- 答题选项/解析语义色 -->
     <color name="answer_correct">#30D158</color>
     <color name="answer_correct_text">#30D158</color>

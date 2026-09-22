@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Material 3 样式令牌层（TextAppearance / Widget 样式）。
+      Phase 1 仅建立可复用样式，供 Phase 3 组件替换时直接引用（style="@style/..."）。
+      颜色一律引用 colors_roles.xml 中的 M3 角色，便于后续统一切换。
+    -->
+
+    <!-- ===== TextAppearance（排版角色） ===== -->
+    <style name="TextAppearance.AlgoRobo.LabelSmall" parent="@android:style/TextAppearance">
+        <item name="android:textSize">@dimen/text_label_small</item>
+        <item name="android:textColor">@color/md_on_surface_variant</item>
+    </style>
+    <style name="TextAppearance.AlgoRobo.LabelMedium" parent="@android:style/TextAppearance">
+        <item name="android:textSize">@dimen/text_label_medium</item>
+        <item name="android:textColor">@color/md_on_surface_variant</item>
+    </style>
+    <style name="TextAppearance.AlgoRobo.BodySmall" parent="@android:style/TextAppearance">
+        <item name="android:textSize">@dimen/text_body_small</item>
+        <item name="android:textColor">@color/md_on_surface_variant</item>
+    </style>
+    <style name="TextAppearance.AlgoRobo.BodyMedium" parent="@android:style/TextAppearance">
+        <item name="android:textSize">@dimen/text_body_medium</item>
+        <item name="android:textColor">@color/md_on_surface</item>
+    </style>
+    <style name="TextAppearance.AlgoRobo.BodyLarge" parent="@android:style/TextAppearance">
+        <item name="android:textSize">@dimen/text_body_large</item>
+        <item name="android:textColor">@color/md_on_surface</item>
+    </style>
+    <style name="TextAppearance.AlgoRobo.TitleMedium" parent="@android:style/TextAppearance">
+        <item name="android:textSize">@dimen/text_title_large</item>
+        <item name="android:textColor">@color/md_on_surface</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="TextAppearance.AlgoRobo.TitleLarge" parent="@android:style/TextAppearance">
+        <item name="android:textSize">@dimen/text_headline_medium</item>
+        <item name="android:textColor">@color/md_on_surface</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="TextAppearance.AlgoRobo.HeadlineSmall" parent="@android:style/TextAppearance">
+        <item name="android:textSize">@dimen/text_display_medium</item>
+        <item name="android:textColor">@color/md_on_surface</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- ===== Widget 样式（Phase 3 组件替换时引用） ===== -->
+    <style name="Widget.AlgoRobo.TopBar" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">@dimen/topbar_height</item>
+        <item name="android:background">@color/md_primary</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:paddingStart">@dimen/space_md</item>
+        <item name="android:paddingEnd">@dimen/space_md</item>
+    </style>
+
+    <style name="Widget.AlgoRobo.Card" parent="">
+        <item name="android:background">@drawable/bg_card</item>
+        <item name="android:padding">@dimen/space_lg</item>
+    </style>
+
+    <style name="Widget.AlgoRobo.Divider" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">1dp</item>
+        <item name="android:background">@color/md_outline_variant</item>
+    </style>
+
+    <style name="Widget.AlgoRobo.Button.Primary" parent="">
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">@color/md_on_primary</item>
+        <item name="android:background">@drawable/bg_btn_primary</item>
+        <item name="android:minHeight">@dimen/touch_target_min</item>
+    </style>
+
+    <style name="Widget.AlgoRobo.Button.Outline" parent="">
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">@color/md_primary</item>
+        <item name="android:background">@drawable/bg_btn_outline</item>
+        <item name="android:minHeight">@dimen/touch_target_min</item>
+    </style>
+</resources>

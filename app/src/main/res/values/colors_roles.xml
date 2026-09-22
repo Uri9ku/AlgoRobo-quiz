@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Material 3 颜色角色（Color roles）令牌层。
+      说明：Phase 1 仅做「角色名 → 现有色」的别名映射，不改变任何现有观感；
+      后续 Phase 2/3 只需在此处替换取值即可全局切换 M3 配色（含 seed 生成的 tonal palette）。
+      含 @color/xxx 引用的角色会自动跟随 values-night 的覆盖值。
+    -->
+
+    <!-- Primary -->
+    <color name="md_primary">@color/primary</color>
+    <color name="md_on_primary">@color/text_on_primary</color>
+    <color name="md_primary_container">@color/primary_light</color>
+    <color name="md_on_primary_container">@color/text_main</color>
+
+    <!-- Secondary / Tertiary -->
+    <color name="md_secondary">@color/accent</color>
+    <color name="md_on_secondary">@color/text_on_primary</color>
+    <color name="md_secondary_container">@color/card_bg</color>
+    <color name="md_tertiary">@color/warning</color>
+    <color name="md_on_tertiary">@color/bg_page</color>
+    <color name="md_tertiary_container">@color/sheet_marked_bg</color>
+    <color name="md_on_tertiary_container">@color/sheet_marked_stroke</color>
+
+    <!-- Error -->
+    <color name="md_error">@color/danger</color>
+    <color name="md_on_error">@color/white</color>
+    <color name="md_error_container">@color/danger_light</color>
+    <color name="md_on_error_container">@color/danger</color>
+
+    <!-- Surface & container 层级（M3 用 tonal surface 替代重阴影） -->
+    <color name="md_surface">@color/bg_page</color>
+    <color name="md_on_surface">@color/text_main</color>
+    <color name="md_surface_variant">@color/card_bg</color>
+    <color name="md_on_surface_variant">@color/text_sub</color>
+    <color name="md_surface_container_lowest">@color/bg_page</color>
+    <color name="md_surface_container_low">@color/bg_page</color>
+    <color name="md_surface_container">@color/card_bg</color>
+    <color name="md_surface_container_high">@color/card_bg</color>
+    <color name="md_surface_container_highest">@color/card_bg</color>
+    <color name="md_inverse_surface">@color/white</color>
+    <color name="md_inverse_on_surface">@color/bg_page</color>
+
+    <!-- Outline -->
+    <color name="md_outline">@color/divider</color>
+    <color name="md_outline_variant">@color/divider</color>
+
+    <!-- Scrim / overlay -->
+    <color name="md_scrim">#FF000000</color>
+    <color name="scrim_black">#FF000000</color>
+    <color name="transparent">#00FFFFFF</color>
+    <color name="overlay_scrim_light">#CCFFFFFF</color>
+    <color name="state_layer_dark">#33000000</color>
+
+    <!-- 分享卡片（固定浅色底，不随深色模式变化） -->
+    <color name="share_card_bg">#FFFFFFFF</color>
+    <color name="share_card_on">#FF1C1C1E</color>
+    <color name="share_card_sub">#FF666666</color>
+    <color name="share_card_muted">#FF999999</color>
+    <color name="share_card_divider">#FFE5E5E5</color>
+    <color name="share_card_correct">#FF30A14E</color>
+    <color name="share_card_option">#FF444444</color>
+    <color name="on_primary_80">#CCFFFFFF</color>
+
+    <!-- 其他语义色 -->
+    <color name="tab_inactive_text">#FF666666</color>
+    <color name="ink_default">#FF000000</color>
+
+    <!-- 开发者模式悬浮控件（调试用，保持独立） -->
+    <color name="dev_bubble_text">#FFFFFFFF</color>
+    <color name="dev_bubble_bg">#01000000</color>
+    <color name="dev_highlight_fill">#3DFF3B30</color>
+    <color name="dev_highlight_shadow">#B3FF3B30</color>
+    <color name="dev_highlight_stroke">#FFFF3B30</color>
+
+    <!-- Primary 透明度阶梯（原 drawable 内联色统一收口） -->
+    <color name="primary_90">#E60A84FF</color>
+    <color name="primary_20">#330A84FF</color>
+    <color name="primary_light_tint">#3B9BFF</color>
+
+    <!-- 白色透明度阶梯 -->
+    <color name="white_50">#80FFFFFF</color>
+    <color name="white_40">#66FFFFFF</color>
+    <color name="white_20">#33FFFFFF</color>
+    <color name="white_15">#26FFFFFF</color>
+
+    <!-- 中性灰阶（启动图标/悬浮面板等） -->
+    <color name="neutral_100">#F0F0F0</color>
+    <color name="neutral_700">#4A4A4C</color>
+    <color name="neutral_900">#F018181A</color>
+    <color name="launcher_accent">#99D21F3C</color>
+</resources>

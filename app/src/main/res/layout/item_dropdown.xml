@@ -9,6 +9,6 @@
     android:singleLine="true"
     android:paddingStart="16dp"
     android:paddingEnd="16dp"
-    android:textSize="14sp"
+    android:textSize="@dimen/text_body_medium"
     android:textColor="@color/text_main"
     android:background="@android:color/transparent" />

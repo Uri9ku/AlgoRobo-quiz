@@ -348,7 +348,7 @@ public class MainActivity extends AppCompatActivity {
         } else if (expanded) {
             dot.setText("\u25b4");
             dot.setBackgroundResource(R.drawable.bg_kp_circle_filled);
-            dot.setTextColor(Color.WHITE);
+            dot.setTextColor(getColor(R.color.white));
         } else {
             dot.setText("\u25be");
             dot.setBackgroundResource(R.drawable.bg_kp_circle_outline);

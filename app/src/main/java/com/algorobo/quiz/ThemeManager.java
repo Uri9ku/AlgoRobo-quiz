@@ -76,29 +76,90 @@ public class ThemeManager {
         return s.toUpperCase();
     }
 
-    /** 全局应用主题色到状态栏，并适配刘海屏（延伸内容至凹口区域）。 */
+    /** 当前是否处于深色主题（结合设置与系统）。 */
+    public static boolean isDarkTheme(Context c) {
+        int mode = DataStore.getDarkMode(c);
+        if (mode == 2) return true;
+        if (mode == 1) return false;
+        int ui = c.getResources().getConfiguration().uiMode
+                & android.content.res.Configuration.UI_MODE_NIGHT_MASK;
+        return ui == android.content.res.Configuration.UI_MODE_NIGHT_YES;
+    }
+
+    /**
+     * 全局应用 edge-to-edge（M3 推荐）：
+     * 系统栏透明 + 图标明暗跟随主题 + 内容根视图预留系统栏 Insets（避免被状态栏/导航栏遮挡）。
+     */
     public static void applyStatusBar(Activity activity) {
-        int color = getThemeColor(activity);
-        activity.getWindow().setStatusBarColor(color);
+        android.view.Window win = activity.getWindow();
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(win, false);
+        win.setStatusBarColor(Color.TRANSPARENT);
+        win.setNavigationBarColor(Color.TRANSPARENT);
+        androidx.core.view.WindowInsetsControllerCompat ctrl =
+                androidx.core.view.WindowCompat.getInsetsController(win, win.getDecorView());
+        boolean dark = isDarkTheme(activity);
+        // 默认：状态栏/导航栏图标明暗跟随主题（首页顶部为页面底色）
+        ctrl.setAppearanceLightStatusBars(!dark);
+        ctrl.setAppearanceLightNavigationBars(!dark);
         // 刘海屏适配：内容延伸至凹口（shortEdges），API 28+
         if (android.os.Build.VERSION.SDK_INT >= 28) {
-            android.view.WindowManager.LayoutParams lp = activity.getWindow().getAttributes();
+            android.view.WindowManager.LayoutParams lp = win.getAttributes();
             lp.layoutInDisplayCutoutMode =
                     android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
-            activity.getWindow().setAttributes(lp);
+            win.setAttributes(lp);
+        }
+        // 内容根视图：左右/底部 Insets 转为 padding，保证底部控件不被导航栏遮挡
+        android.view.View content = activity.findViewById(android.R.id.content);
+        if (content != null) {
+            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(content, (v, insets) -> {
+                androidx.core.graphics.Insets bars =
+                        insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars());
+                v.setPadding(bars.left, v.getPaddingTop(), bars.right, bars.bottom);
+                return insets;
+            });
+            androidx.core.view.ViewCompat.requestApplyInsets(content);
         }
     }
 
-    /** 给指定的顶栏 View 动态染色为主题色。 */
+    /** 给指定的顶栏 View 动态染色为主题色，并让顶栏延伸到状态栏（edge-to-edge 顶部 Insets）。 */
     public static void applyTopBarColor(Activity activity, int... viewIds) {
         int color = getThemeColor(activity);
         for (int id : viewIds) {
             android.view.View v = activity.findViewById(id);
-            if (v != null) v.setBackgroundColor(color);
+            if (v == null) continue;
+            v.setBackgroundColor(color);
+            applyTopInsetToView(v);
         }
+        // 顶栏背景延伸至状态栏下方，状态栏图标固定为白色以保证对比度
+        android.view.Window win = activity.getWindow();
+        androidx.core.view.WindowInsetsControllerCompat ctrl =
+                androidx.core.view.WindowCompat.getInsetsController(win, win.getDecorView());
+        ctrl.setAppearanceLightStatusBars(false);
     }
 
-    /** 获取状态栏高度（px），用于刘海屏下动态顶部间距。 */
+    /** 顶栏适配状态栏 Insets：固定高度则增高，wrap_content 则加顶部 padding。 */
+    private static void applyTopInsetToView(final android.view.View v) {
+        final int baseTopPadding = v.getPaddingTop();
+        final android.view.ViewGroup.LayoutParams lp = v.getLayoutParams();
+        final int baseHeight = lp == null ? 0 : lp.height;
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(v, (view, insets) -> {
+            int top = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars()).top;
+            if (baseHeight > 0) {
+                android.view.ViewGroup.LayoutParams p = view.getLayoutParams();
+                if (p != null && p.height != baseHeight + top) {
+                    p.height = baseHeight + top;
+                    view.setLayoutParams(p);
+                }
+            } else {
+                view.setPadding(view.getPaddingLeft(), baseTopPadding + top,
+                        view.getPaddingRight(), view.getPaddingBottom());
+            }
+            return insets;
+        });
+        androidx.core.view.ViewCompat.requestApplyInsets(v);
+    }
+
+    /** 获取状态栏高度（px），保留兼容。 */
     public static int getStatusBarHeight(Activity activity) {
         int result = 0;
         int resourceId = activity.getResources().getIdentifier(
@@ -109,16 +170,22 @@ public class ThemeManager {
         return result;
     }
 
-    /** 将顶栏内首个子 View 的顶部 margin 动态设为状态栏高度（刘海屏适配）。 */
+    /** 将顶栏内首个子 View 的顶部间距设为状态栏高度（edge-to-edge 下用 Insets 动态计算）。 */
     public static void applyTopInset(Activity activity, int viewId) {
-        android.view.View v = activity.findViewById(viewId);
+        final android.view.View v = activity.findViewById(viewId);
         if (v == null) return;
-        int top = getStatusBarHeight(activity);
-        android.view.ViewGroup.MarginLayoutParams lp =
+        final android.view.ViewGroup.MarginLayoutParams lp =
                 (android.view.ViewGroup.MarginLayoutParams) v.getLayoutParams();
-        if (lp != null && top > 0) {
-            lp.topMargin = top;
-            v.setLayoutParams(lp);
-        }
+        if (lp == null) return;
+        final int baseTopMargin = lp.topMargin;
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(v, (view, insets) -> {
+            int top = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars()).top;
+            if (lp.topMargin != baseTopMargin + top) {
+                lp.topMargin = baseTopMargin + top;
+                view.setLayoutParams(lp);
+            }
+            return insets;
+        });
+        androidx.core.view.ViewCompat.requestApplyInsets(v);
     }
 }

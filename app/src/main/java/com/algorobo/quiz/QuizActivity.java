@@ -468,7 +468,7 @@ public class QuizActivity extends AppCompatActivity {
             int bg;
             if (i == index) {
                 bg = R.drawable.bg_index_current;
-                dot.setTextColor(getColor(android.R.color.white));
+                dot.setTextColor(getColor(R.color.white));
             } else if (answered[i]) {
                 bg = R.drawable.bg_index_done;
                 dot.setTextColor(getColor(R.color.accent));
@@ -637,7 +637,7 @@ public class QuizActivity extends AppCompatActivity {
             TextView btnConfirm = new TextView(this);
             btnConfirm.setText("确认答案");
             btnConfirm.setTextSize(16);
-            btnConfirm.setTextColor(getColor(android.R.color.white));
+            btnConfirm.setTextColor(getColor(R.color.white));
             btnConfirm.setGravity(Gravity.CENTER);
             btnConfirm.setPadding(0, dp(12), 0, dp(12));
             btnConfirm.setBackgroundResource(R.drawable.bg_option_correct);
@@ -680,7 +680,7 @@ public class QuizActivity extends AppCompatActivity {
         TextView btnDone = new TextView(this);
         btnDone.setText("标记完成");
         btnDone.setTextSize(16);
-        btnDone.setTextColor(getColor(android.R.color.white));
+        btnDone.setTextColor(getColor(R.color.white));
         btnDone.setGravity(Gravity.CENTER);
         btnDone.setPadding(0, dp(14), 0, dp(14));
         btnDone.setBackgroundResource(R.drawable.bg_option_correct);
@@ -1402,7 +1402,7 @@ public class QuizActivity extends AppCompatActivity {
             android.graphics.Bitmap bmp = android.graphics.Bitmap.createBitmap(
                     widthPx, heightPx, android.graphics.Bitmap.Config.ARGB_8888);
             android.graphics.Canvas canvas = new android.graphics.Canvas(bmp);
-            canvas.drawColor(0xFFFFFFFF);
+            canvas.drawColor(getColor(R.color.share_card_bg));
             card.draw(canvas);
 
             java.io.File dir = new java.io.File(getFilesDir(), "share");
@@ -1523,13 +1523,13 @@ public class QuizActivity extends AppCompatActivity {
         for (int i = 0; i < arr.length; i++) {
             if (i == idx) arr[i].setBackgroundResource(R.drawable.bg_option_correct);
             else arr[i].setBackgroundResource(R.drawable.bg_option_normal);
-            arr[i].setTextColor(i == idx ? getColor(android.R.color.white) : getColor(R.color.text_main));
+            arr[i].setTextColor(i == idx ? getColor(R.color.white) : getColor(R.color.text_main));
         }
     }
     private void updateModeButtons(TextView btnModeRecite, TextView btnModeBrush) {
         btnModeRecite.setBackgroundResource(!brushMode ? R.drawable.bg_option_correct : R.drawable.bg_option_normal);
         btnModeBrush.setBackgroundResource(brushMode ? R.drawable.bg_option_correct : R.drawable.bg_option_normal);
-        int selected = getColor(android.R.color.white);
+        int selected = getColor(R.color.white);
         int normal = getColor(R.color.text_main);
         btnModeRecite.setTextColor(!brushMode ? selected : normal);
         btnModeBrush.setTextColor(brushMode ? selected : normal);
@@ -1763,13 +1763,13 @@ public class QuizActivity extends AppCompatActivity {
         ImageView iv = new ImageView(this);
         iv.setImageBitmap(bmp);
         iv.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        iv.setBackgroundColor(0xFF000000);
+        iv.setBackgroundColor(getColor(R.color.scrim_black));
         iv.setOnClickListener(v -> d.dismiss());
         d.setContentView(iv);
         android.view.Window w = d.getWindow();
         if (w != null) {
             w.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-            w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0xFF000000));
+            w.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(getColor(R.color.scrim_black)));
         }
         d.show();
     }

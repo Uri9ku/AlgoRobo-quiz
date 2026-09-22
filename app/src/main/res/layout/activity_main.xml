@@ -23,11 +23,11 @@
                 android:layout_height="wrap_content" android:orientation="horizontal"
                 android:gravity="center_vertical" android:clickable="true" android:focusable="true">
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:text="🏆" android:textSize="18sp" />
+                    android:text="🏆" android:textSize="@dimen/text_title_large" />
                 <TextView android:id="@+id/tvExamTypeName" android:layout_width="wrap_content"
                     android:layout_height="wrap_content" android:layout_marginStart="8dp"
                     android:text="中国电子学会等级考试" android:maxLines="1"
-                    android:textSize="17sp" android:textStyle="bold" android:textColor="@android:color/white" />
+                    android:textSize="@dimen/text_title_medium" android:textStyle="bold" android:textColor="@android:color/white" />
                 <ImageView android:layout_width="wrap_content" android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"
                     android:src="@drawable/ic_arrow_down_white" android:contentDescription="选择考试类型" />
@@ -65,7 +65,7 @@
                             android:contentDescription="真题练习" />
                     </FrameLayout>
                     <TextView android:id="@+id/labelPractice" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp" android:text="真题练习" android:textSize="12sp" android:textColor="@color/text_main" />
+                        android:layout_marginTop="6dp" android:text="真题练习" android:textSize="@dimen/text_label_medium" android:textColor="@color/text_main" />
                 </LinearLayout>
 
                 <!-- 2 题库练习 -->
@@ -77,7 +77,7 @@
                         android:padding="12dp" android:background="@drawable/bg_grid_icon"
                         android:contentDescription="题库练习" />
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp" android:text="题库练习" android:textSize="12sp" android:textColor="@color/text_main" />
+                        android:layout_marginTop="6dp" android:text="题库练习" android:textSize="@dimen/text_label_medium" android:textColor="@color/text_main" />
                 </LinearLayout>
 
                 <!-- 3 随机练习 -->
@@ -89,7 +89,7 @@
                         android:padding="12dp" android:background="@drawable/bg_grid_icon"
                         android:contentDescription="随机练习" />
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp" android:text="随机练习" android:textSize="12sp" android:textColor="@color/text_main" />
+                        android:layout_marginTop="6dp" android:text="随机练习" android:textSize="@dimen/text_label_medium" android:textColor="@color/text_main" />
                 </LinearLayout>
 
                 <!-- 4 错题本 -->
@@ -102,7 +102,7 @@
                             android:padding="12dp" android:background="@drawable/bg_grid_icon"
                             android:contentDescription="错题本" />
                         <TextView android:id="@+id/labelWrongBook" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp" android:text="错题本" android:textSize="12sp" android:textColor="@color/text_main" />
+                            android:layout_marginTop="6dp" android:text="错题本" android:textSize="@dimen/text_label_medium" android:textColor="@color/text_main" />
                     </LinearLayout>
                     <!-- 数量角标：外层裁剪容器 + 内层数字，数字变化时上下滑动顶替 -->
                     <FrameLayout android:id="@+id/badgeWrongBox" android:layout_width="wrap_content"
@@ -113,7 +113,7 @@
                         <TextView android:id="@+id/badgeWrong" android:layout_width="wrap_content"
                             android:layout_height="match_parent" android:layout_gravity="center"
                             android:gravity="center" android:includeFontPadding="false"
-                            android:text="0" android:textSize="10sp" android:textColor="@android:color/white"
+                            android:text="0" android:textSize="@dimen/text_micro" android:textColor="@android:color/white"
                             android:paddingStart="6dp" android:paddingEnd="6dp" />
                     </FrameLayout>
                 </FrameLayout>
@@ -128,7 +128,7 @@
                             android:padding="12dp" android:background="@drawable/bg_grid_icon"
                             android:contentDescription="收藏题" />
                         <TextView android:id="@+id/labelFavorite" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp" android:text="收藏题" android:textSize="12sp" android:textColor="@color/text_main" />
+                            android:layout_marginTop="6dp" android:text="收藏题" android:textSize="@dimen/text_label_medium" android:textColor="@color/text_main" />
                     </LinearLayout>
                     <!-- 数量角标：外层裁剪容器 + 内层数字，数字变化时上下滑动顶替 -->
                     <FrameLayout android:id="@+id/badgeFavoriteBox" android:layout_width="wrap_content"
@@ -139,7 +139,7 @@
                         <TextView android:id="@+id/badgeFavorite" android:layout_width="wrap_content"
                             android:layout_height="match_parent" android:layout_gravity="center"
                             android:gravity="center" android:includeFontPadding="false"
-                            android:text="0" android:textSize="10sp" android:textColor="@android:color/white"
+                            android:text="0" android:textSize="@dimen/text_micro" android:textColor="@android:color/white"
                             android:paddingStart="6dp" android:paddingEnd="6dp" />
                     </FrameLayout>
                 </FrameLayout>
@@ -153,7 +153,7 @@
                         android:padding="12dp" android:background="@drawable/bg_grid_icon"
                         android:contentDescription="学习统计" />
                     <TextView android:id="@+id/labelStatistics" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp" android:text="学习统计" android:textSize="12sp" android:textColor="@color/text_main" />
+                        android:layout_marginTop="6dp" android:text="学习统计" android:textSize="@dimen/text_label_medium" android:textColor="@color/text_main" />
                 </LinearLayout>
 
                 <!-- 7 打卡日历 -->
@@ -165,7 +165,7 @@
                         android:padding="12dp" android:background="@drawable/bg_grid_icon"
                         android:contentDescription="打卡日历" />
                     <TextView android:id="@+id/labelCalendar" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp" android:text="打卡日历" android:textSize="12sp" android:textColor="@color/text_main" />
+                        android:layout_marginTop="6dp" android:text="打卡日历" android:textSize="@dimen/text_label_medium" android:textColor="@color/text_main" />
                 </LinearLayout>
 
                 <!-- 8 自定义题库 -->
@@ -177,7 +177,7 @@
                         android:padding="12dp" android:background="@drawable/bg_grid_icon"
                         android:contentDescription="上传题目" />
                     <TextView android:id="@+id/labelCustomBank" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp" android:text="上传题目" android:textSize="12sp" android:textColor="@color/text_main" />
+                        android:layout_marginTop="6dp" android:text="上传题目" android:textSize="@dimen/text_label_medium" android:textColor="@color/text_main" />
                 </LinearLayout>
 
                 <!-- 9 知识点专题 -->
@@ -189,7 +189,7 @@
                         android:padding="12dp" android:background="@drawable/bg_grid_icon"
                         android:contentDescription="知识点专题" />
                     <TextView android:id="@+id/labelKnowledge" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp" android:text="知识点专题" android:textSize="12sp" android:textColor="@color/text_main" />
+                        android:layout_marginTop="6dp" android:text="知识点专题" android:textSize="@dimen/text_label_medium" android:textColor="@color/text_main" />
                 </LinearLayout>
 
                 <!-- 10 占位空格 -->
@@ -203,9 +203,9 @@
                 android:layout_marginTop="10dp" android:orientation="horizontal" android:gravity="center_vertical"
                 android:padding="12dp" android:background="@drawable/bg_resume" android:visibility="gone">
                 <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                    android:text="继续上次练习" android:textSize="14sp" android:textStyle="bold" android:textColor="@color/primary" />
+                    android:text="继续上次练习" android:textSize="@dimen/text_body_medium" android:textStyle="bold" android:textColor="@color/primary" />
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:text="▶" android:textSize="16sp" android:textColor="@color/primary" />
+                    android:text="▶" android:textSize="@dimen/text_body_large" android:textColor="@color/primary" />
             </LinearLayout>
         </LinearLayout>
 

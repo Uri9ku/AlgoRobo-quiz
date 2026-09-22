@@ -3,11 +3,11 @@
     android:width="24dp" android:height="24dp"
     android:viewportWidth="24" android:viewportHeight="24">
     <!-- 书本轮廓 -->
-    <path android:fillColor="#00000000"
-        android:strokeColor="#FFFFFF" android:strokeWidth="1.5"
+    <path android:fillColor="@color/transparent"
+        android:strokeColor="@color/white" android:strokeWidth="1.5"
         android:strokeLineJoin="round" android:strokeLineCap="round"
         android:pathData="M6,2.75H20V21.25H6Z M9.5,2.75V21.25" />
     <!-- 减号：从错题本移除 -->
-    <path android:fillColor="#FFFFFF"
+    <path android:fillColor="@color/white"
         android:pathData="M11.75,11.25H18.25V12.75H11.75Z" />
 </vector>

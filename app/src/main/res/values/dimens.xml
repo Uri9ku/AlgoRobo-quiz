@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Material 3 尺寸令牌层（Shape / Spacing / Typography size）。
+      Phase 1：形状圆角向 M3 形状尺度收敛（none/xs/sm/md/lg/xl/full）；
+      间距与字号令牌保持现有数值不变（纯引用化），后续可在本文件单点收敛。
+    -->
+
+    <!-- ===== Shape 尺度 ===== -->
+    <dimen name="shape_corner_none">0dp</dimen>
+    <dimen name="shape_corner_xs">4dp</dimen>
+    <dimen name="shape_corner_sm">8dp</dimen>
+    <dimen name="shape_corner_md">12dp</dimen>
+    <dimen name="shape_corner_lg">16dp</dimen>
+    <dimen name="shape_corner_xl">28dp</dimen>
+    <dimen name="shape_corner_full">999dp</dimen>
+
+    <!-- ===== Spacing 尺度（4dp 基准） ===== -->
+    <dimen name="space_xs">4dp</dimen>
+    <dimen name="space_sm">8dp</dimen>
+    <dimen name="space_md">12dp</dimen>
+    <dimen name="space_lg">16dp</dimen>
+    <dimen name="space_xl">24dp</dimen>
+    <dimen name="space_2xl">32dp</dimen>
+
+    <!-- ===== 组件尺寸 ===== -->
+    <dimen name="topbar_height">56dp</dimen>
+    <dimen name="touch_target_min">48dp</dimen>
+    <dimen name="icon_medium">24dp</dimen>
+    <dimen name="icon_large">40dp</dimen>
+
+    <!-- ===== Typography 字号令牌 ===== -->
+    <dimen name="text_micro">10sp</dimen>
+    <dimen name="text_label_small">11sp</dimen>
+    <dimen name="text_label_medium">12sp</dimen>
+    <dimen name="text_body_small">13sp</dimen>
+    <dimen name="text_body_medium">14sp</dimen>
+    <dimen name="text_title_small">15sp</dimen>
+    <dimen name="text_body_large">16sp</dimen>
+    <dimen name="text_title_medium">17sp</dimen>
+    <dimen name="text_title_large">18sp</dimen>
+    <dimen name="text_headline_small">20sp</dimen>
+    <dimen name="text_headline_medium">22sp</dimen>
+    <dimen name="text_display_small">24sp</dimen>
+    <dimen name="text_display_medium">26sp</dimen>
+    <dimen name="text_display_large">28sp</dimen>
+    <dimen name="text_hero">48sp</dimen>
+</resources>

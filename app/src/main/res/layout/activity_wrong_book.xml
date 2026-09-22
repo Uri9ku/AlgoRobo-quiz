@@ -3,11 +3,11 @@
 <LinearLayout android:id="@+id/topBar" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/bg_result_header_chalk" android:padding="16dp">
 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
 <ImageView android:id="@+id/btnWrongBack" android:layout_width="wrap_content" android:layout_height="wrap_content" android:src="@drawable/ic_back" android:contentDescription="返回" android:padding="4dp"/>
-<TextView android:id="@+id/tvPageTitle" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="错题本" android:textSize="18sp" android:textStyle="bold" android:textColor="@android:color/white"/>
-<TextView android:id="@+id/btnWrongSort" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="排序" android:textSize="14sp" android:textColor="@android:color/white" android:padding="4dp" android:layout_marginEnd="10dp"/>
-<TextView android:id="@+id/btnWrongClear" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="清空" android:textSize="14sp" android:textColor="@android:color/white" android:padding="4dp"/>
+<TextView android:id="@+id/tvPageTitle" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:text="错题本" android:textSize="@dimen/text_title_large" android:textStyle="bold" android:textColor="@android:color/white"/>
+<TextView android:id="@+id/btnWrongSort" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="排序" android:textSize="@dimen/text_body_medium" android:textColor="@android:color/white" android:padding="4dp" android:layout_marginEnd="10dp"/>
+<TextView android:id="@+id/btnWrongClear" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="清空" android:textSize="@dimen/text_body_medium" android:textColor="@android:color/white" android:padding="4dp"/>
 </LinearLayout>
 </LinearLayout>
-<TextView android:id="@+id/tvWrongEmpty" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textSize="14sp" android:textColor="@color/text_sub" android:padding="40dp" android:text="暂无错题，继续加油！" android:visibility="gone"/>
+<TextView android:id="@+id/tvWrongEmpty" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textSize="@dimen/text_body_medium" android:textColor="@color/text_sub" android:padding="40dp" android:text="暂无错题，继续加油！" android:visibility="gone"/>
 <ListView android:id="@+id/listWrong" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:divider="@color/divider" android:dividerHeight="1dp"/>
 </LinearLayout>
