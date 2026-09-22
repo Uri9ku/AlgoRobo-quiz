@@ -163,6 +163,14 @@ public class SettingsActivity extends AppCompatActivity {
         findViewById(R.id.btnAiRole).setOnClickListener(v -> showAiRoleDialog());
         updateAiRoleValue();
 
+        // 刷题分类：显示/隐藏知识点标签（复用）
+        SwitchCompat swKnowledgeTag = findViewById(R.id.swKnowledgeTag);
+        swKnowledgeTag.setChecked(DataStore.isKnowledgeTagVisible(this));
+        swKnowledgeTag.setOnCheckedChangeListener((btn, checked) -> {
+            DataStore.setKnowledgeTagVisible(this, checked);
+            showToast(checked ? "已显示知识点标签" : "已隐藏知识点标签");
+        });
+
         // 下载目录标题点击折叠/展开按钮区
         final android.widget.LinearLayout examDirButtons = findViewById(R.id.examDirButtons);
         final TextView ivExamDirArrow = findViewById(R.id.ivExamDirArrow);

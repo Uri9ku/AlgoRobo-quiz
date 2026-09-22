@@ -34,6 +34,11 @@
             android:text="知识点" android:textSize="11sp" android:textColor="@color/text_sub"
             android:background="@drawable/bg_tag_gray" android:paddingStart="8dp" android:paddingEnd="8dp"
             android:paddingTop="2dp" android:paddingBottom="2dp" android:visibility="gone" />
+        <TextView android:id="@+id/tvAnalysisSource" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginStart="8dp" android:maxWidth="180dp" android:maxLines="1" android:ellipsize="end"
+            android:text="真题来源" android:textSize="11sp" android:textColor="@color/text_sub"
+            android:background="@drawable/bg_tag_gray" android:paddingStart="8dp" android:paddingEnd="8dp"
+            android:paddingTop="2dp" android:paddingBottom="2dp" android:visibility="gone" />
     </LinearLayout>
 
     <TextView android:id="@+id/tvAnalysisStem" android:layout_width="match_parent" android:layout_height="wrap_content"

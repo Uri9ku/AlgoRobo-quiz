@@ -515,9 +515,9 @@ public class QuizActivity extends AppCompatActivity {
                         .setPositiveButton("知道了", null)
                         .show());
     }
-    /** 错题本刷题：显示「错题来源」标签，点击弹出胶囊框展示该题来源（试卷名 + 第几题）。 */
+    /** 非真题卷刷题（错题本/收藏/知识点/全部）时显示来源标签：错题本叫「错题来源」，其余叫「真题来源」。 */
     private void renderSourceTag(Question q) {
-        if (!"wrong".equals(source)) {
+        if (source != null && source.startsWith("paper:")) {
             tvSource.setVisibility(View.GONE);
             return;
         }
@@ -526,7 +526,7 @@ public class QuizActivity extends AppCompatActivity {
             tvSource.setVisibility(View.GONE);
             return;
         }
-        tvSource.setText("错题来源");
+        tvSource.setText("wrong".equals(source) ? "错题来源" : "真题来源");
         tvSource.setVisibility(View.VISIBLE);
         tvSource.setOnClickListener(v -> showSourcePopup(tvSource, info));
     }
@@ -1616,6 +1616,8 @@ public class QuizActivity extends AppCompatActivity {
         intent.putExtra("correct", correct);
         intent.putExtra("duration_sec", usedSec);
         intent.putExtra("records", (java.io.Serializable) records);
+        // 传下来源：全部解析页据此决定是否显示「真题来源」标签
+        intent.putExtra("source", source == null ? "all" : source);
         startActivity(intent);
         finish();
     }

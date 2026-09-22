@@ -261,15 +261,67 @@ public class MainActivity extends AppCompatActivity {
 
     /** 平铺渲染节点与其已展开的子节点（逐行展开，按层级阶梯缩进）。 */
     private void addKpNode(RobotCatalog.KpNode node, int depth) {
-        llGreenContainer.addView(buildKpRow(node, depth));
+        View row = buildKpRow(node, depth);
+        row.setTag(node.path);
+        llGreenContainer.addView(row);
         View divider = new View(this);
         divider.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, dp(1))));
         divider.setBackgroundColor(getColor(R.color.divider));
+        divider.setTag(node.path);
         llGreenContainer.addView(divider);
         if (!node.children.isEmpty() && expandedPaths.contains(node.path)) {
             for (RobotCatalog.KpNode ch : node.children) addKpNode(ch, depth + 1);
         }
+    }
+
+    /** 展开/收起节点：展开时子行淡入下滑，收起时子行淡出右移，随后重绘。 */
+    private void toggleKpNode(RobotCatalog.KpNode node) {
+        if (expandedPaths.contains(node.path)) {
+            final List<View> kids = kpRowsUnder(node.path);
+            if (kids.isEmpty()) {
+                expandedPaths.remove(node.path);
+                renderGreenContainer();
+                return;
+            }
+            final int n = kids.size();
+            for (int i = 0; i < n; i++) {
+                final boolean last = (i == n - 1);
+                kids.get(i).animate()
+                        .alpha(0f).translationX(dp(16))
+                        .setDuration(120).setStartDelay(i * 10L)
+                        .withEndAction(() -> {
+                            if (last) {
+                                expandedPaths.remove(node.path);
+                                renderGreenContainer();
+                            }
+                        })
+                        .start();
+            }
+        } else {
+            expandedPaths.add(node.path);
+            renderGreenContainer();
+            List<View> kids = kpRowsUnder(node.path);
+            for (int i = 0; i < kids.size(); i++) {
+                View v = kids.get(i);
+                v.setAlpha(0f);
+                v.setTranslationY(-dp(8));
+                v.animate().alpha(1f).translationY(0f)
+                        .setDuration(160).setStartDelay(i * 12L).start();
+            }
+        }
+    }
+
+    /** 收集当前界面上属于该节点子树的行/分隔线（按渲染时打的 path tag）。 */
+    private List<View> kpRowsUnder(String path) {
+        List<View> out = new java.util.ArrayList<>();
+        String prefix = path + "/";
+        for (int i = 0; i < llGreenContainer.getChildCount(); i++) {
+            View v = llGreenContainer.getChildAt(i);
+            Object tag = v.getTag();
+            if (tag instanceof String && ((String) tag).startsWith(prefix)) out.add(v);
+        }
+        return out;
     }
 
     /** 单行：状态圆点 + 名称/花瓣进度 + 右侧箭头。 */
@@ -356,9 +408,7 @@ public class MainActivity extends AppCompatActivity {
 
         row.setOnClickListener(v -> {
             if (hasChildren) {
-                if (expandedPaths.contains(node.path)) expandedPaths.remove(node.path);
-                else expandedPaths.add(node.path);
-                renderGreenContainer();
+                toggleKpNode(node);
             } else {
                 startKnowledgeQuiz(node);
             }

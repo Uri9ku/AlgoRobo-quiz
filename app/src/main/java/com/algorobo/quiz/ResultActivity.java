@@ -46,6 +46,7 @@ public class ResultActivity extends AppCompatActivity {
         findViewById(R.id.btnResultAgain).setOnClickListener(v -> {
             android.content.Intent intent = new android.content.Intent(this, AllAnalysisActivity.class);
             intent.putExtra("records", (java.io.Serializable) new ArrayList<>(records));
+            intent.putExtra("source", getIntent().getStringExtra("source"));
             startActivity(intent);
         });
     }

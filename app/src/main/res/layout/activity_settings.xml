@@ -246,6 +246,26 @@
 
 
 
+            <!-- 分组：刷题 -->
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginTop="20dp" android:text="刷题" android:textSize="14sp"
+                android:textStyle="bold" android:textColor="@color/text_main" android:layout_marginBottom="8dp"/>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:padding="16dp" android:background="@drawable/bg_card">
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                    android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="显示知识点标签" android:textSize="16sp" android:textColor="@color/text_main"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp" android:text="刷题页在题型右侧显示知识点标签"
+                        android:textSize="12sp" android:textColor="@color/text_sub"/>
+                </LinearLayout>
+                <androidx.appcompat.widget.SwitchCompat android:id="@+id/swKnowledgeTag"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+            </LinearLayout>
+
             <!-- 分组：AI 功能 -->
             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:layout_marginTop="20dp" android:text="AI 功能" android:textSize="14sp"

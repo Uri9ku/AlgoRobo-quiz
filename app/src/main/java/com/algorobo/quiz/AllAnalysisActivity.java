@@ -34,6 +34,8 @@ public class AllAnalysisActivity extends AppCompatActivity {
     /** 批量选择模式：长按题目进入，工具栏切为批量收藏/批量错题。 */
     private boolean selectMode = false;
     private final java.util.Set<String> selectedUids = new java.util.HashSet<>();
+    /** 本次刷题来源（paper:xxx 时不显示「真题来源」标签）。 */
+    private String quizSource = "all";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,8 +46,9 @@ public class AllAnalysisActivity extends AppCompatActivity {
         PageTitle.apply(this, R.id.tvAnalysisTitle);
         markdownRenderer = new MarkdownUtil(getColor(R.color.text_main), getColor(R.color.accent));
 
-        java.io.Serializable data = getIntent().getSerializableExtra("records");
-        if (data instanceof List) {
+        String src = getIntent().getStringExtra("source");
+        if (src != null && !src.isEmpty()) quizSource = src;
+        java.io.Serializable data = getIntent().getSerializableExtra("records");        if (data instanceof List) {
             List<?> raw = (List<?>) data;
             for (Object o : raw) {
                 if (o instanceof AnswerRecord) records.add((AnswerRecord) o);
@@ -67,14 +70,17 @@ public class AllAnalysisActivity extends AppCompatActivity {
         rv.setAdapter(adapter);
 
         btnAnalysisAllAi.setOnClickListener(v -> {
-            if (selectMode) batchFavorite();
+            if (selectMode) toggleSelectAll();
             else confirmAnalyzeAll();
         });
         btnAnalysisExpandAll.setOnClickListener(v -> {
-            if (selectMode) batchWrong();
+            if (selectMode) batchFavorite();
             else toggleAllExpand();
         });
-        btnAnalysisDraft.setOnClickListener(v -> DraftPaper.show(this, null, null));
+        btnAnalysisDraft.setOnClickListener(v -> {
+            if (selectMode) batchWrong();
+            else DraftPaper.show(this, null, null);
+        });
         updateExpandButton();
 
         renderAnalysisIndex();
@@ -152,9 +158,15 @@ public class AllAnalysisActivity extends AppCompatActivity {
         if (indexContainer == null || indexScroll == null) return;
         View child = indexContainer.getChildAt(pos);
         if (child == null) return;
-        int targetX = child.getLeft() - (indexScroll.getWidth() - child.getWidth()) / 2;
-        if (targetX < 0) targetX = 0;
-        indexScroll.scrollTo(targetX, 0);
+        // 仅当题号移出可视区时才滚动（不居中），避免滑动时索引条来回跳
+        int scrollX = indexScroll.getScrollX();
+        int viewW = indexScroll.getWidth();
+        int margin = dp(24);
+        if (child.getLeft() - margin < scrollX) {
+            indexScroll.smoothScrollTo(Math.max(0, child.getLeft() - margin), 0);
+        } else if (child.getRight() + margin > scrollX + viewW) {
+            indexScroll.smoothScrollTo(child.getRight() + margin - viewW, 0);
+        }
     }
 
     private void updateIndexHighlight() {
@@ -165,6 +177,55 @@ public class AllAnalysisActivity extends AppCompatActivity {
         currentIndexPos = pos;
         highlightIndex(pos);
         scrollIndexToCurrent(pos);
+    }
+
+    /** 由答题记录的唯一 key「scope#题号」还原来源描述（与刷题页一致）。 */
+    private String buildSourceInfo(AnswerRecord r) {
+        String uid = r == null ? null : r.uid;
+        if (uid == null) return null;
+        int h = uid.lastIndexOf('#');
+        if (h <= 0 || h == uid.length() - 1) return null;
+        String key = uid.substring(0, h);
+        int idx = -1;
+        try {
+            idx = Integer.parseInt(uid.substring(h + 1));
+        } catch (Exception ignore) {
+        }
+        String title = null;
+        if ("builtin".equals(key)) {
+            title = "内置题库";
+        } else if ("custom".equals(key)) {
+            title = "自定义题库";
+        } else {
+            title = RobotExamBank.getCustomTitle(this, key);
+            if (title == null || title.isEmpty()) {
+                RobotExamBank.Paper p = RobotExamBank.getPaper(this, key);
+                if (p != null) title = p.title;
+            }
+        }
+        if (title == null || title.isEmpty()) return null;
+        return idx > 0 ? (title + " · 第 " + idx + " 题") : title;
+    }
+
+    /** 胶囊框：与刷题页同款，展示真题来源。 */
+    private void showSourcePopup(View anchor, String text) {
+        TextView tv = new TextView(this);
+        tv.setText(text);
+        tv.setTextSize(13);
+        tv.setTextColor(getColor(R.color.text_main));
+        tv.setGravity(Gravity.CENTER);
+        tv.setPadding(dp(16), dp(10), dp(16), dp(10));
+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+        bg.setColor(getColor(R.color.card_bg));
+        bg.setCornerRadius(dp(24));
+        bg.setStroke(dp(1), getColor(R.color.divider));
+        tv.setBackground(bg);
+        android.widget.PopupWindow pw = new android.widget.PopupWindow(tv,
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, true);
+        pw.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        pw.setOutsideTouchable(true);
+        pw.setFocusable(true);
+        pw.showAsDropDown(anchor, 0, dp(6));
     }
 
     // ===================== 工具栏 =====================
@@ -248,26 +309,54 @@ public class AllAnalysisActivity extends AppCompatActivity {
     private void updateToolbar() {
         if (btnAnalysisAllAi == null) return;
         if (selectMode) {
-            btnAnalysisAllAi.setImageResource(R.drawable.ic_tool_favorite_filled);
-            btnAnalysisAllAi.setContentDescription("批量加入收藏题");
-            btnAnalysisExpandAll.setImageResource(R.drawable.ic_tool_wrongbook);
-            btnAnalysisExpandAll.setContentDescription("批量加入错题本");
-            btnAnalysisDraft.setVisibility(View.GONE);
+            // 批量模式：全选/取消全选 + 批量收藏 + 批量错题（草稿纸让位）
+            boolean allSel = isAllSelected();
+            btnAnalysisAllAi.setImageResource(allSel
+                    ? R.drawable.ic_tool_deselect_all : R.drawable.ic_tool_select_all);
+            btnAnalysisAllAi.setContentDescription(allSel ? "取消全选" : "全选");
+            btnAnalysisExpandAll.setImageResource(R.drawable.ic_tool_favorite_filled);
+            btnAnalysisExpandAll.setContentDescription("批量加入收藏题");
+            btnAnalysisDraft.setImageResource(R.drawable.ic_tool_wrongbook);
+            btnAnalysisDraft.setContentDescription("批量加入错题本");
+            btnAnalysisDraft.setVisibility(View.VISIBLE);
         } else {
             btnAnalysisAllAi.setImageResource(R.drawable.ic_tool_analyze);
             btnAnalysisAllAi.setContentDescription("全部解析");
             btnAnalysisExpandAll.setImageResource(allExpanded
                     ? R.drawable.ic_tool_collapse : R.drawable.ic_tool_expand);
             btnAnalysisExpandAll.setContentDescription("全部展开收起");
+            btnAnalysisDraft.setImageResource(R.drawable.ic_tool_draft);
+            btnAnalysisDraft.setContentDescription("草稿纸");
             btnAnalysisDraft.setVisibility(View.VISIBLE);
         }
     }
 
+    private boolean isAllSelected() {
+        if (records.isEmpty()) return false;
+        for (AnswerRecord r : records) {
+            if (r.uid == null || !selectedUids.contains(r.uid)) return false;
+        }
+        return true;
+    }
+
+    /** 全选 / 取消全选。 */
+    private void toggleSelectAll() {
+        boolean wasAll = isAllSelected();
+        selectedUids.clear();
+        if (!wasAll) {
+            for (AnswerRecord r : records) if (r.uid != null) selectedUids.add(r.uid);
+        }
+        updateToolbar();
+        adapter.notifyDataSetChanged();
+        toast(wasAll ? "已取消全选" : "已全选 " + selectedUids.size() + " 题");
+    }
+
     // ===================== 批量选择模式 =====================
 
-    private void enterSelectMode() {
+    private void enterSelectMode(String uid) {
         selectMode = true;
         selectedUids.clear();
+        if (uid != null) selectedUids.add(uid);   // 长按即勾选当前题目
         updateToolbar();
         adapter.notifyDataSetChanged();
         toast("已进入批量选择：勾选题目后点工具栏按钮");
@@ -458,6 +547,7 @@ public class AllAnalysisActivity extends AppCompatActivity {
             }
             h.detail.setText(r.analysis == null || r.analysis.isEmpty() ? "（暂无解析）" : r.analysis);
             bindKnowledge(h, r);
+            bindSourceTag(h, r);
             bindAiAnalysis(h, r);
             applyAnalysisVisibility(h);
             bindActions(h, r);
@@ -479,7 +569,7 @@ public class AllAnalysisActivity extends AppCompatActivity {
                 else selectedUids.remove(uid);
             });
             h.itemView.setOnLongClickListener(v -> {
-                if (!selectMode) enterSelectMode();
+                if (!selectMode) enterSelectMode(uid);
                 return true;
             });
             h.itemView.setOnClickListener(v -> {
@@ -537,6 +627,18 @@ public class AllAnalysisActivity extends AppCompatActivity {
                     .setMessage(all.contains("\n") ? "· " + all : all)
                     .setPositiveButton("知道了", null)
                     .show());
+        }
+
+        /** 非真题卷刷题时，知识点标签旁显示「真题来源」（样式与错题来源一致）。 */
+        private void bindSourceTag(Holder h, final AnswerRecord r) {
+            boolean isPaper = quizSource != null && quizSource.startsWith("paper:");
+            String info = isPaper ? null : buildSourceInfo(r);
+            if (info == null || info.isEmpty()) {
+                h.source.setVisibility(View.GONE);
+                return;
+            }
+            h.source.setVisibility(View.VISIBLE);
+            h.source.setOnClickListener(v -> showSourcePopup(h.source, info));
         }
 
         /** AI 解析：优先缓存；无正式解析时用 AI 内容替换「暂无解析」。 */
@@ -737,6 +839,7 @@ public class AllAnalysisActivity extends AppCompatActivity {
         class Holder extends RecyclerView.ViewHolder {
             TextView index, type, stem, options, user, correctAns, result, detail;
             TextView knowledge, btnAi, btnToggle, aiDetail;
+            TextView source;
             ImageView ivStemImage, btnFav, btnWrong;
             android.widget.CheckBox cbSelect;
             LinearLayout analysisOptionImages;
@@ -753,6 +856,7 @@ public class AllAnalysisActivity extends AppCompatActivity {
                 result = v.findViewById(R.id.tvAnalysisResult);
                 detail = v.findViewById(R.id.tvAnalysisDetail);
                 knowledge = v.findViewById(R.id.tvAnalysisKnowledge);
+                source = v.findViewById(R.id.tvAnalysisSource);
                 btnAi = v.findViewById(R.id.btnAnalysisAi);
                 btnToggle = v.findViewById(R.id.btnAnalysisToggle);
                 aiDetail = v.findViewById(R.id.tvAnalysisAiDetail);
