@@ -84,6 +84,8 @@ public class SettingsActivity extends AppCompatActivity {
         etCheckinThreshold = findViewById(R.id.etCheckinThreshold);
         tvImportConcurrencyValue = findViewById(R.id.tvImportConcurrencyValue);
         tvBadgeAnimValue = findViewById(R.id.tvBadgeAnimValue);
+        sbConcurrency = findViewById(R.id.sbImportConcurrency);
+        sbBadgeAnim = findViewById(R.id.sbBadgeAnim);
 
         findViewById(R.id.btnBackSettings).setOnClickListener(v -> finish());
 
@@ -208,8 +210,6 @@ public class SettingsActivity extends AppCompatActivity {
         });
 
         // 下载分类：并发下载与解析数（1~10，默认 3）
-        sbConcurrency = findViewById(R.id.sbImportConcurrency);
-        tvImportConcurrencyValue = findViewById(R.id.tvImportConcurrencyValue);
         int curConcurrency = DataStore.getImportConcurrency(this);
         sbConcurrency.setProgress(curConcurrency - 1);
         tvImportConcurrencyValue.setText(curConcurrency + " 套");
@@ -265,8 +265,6 @@ public class SettingsActivity extends AppCompatActivity {
 
         // 数量角标（错题本 / 收藏题）
         swBadgeVisible = findViewById(R.id.swBadgeVisible);
-        sbBadgeAnim = findViewById(R.id.sbBadgeAnim);
-        tvBadgeAnimValue = findViewById(R.id.tvBadgeAnimValue);
         swBadgeVisible.setChecked(DataStore.isBadgeVisible(this));
         swBadgeVisible.setOnCheckedChangeListener((btn, checked) -> {
             DataStore.setBadgeVisible(this, checked);
