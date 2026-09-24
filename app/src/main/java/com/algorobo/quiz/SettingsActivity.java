@@ -97,6 +97,7 @@ public class SettingsActivity extends AppCompatActivity {
         setupCollapse(R.id.cardAnimHeader, R.id.cardAnimBody);
         setupCollapse(R.id.cardFontSizeHeader, R.id.cardFontSizeBody);
         setupCollapse(R.id.cardThresholdHeader, R.id.cardThresholdBody);
+        setupCollapse(R.id.cardCheckinHeader, R.id.cardCheckinBody);
         setupCollapse(R.id.cardImportConcurrencyHeader, R.id.cardImportConcurrencyBody);
         setupCollapse(R.id.cardBadgeAnimHeader, R.id.cardBadgeAnimBody);
 

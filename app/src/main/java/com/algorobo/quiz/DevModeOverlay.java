@@ -211,13 +211,13 @@ public final class DevModeOverlay {
             bubbleY = sp.getInt("by", Integer.MIN_VALUE);
         }
         if (bubbleX == Integer.MIN_VALUE) {
-            bubbleX = w - dp(c, 90) - dp(c, 4);
-            bubbleY = (int) (h * 0.68f);
+            bubbleX = w / 2 - dp(c, 45);
+            bubbleY = h / 2 - dp(c, 30);
         }
         // 历史保存的位置可能落在窗口外（那样点击会被系统手势区吃掉），这里做合法性校正
         int maxY = Math.max(0, h - dp(c, 60));
-        if (bubbleY < 0 || bubbleY > maxY) bubbleY = (int) (h * 0.68f);
-        if (bubbleX < 0 || bubbleX > Math.max(0, w - dp(c, 40))) bubbleX = w - dp(c, 90) - dp(c, 4);
+        if (bubbleY < 0 || bubbleY > maxY) bubbleY = h / 2 - dp(c, 30);
+        if (bubbleX < 0 || bubbleX > Math.max(0, w - dp(c, 40))) bubbleX = w / 2 - dp(c, 45);
         clampBubble(c, w, h);
         bubble.setX(bubbleX);
         bubble.setY(bubbleY);
