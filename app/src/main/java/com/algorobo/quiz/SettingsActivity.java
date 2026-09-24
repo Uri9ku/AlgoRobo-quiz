@@ -14,6 +14,8 @@ import androidx.appcompat.widget.SwitchCompat;
 public class SettingsActivity extends AppCompatActivity {
 
     private static final int REQ_PICK_EXAM_DIR = 1001;
+    private static final int REQ_CREATE_BACKUP = 2001;
+    private static final int REQ_OPEN_BACKUP = 2002;
 
     private TextView tvToastValue, tvAnimValue, tvDarkModeValue;
     private SeekBar sbToast, sbAnim;
@@ -34,6 +36,19 @@ public class SettingsActivity extends AppCompatActivity {
     private android.widget.TextView customColorBtn;
     private android.widget.TextView customColorSwatch;
     private boolean themeColorExpanded = false;
+    /** 打卡判定：滑动条与手动输入控件 */
+    private TextView tvCheckinThresholdValue;
+    private SeekBar sbCheckinThreshold;
+    private TextView tvCheckinPreview;
+    private EditText etCheckinThreshold;
+    /** 并发下载与角标动画：当前显示值 */
+    private TextView tvImportConcurrencyValue;
+    private TextView tvBadgeAnimValue;
+    private SwitchCompat swBadgeVisible;
+    private SeekBar sbBadgeAnim;
+    private SwitchCompat swDevMode;
+    private SeekBar sbConcurrency;
+    private SwitchCompat swAutoDownloadDocx;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,21 +78,30 @@ public class SettingsActivity extends AppCompatActivity {
         customColorRow = findViewById(R.id.customColorRow);
         customColorBtn = findViewById(R.id.customColorBtn);
         customColorSwatch = findViewById(R.id.customColorSwatch);
+        tvCheckinThresholdValue = findViewById(R.id.tvCheckinThresholdValue);
+        sbCheckinThreshold = findViewById(R.id.sbCheckinThreshold);
+        tvCheckinPreview = findViewById(R.id.tvCheckinPreview);
+        etCheckinThreshold = findViewById(R.id.etCheckinThreshold);
+        tvImportConcurrencyValue = findViewById(R.id.tvImportConcurrencyValue);
+        tvBadgeAnimValue = findViewById(R.id.tvBadgeAnimValue);
 
         findViewById(R.id.btnBackSettings).setOnClickListener(v -> finish());
 
-        // 打卡判定：每天答满 N 题（首次作答）自动打卡，输入仅数字，范围 10~100
+        // 打卡判定：每天答满 N 题（首次作答）自动打卡，滑动条范围 10~100，也可手动输入
         setupCheckinThreshold();
 
         // 备份与导出：学习数据 JSON 导出/导入（API Key 不随备份导出）
         findViewById(R.id.btnBackupExport).setOnClickListener(v -> onBackupExport());
         findViewById(R.id.btnBackupImport).setOnClickListener(v -> onBackupImport());
 
-        // 点击标题行折叠/展开滑动条（三个数字类设置卡片）
+        // 点击标题行折叠/展开滑动条（所有数字类设置卡片）
         setupCollapse(R.id.cardToastHeader, R.id.cardToastBody);
         setupCollapse(R.id.cardAnimHeader, R.id.cardAnimBody);
-        setupCollapse(R.id.cardThresholdHeader, R.id.cardThresholdBody);
         setupCollapse(R.id.cardFontSizeHeader, R.id.cardFontSizeBody);
+        setupCollapse(R.id.cardThresholdHeader, R.id.cardThresholdBody);
+        setupCollapse(R.id.cardCheckinHeader, R.id.cardCheckinBody);
+        setupCollapse(R.id.cardImportConcurrencyHeader, R.id.cardImportConcurrencyBody);
+        setupCollapse(R.id.cardBadgeAnimHeader, R.id.cardBadgeAnimBody);
 
         // 主题色：渲染色板 + 即时染色
         setupThemeColor();
@@ -184,16 +208,16 @@ public class SettingsActivity extends AppCompatActivity {
         });
 
         // 下载分类：并发下载与解析数（1~10，默认 3）
-        SeekBar sbConcurrency = findViewById(R.id.sbImportConcurrency);
-        TextView tvConcurrencyValue = findViewById(R.id.tvImportConcurrencyValue);
+        sbConcurrency = findViewById(R.id.sbImportConcurrency);
+        tvImportConcurrencyValue = findViewById(R.id.tvImportConcurrencyValue);
         int curConcurrency = DataStore.getImportConcurrency(this);
         sbConcurrency.setProgress(curConcurrency - 1);
-        tvConcurrencyValue.setText(curConcurrency + " 套");
+        tvImportConcurrencyValue.setText(curConcurrency + " 套");
         sbConcurrency.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 int v = progress + 1;
-                tvConcurrencyValue.setText(v + " 套");
+                tvImportConcurrencyValue.setText(v + " 套");
                 DataStore.setImportConcurrency(SettingsActivity.this, v);
             }
 
@@ -230,7 +254,7 @@ public class SettingsActivity extends AppCompatActivity {
         findViewById(R.id.btnGrantStorage).setOnClickListener(v -> onStoragePermission());
 
         // 导入时自动下载原题 docx
-        SwitchCompat swAutoDownloadDocx = findViewById(R.id.swAutoDownloadDocx);
+        swAutoDownloadDocx = findViewById(R.id.swAutoDownloadDocx);
         swAutoDownloadDocx.setChecked(DataStore.isAutoDownloadDocx(this));
         swAutoDownloadDocx.setOnCheckedChangeListener((btn, checked) -> {
             DataStore.setAutoDownloadDocx(this, checked);
@@ -240,9 +264,9 @@ public class SettingsActivity extends AppCompatActivity {
         });
 
         // 数量角标（错题本 / 收藏题）
-        SwitchCompat swBadgeVisible = findViewById(R.id.swBadgeVisible);
-        SeekBar sbBadgeAnim = findViewById(R.id.sbBadgeAnim);
-        TextView tvBadgeAnimValue = findViewById(R.id.tvBadgeAnimValue);
+        swBadgeVisible = findViewById(R.id.swBadgeVisible);
+        sbBadgeAnim = findViewById(R.id.sbBadgeAnim);
+        tvBadgeAnimValue = findViewById(R.id.tvBadgeAnimValue);
         swBadgeVisible.setChecked(DataStore.isBadgeVisible(this));
         swBadgeVisible.setOnCheckedChangeListener((btn, checked) -> {
             DataStore.setBadgeVisible(this, checked);
@@ -261,7 +285,7 @@ public class SettingsActivity extends AppCompatActivity {
         });
 
         // 开发者模式悬浮球：关闭后每个页面都不再显示悬浮球
-        SwitchCompat swDevMode = findViewById(R.id.swDevMode);        swDevMode.setChecked(DataStore.isDevModeEnabled(this));
+        swDevMode = findViewById(R.id.swDevMode);        swDevMode.setChecked(DataStore.isDevModeEnabled(this));
         swDevMode.setOnCheckedChangeListener((btn, checked) -> {
             DataStore.setDevModeEnabled(this, checked);
             DevModeOverlay.onSettingChanged(this);
@@ -528,6 +552,19 @@ public class SettingsActivity extends AppCompatActivity {
         float fontSp = DataStore.getQuestionFontSp(this);
         tvFontSizeValue.setText(((int) fontSp) + " sp");
         sbFontSize.setProgress(Math.max(0, Math.min(12, (int) fontSp - 14)));
+
+        // 打卡判定、并发、角标动画刷新
+        int checkin = DataStore.getCheckinThreshold(this);
+        tvCheckinThresholdValue.setText(checkin + " 题");
+        tvCheckinPreview.setText(String.valueOf(checkin));
+        sbCheckinThreshold.setProgress(checkin - 10);
+        etCheckinThreshold.setText(String.valueOf(checkin));
+        int conc = DataStore.getImportConcurrency(this);
+        tvImportConcurrencyValue.setText(conc + " 套");
+        sbConcurrency.setProgress(conc - 1);
+        int badgeMs = DataStore.getBadgeAnimDuration(this);
+        tvBadgeAnimValue.setText(badgeMs + " ms");
+        sbBadgeAnim.setProgress(badgeProgressOf(badgeMs));
     }
 
     // ==================== 错题排序 ====================
@@ -603,35 +640,41 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     // ==================== 打卡判定 ====================
-
-    private static final int REQ_CREATE_BACKUP = 2001;
-    private static final int REQ_OPEN_BACKUP = 2002;
-
+    /** 打卡判定：滑动条 10~100，点击行展开；也可手动输入。 */
     private void setupCheckinThreshold() {
-        final EditText et = findViewById(R.id.etCheckinThreshold);
-        et.setText(String.valueOf(DataStore.getCheckinThreshold(this)));
-        et.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-        et.setSelection(et.getText().length());
-        // 校验输入：仅数字；范围 10~100，非法时提示并还原
-        et.setOnFocusChangeListener((v, hasFocus) -> {
+        int cur = DataStore.getCheckinThreshold(this);
+        sbCheckinThreshold.setProgress(cur - 10);
+        tvCheckinThresholdValue.setText(cur + " 题");
+        tvCheckinPreview.setText(String.valueOf(cur));
+        etCheckinThreshold.setText(String.valueOf(cur));
+        // 滑动条：拖动时同步显示值
+        sbCheckinThreshold.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar bar, int progress, boolean fromUser) {
+                int n = progress + 10;
+                tvCheckinPreview.setText(String.valueOf(n));
+                tvCheckinThresholdValue.setText(n + " 题");
+                if (fromUser) {
+                    DataStore.setCheckinThreshold(SettingsActivity.this, n);
+                    etCheckinThreshold.setText(String.valueOf(n));
+                }
+            }
+            @Override public void onStartTrackingTouch(SeekBar bar) {}
+            @Override public void onStopTrackingTouch(SeekBar bar) {}
+        });
+        // 手动输入：失去焦点时校验范围 10~100
+        etCheckinThreshold.setOnFocusChangeListener((v, hasFocus) -> {
             if (hasFocus) return;
-            String s = et.getText().toString().trim();
-            if (s.isEmpty()) {
-                et.setText("20");
-                DataStore.setCheckinThreshold(this, 20);
-                showToast("打卡判定已重置为 20 题");
-                return;
-            }
-            int n;
-            try { n = Integer.parseInt(s); } catch (Exception e) { n = -1; }
-            if (n < 10 || n > 100) {
-                showToast("请输入 10~100 之间的数字");
-                et.setText(String.valueOf(DataStore.getCheckinThreshold(this)));
-                et.setSelection(et.getText().length());
-                return;
-            }
-            DataStore.setCheckinThreshold(this, n);
-            showToast("打卡判定已设为每天答满 " + n + " 题");
+            String s = etCheckinThreshold.getText().toString().trim();
+            if (s.isEmpty()) { etCheckinThreshold.setText(String.valueOf(DataStore.getCheckinThreshold(SettingsActivity.this))); return; }
+            try {
+                int n = Integer.parseInt(s);
+                if (n < 10 || n > 100) { showToast("请输入 10~100 之间的数字"); etCheckinThreshold.setText(String.valueOf(DataStore.getCheckinThreshold(SettingsActivity.this))); return; }
+                DataStore.setCheckinThreshold(SettingsActivity.this, n);
+                tvCheckinThresholdValue.setText(n + " 题");
+                tvCheckinPreview.setText(String.valueOf(n));
+                sbCheckinThreshold.setProgress(n - 10);
+                showToast("打卡判定已设为每天答满 " + n + " 题");
+            } catch (Exception e) { showToast("请输入有效的数字"); etCheckinThreshold.setText(String.valueOf(DataStore.getCheckinThreshold(SettingsActivity.this))); }
         });
     }
 

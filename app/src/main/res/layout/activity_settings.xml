@@ -50,9 +50,9 @@
             </LinearLayout>
 
             <!-- 打卡判定 -->
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                android:orientation="horizontal" android:gravity="center_vertical"
-                android:padding="16dp" android:background="@drawable/bg_card">
+            <LinearLayout android:id="@+id/cardCheckinHeader" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical"
+                android:padding="16dp" android:background="@drawable/bg_card" android:clickable="true" android:focusable="true">
                 <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
                     android:layout_weight="1" android:orientation="vertical">
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
@@ -61,13 +61,39 @@
                         android:layout_marginTop="4dp" android:text="每天答满 N 题（新题）自动打卡，范围 10~100"
                         android:textSize="@dimen/text_label_medium" android:textColor="@color/text_sub"/>
                 </LinearLayout>
-                <EditText android:id="@+id/etCheckinThreshold"
-                    android:layout_width="80dp" android:layout_height="wrap_content"
-                    android:gravity="center" android:inputType="number"
-                    android:maxLength="3" android:textSize="@dimen/text_body_medium" android:textColor="@color/primary"
-                    android:textStyle="bold"/>
+                <TextView android:id="@+id/tvCheckinThresholdValue" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:text="20 题" android:textSize="@dimen/text_body_medium"
+                    android:textColor="@color/primary"/>
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                    android:text=" 题" android:textSize="@dimen/text_body_medium" android:textColor="@color/text_sub"/>
+                    android:text=" ›" android:textSize="@dimen/text_title_large" android:textColor="@color/text_sub"/>
+            </LinearLayout>
+            <LinearLayout android:id="@+id/cardCheckinBody" android:layout_width="match_parent"
+                android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone"
+                android:padding="16dp" android:background="@drawable/bg_card">
+                <android.widget.SeekBar android:id="@+id/sbCheckinThreshold" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginTop="8dp" android:max="90"/>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginTop="8dp">
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:text="10" android:textSize="@dimen/text_label_small"
+                        android:textColor="@color/text_sub"/>
+                    <TextView android:id="@+id/tvCheckinPreview" android:layout_width="0dp"
+                        android:layout_height="wrap_content" android:layout_weight="1"
+                        android:gravity="center" android:text="20" android:textSize="@dimen/text_title_small"
+                        android:textColor="@color/primary" android:textStyle="bold"/>
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:gravity="end" android:text="100"
+                        android:textSize="@dimen/text_label_small" android:textColor="@color/text_sub"/>
+                </LinearLayout>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp" android:text="拖动选择，也可点击数字手动输入"
+                    android:textSize="@dimen/text_label_small" android:textColor="@color/text_sub"/>
+                <EditText android:id="@+id/etCheckinThreshold" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:layout_marginTop="8dp"
+                    android:gravity="center" android:inputType="number" android:maxLength="3"
+                    android:textSize="@dimen/text_body_medium" android:textColor="@color/primary"
+                    android:textStyle="bold" android:background="@drawable/bg_search"
+                    android:padding="8dp" android:hint="手动输入 10~100"/>
             </LinearLayout>
 
             <!-- Toast 显示时长 -->
@@ -466,8 +492,9 @@
                     android:layout_marginTop="14dp" android:background="@color/bg_page"/>
 
                 <!-- 并发下载与解析数 -->
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp" android:orientation="horizontal" android:gravity="center_vertical">
+                <LinearLayout android:id="@+id/cardImportConcurrencyHeader" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical"
+                    android:padding="16dp" android:background="@drawable/bg_card" android:clickable="true" android:focusable="true">
                     <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
                         android:layout_weight="1" android:orientation="vertical">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
@@ -479,17 +506,23 @@
                     <TextView android:id="@+id/tvImportConcurrencyValue" android:layout_width="wrap_content"
                         android:layout_height="wrap_content" android:text="3 套" android:textSize="@dimen/text_body_medium"
                         android:textColor="@color/primary"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text=" ›" android:textSize="@dimen/text_title_large" android:textColor="@color/text_sub"/>
                 </LinearLayout>
-                <SeekBar android:id="@+id/sbImportConcurrency" android:layout_width="match_parent"
-                    android:layout_height="wrap_content" android:layout_marginTop="8dp" android:max="9"/>
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                        android:layout_weight="1" android:text="1" android:textSize="@dimen/text_label_small"
-                        android:textColor="@color/text_sub"/>
-                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                        android:layout_weight="1" android:gravity="end" android:text="10" android:textSize="@dimen/text_label_small"
-                        android:textColor="@color/text_sub"/>
+                <LinearLayout android:id="@+id/cardImportConcurrencyBody" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone"
+                    android:padding="16dp" android:background="@drawable/bg_card">
+                    <SeekBar android:id="@+id/sbImportConcurrency" android:layout_width="match_parent"
+                        android:layout_height="wrap_content" android:layout_marginTop="8dp" android:max="9"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:text="1" android:textSize="@dimen/text_label_small"
+                            android:textColor="@color/text_sub"/>
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:gravity="end" android:text="10" android:textSize="@dimen/text_label_small"
+                            android:textColor="@color/text_sub"/>
+                    </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
 
@@ -560,25 +593,38 @@
                 <View android:layout_width="match_parent" android:layout_height="1dp"
                     android:layout_marginTop="14dp" android:background="@color/bg_page"/>
 
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp" android:orientation="horizontal" android:gravity="center_vertical">
-                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                        android:layout_weight="1" android:text="角标数字变化速度" android:textSize="@dimen/text_body_large"
-                        android:textColor="@color/text_main"/>
+                <LinearLayout android:id="@+id/cardBadgeAnimHeader" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical"
+                    android:padding="16dp" android:background="@drawable/bg_card" android:clickable="true" android:focusable="true">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="角标数字变化速度" android:textSize="@dimen/text_body_large"
+                            android:textColor="@color/text_main"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp" android:text="数量角标数值变化的动画快慢"
+                            android:textSize="@dimen/text_label_medium" android:textColor="@color/text_sub"/>
+                    </LinearLayout>
                     <TextView android:id="@+id/tvBadgeAnimValue" android:layout_width="wrap_content"
                         android:layout_height="wrap_content" android:text="300 ms" android:textSize="@dimen/text_body_medium"
                         android:textColor="@color/primary"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text=" ›" android:textSize="@dimen/text_title_large" android:textColor="@color/text_sub"/>
                 </LinearLayout>
-                <android.widget.SeekBar android:id="@+id/sbBadgeAnim" android:layout_width="match_parent"
-                    android:layout_height="wrap_content" android:layout_marginTop="8dp" android:max="18"/>
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                        android:layout_weight="1" android:text="快" android:textSize="@dimen/text_label_small"
-                        android:textColor="@color/text_sub"/>
-                    <TextView android:layout_width="0dp" android:layout_height="wrap_content"
-                        android:layout_weight="1" android:gravity="end" android:text="慢" android:textSize="@dimen/text_label_small"
-                        android:textColor="@color/text_sub"/>
+                <LinearLayout android:id="@+id/cardBadgeAnimBody" android:layout_width="match_parent"
+                    android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone"
+                    android:padding="16dp" android:background="@drawable/bg_card">
+                    <android.widget.SeekBar android:id="@+id/sbBadgeAnim" android:layout_width="match_parent"
+                        android:layout_height="wrap_content" android:layout_marginTop="8dp" android:max="18"/>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:text="快" android:textSize="@dimen/text_label_small"
+                            android:textColor="@color/text_sub"/>
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:gravity="end" android:text="慢" android:textSize="@dimen/text_label_small"
+                            android:textColor="@color/text_sub"/>
+                    </LinearLayout>
                 </LinearLayout>
 
                 <View android:layout_width="match_parent" android:layout_height="1dp"

@@ -104,10 +104,16 @@ public class QuizActivity extends AppCompatActivity {
             questions = reorderByUids(questions, resumeUids);
             random = false; // 恢复时沿用快照顺序，不再重新随机
         }
+        // 若恢复时题目为空（快照已过期：题目被删除/导入更新），清除进度并重新加载当前题库
+        if (resume && questions.isEmpty()) {
+            DataStore.clearResume(this);
+            questions = loadQuestions(source);
+            resume = false;
+        }
         if (questions.isEmpty()) {
             // 区分「某套真题没解析到题目」与「当前没有可练的题」，便于用户重新导入
             showToast(source != null && source.startsWith("paper:")
-                    ? "该套真题没有可用题目，请重新导入" : "暂无题目");
+                    ? "该套真题没有可用题目，请重新导入" : "暂无题目，请先导入或选择题库");
             finish();
             return;
         }

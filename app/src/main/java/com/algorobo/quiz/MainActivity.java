@@ -523,7 +523,7 @@ public class MainActivity extends AppCompatActivity {
     private void bindResume() {
         DataStore.ResumeState resume = DataStore.getResume(this);
         LinearLayout btnResume = findViewById(R.id.btnResume);
-        if (resume == null) {
+        if (resume == null || resume.uids == null || resume.uids.isEmpty()) {
             btnResume.setVisibility(View.GONE);
             return;
         }
