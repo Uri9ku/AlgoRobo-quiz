@@ -31,20 +31,13 @@
                 <ImageView android:layout_width="wrap_content" android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"
                     android:src="@drawable/ic_arrow_down_white" android:contentDescription="选择考试类型" />
-                <ImageView android:id="@+id/btnExamTypeSettings" android:layout_width="36dp"
-                    android:layout_height="36dp" android:layout_marginStart="8dp"
-                    android:src="@drawable/ic_settings" android:contentDescription="自定义排序"
-                    android:background="?attr/selectableItemBackgroundBorderless" />
             </LinearLayout>
 
-            <!-- 第二行：类目标签（横向滚动） -->
-            <HorizontalScrollView android:layout_width="match_parent"
-                android:layout_height="wrap_content" android:layout_marginTop="10dp"
-                android:scrollbars="none" android:overScrollMode="never">
-                <LinearLayout android:id="@+id/llCategories" android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" android:orientation="horizontal"
-                    android:gravity="center_vertical" />
-            </HorizontalScrollView>
+            <!-- 第二行：类目标签（横向滚动，可长按拖拽排序） -->
+            <androidx.recyclerview.widget.RecyclerView android:id="@+id/rvCategories"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="10dp" android:scrollbars="none"
+                android:overScrollMode="never" android:background="@android:color/transparent" />
         </LinearLayout>
 
         <!-- ===== 中部黄框：功能卡片区 ===== -->
@@ -196,10 +189,20 @@
                         android:layout_marginTop="6dp" android:text="知识点专题" android:textSize="@dimen/text_label_medium" android:textColor="@color/text_main" />
                 </LinearLayout>
 
-                <!-- 10 占位空格 -->
-                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
-                    android:layout_columnWeight="1" android:orientation="vertical" android:gravity="center"
-                    android:paddingTop="6dp" android:paddingBottom="6dp" />
+                <!-- 10 设置 -->
+                <LinearLayout android:id="@+id/cardFabSettings" android:layout_width="0dp"
+                    android:layout_height="wrap_content" android:layout_columnWeight="1"
+                    android:orientation="vertical" android:gravity="center"
+                    android:paddingTop="6dp" android:paddingBottom="6dp">
+                    <FrameLayout android:layout_width="52dp" android:layout_height="52dp">
+                        <ImageView android:layout_width="52dp" android:layout_height="52dp"
+                            android:src="@drawable/ic_settings"
+                            android:padding="12dp" android:background="@drawable/bg_grid_icon"
+                            android:contentDescription="设置" />
+                    </FrameLayout>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp" android:text="设置" android:textSize="@dimen/text_label_medium" android:textColor="@color/text_main" />
+                </LinearLayout>
             </GridLayout>
 
             <!-- 继续上次（有进度时显示） -->
@@ -224,9 +227,4 @@
         </LinearLayout>
     </LinearLayout>
     </ScrollView>
-
-    <ImageView android:id="@+id/fabSettings" android:layout_width="56dp" android:layout_height="56dp"
-        android:layout_gravity="bottom|end" android:layout_marginEnd="20dp" android:layout_marginBottom="20dp"
-        android:padding="16dp" android:background="@drawable/bg_btn_primary" android:src="@drawable/ic_settings"
-        android:contentDescription="设置" />
 </FrameLayout>

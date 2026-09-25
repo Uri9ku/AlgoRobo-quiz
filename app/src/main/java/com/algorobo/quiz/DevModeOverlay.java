@@ -519,7 +519,7 @@ public final class DevModeOverlay {
         if (w <= 0 || h <= 0) return;
         if (panelX == Integer.MIN_VALUE) {
             panelX = w / 2 - dp(panel.getContext(), 200);
-            panelY = h / 2 - dp(panel.getContext(), 150);
+            panelY = dp(panel.getContext(), 16);
         }
         panel.post(() -> {
             int x = Math.max(0, Math.min(panelX, Math.max(0, w - panel.getWidth())));

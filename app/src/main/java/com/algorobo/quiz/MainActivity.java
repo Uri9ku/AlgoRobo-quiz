@@ -11,7 +11,12 @@ import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.ItemTouchHelper;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
@@ -24,10 +29,11 @@ public class MainActivity extends AppCompatActivity {
 
     private int currentTypeIndex = 0;
     private int currentCategoryIndex = 0;
+    private String currentCategoryName;
     private final Set<String> expandedPaths = new HashSet<>();
 
     private TextView tvExamTypeName;
-    private LinearLayout llCategories;
+    private RecyclerView rvCategories;
     private LinearLayout llGreenContainer;
     /** 角标上次显示的数量（-1 表示尚未初始化）：用于判断变大/变小以播放滑动动画。 */
     private int lastWrongCount = -1;
@@ -42,12 +48,8 @@ public class MainActivity extends AppCompatActivity {
         ThemeManager.applyTopInset(this, R.id.headerContainer);
 
         tvExamTypeName = findViewById(R.id.tvExamTypeName);
-        llCategories = findViewById(R.id.llCategories);
+        rvCategories = findViewById(R.id.rvCategories);
         llGreenContainer = findViewById(R.id.llGreenContainer);
-
-        // 自定义排序：点击设置图标打开拖拽排序对话框（仅当前考试类型的类目）
-        findViewById(R.id.btnExamTypeSettings).setOnClickListener(v ->
-            new ExamOrderDialog(this, currentTypeIndex, this::renderCategories).show());
 
         // 考试类型下拉选择
         findViewById(R.id.rowExamType).setOnClickListener(v -> showExamTypePopup());
@@ -75,9 +77,10 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.cardKnowledge).setOnClickListener(v ->
             openPage(KnowledgeActivity.class, R.id.labelKnowledge));
 
-        findViewById(R.id.fabSettings).setOnClickListener(v -> {
+        // 设置：进入设置页
+        findViewById(R.id.cardFabSettings).setOnClickListener(v -> {
             Intent i = new Intent(this, SettingsActivity.class);
-            PageTitle.put(i, v.getContentDescription());
+            PageTitle.put(i, "设置");
             startActivity(i);
         });
 
@@ -85,6 +88,8 @@ public class MainActivity extends AppCompatActivity {
         bindResume();
 
         // 初始化考试类型与类目
+        ExamType t0 = ExamCategoryCatalog.getByIndex(currentTypeIndex);
+        currentCategoryName = t0.categories.isEmpty() ? "" : t0.categories.get(0).name;
         renderExamType(currentTypeIndex);
         renderCategories();
         renderGreenContainer();
@@ -139,35 +144,62 @@ public class MainActivity extends AppCompatActivity {
         tvExamTypeName.setText(t.name);
     }
 
-    // ===== 类目标签（红框） =====
+    // ===== 类目标签（横向滚动，可长按拖拽排序） =====
     private void renderCategories() {
         ExamType t = ExamCategoryCatalog.getByIndex(currentTypeIndex);
-        llCategories.removeAllViews();
-        for (int i = 0; i < t.categories.size(); i++) {
-            final int idx = i;
-            Category c = t.categories.get(i);
-            final TextView tag = new TextView(this);
-            tag.setText((c.icon != null && !c.icon.isEmpty() ? c.icon + " " : "") + c.name);
-            tag.setTextSize(14);
-            tag.setPadding(dp(16), dp(8), dp(16), dp(8));
-            tag.setGravity(Gravity.CENTER);
-            applyCategoryStyle(tag, i == currentCategoryIndex);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            lp.setMargins(0, 0, dp(8), 0);
-            tag.setLayoutParams(lp);
-            tag.setOnClickListener(v -> {
-                currentCategoryIndex = idx;
+        List<Category> categories = new ArrayList<>(t.categories);
+        List<String> savedOrder = DataStore.getCategoryOrder(this, t.name);
+        if (!savedOrder.isEmpty()) {
+            categories.sort((a, b) -> {
+                int ia = savedOrder.indexOf(a.name);
+                int ib = savedOrder.indexOf(b.name);
+                if (ia < 0) ia = categories.indexOf(a);
+                if (ib < 0) ib = categories.indexOf(b);
+                return Integer.compare(ia, ib);
+            });
+        }
+        final List<Category> ordered = categories;
+        currentCategoryName = ordered.get(Math.min(currentCategoryIndex, ordered.size() - 1)).name;
+        CategoryAdapter adapter = new CategoryAdapter(ordered);
+        rvCategories.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        rvCategories.setAdapter(adapter);
+        new ItemTouchHelper(new ItemTouchHelper.Callback() {
+            @Override
+            public int getMovementFlags(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
+                return makeMovementFlags(ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT, 0);
+            }
+            @Override
+            public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder source, @NonNull RecyclerView.ViewHolder target) {
+                int from = source.getAdapterPosition();
+                int to = target.getAdapterPosition();
+                Category cat = ordered.remove(from);
+                ordered.add(to, cat);
+                adapter.notifyItemMoved(from, to);
+if (currentCategoryIndex == from) { currentCategoryIndex = to; currentCategoryName = ordered.get(to).name; }
+                else if (currentCategoryIndex == to) { currentCategoryIndex = from; currentCategoryName = ordered.get(from).name; }
+                return true;
+            }
+            @Override
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {}
+            @Override
+            public boolean isLongPressDragEnabled() { return true; }
+            @Override
+            public boolean isItemViewSwipeEnabled() { return false; }
+            @Override
+            public void clearView(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
+                super.clearView(recyclerView, viewHolder);
+                List<String> names = new ArrayList<>();
+                for (Category c : ordered) names.add(c.name);
+                DataStore.setCategoryOrder(MainActivity.this, t.name, names);
                 refreshCategoryStyles();
                 renderGreenContainer();
-            });
-            llCategories.addView(tag);
-        }
+            }
+        }).attachToRecyclerView(rvCategories);
     }
 
     private void refreshCategoryStyles() {
-        for (int i = 0; i < llCategories.getChildCount(); i++) {
-            applyCategoryStyle((TextView) llCategories.getChildAt(i), i == currentCategoryIndex);
+        if (rvCategories.getAdapter() instanceof CategoryAdapter) {
+            ((CategoryAdapter) rvCategories.getAdapter()).refreshSelection(currentCategoryName);
         }
     }
 
@@ -181,6 +213,56 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // ===== 类目标签 RecyclerView 适配器 =====
+    private class CategoryAdapter extends RecyclerView.Adapter<CategoryViewHolder> {
+        private final List<Category> items;
+        private int selectedIndex = 0;
+
+        CategoryAdapter(List<Category> items) {
+            this.items = items;
+        }
+
+        void refreshSelection(String categoryName) {
+            int idx = 0;
+            for (int i = 0; i < items.size(); i++) {
+                if (items.get(i).name.equals(categoryName)) { idx = i; break; }
+            }
+            selectedIndex = idx;
+            notifyDataSetChanged();
+        }
+
+        @NonNull
+        @Override
+        public CategoryViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            TextView tv = new TextView(MainActivity.this);
+            tv.setTextSize(14);
+            tv.setPadding(dp(16), dp(8), dp(16), dp(8));
+            tv.setGravity(Gravity.CENTER);
+            return new CategoryViewHolder(tv);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull CategoryViewHolder holder, int position) {
+            Category c = items.get(position);
+            holder.tv.setText((c.icon != null && !c.icon.isEmpty() ? c.icon + " " : "") + c.name);
+            applyCategoryStyle(holder.tv, position == selectedIndex);
+            holder.tv.setOnClickListener(v -> {
+                currentCategoryIndex = position;
+                currentCategoryName = items.get(position).name;
+                refreshCategoryStyles();
+                renderGreenContainer();
+            });
+        }
+
+        @Override
+        public int getItemCount() { return items.size(); }
+    }
+
+    static class CategoryViewHolder extends RecyclerView.ViewHolder {
+        TextView tv;
+        CategoryViewHolder(TextView v) { super(v); tv = v; }
+    }
+
     // ===== 底部绿框：机器人按「备考目录.md」分级；其他科目按题目标签聚合 =====
     private void renderGreenContainer() {
         ExamType t = ExamCategoryCatalog.getByIndex(currentTypeIndex);
@@ -189,7 +271,11 @@ public class MainActivity extends AppCompatActivity {
         if (t.categories.isEmpty() || currentCategoryIndex >= t.categories.size()) {
             return;
         }
-        Category c = t.categories.get(currentCategoryIndex);
+        Category c = null;
+        for (Category cat : t.categories) {
+            if (cat.name.equals(currentCategoryName)) { c = cat; break; }
+        }
+        if (c == null) return;
         boolean isRobot = c.name != null && c.name.contains("机器人");
 
         List<Question> qs = collectKnowledgeQuestions(c.name);
