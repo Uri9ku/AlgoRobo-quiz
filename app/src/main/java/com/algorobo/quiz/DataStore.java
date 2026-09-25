@@ -24,6 +24,28 @@ public class DataStore {
 
     private static SharedPreferences sp(Context c) { return c.getSharedPreferences(PREFS, Context.MODE_PRIVATE); }
 
+    /** 考试类型排序：保存类型名列表（按用户拖拽后的顺序） */
+    public static List<String> getExamTypeOrder(Context c) {
+        String json = sp(c).getString("exam_type_order", null);
+        if (json == null) return new ArrayList<>();
+        Type type = new TypeToken<List<String>>(){}.getType();
+        return gson.fromJson(json, type);
+    }
+    public static void setExamTypeOrder(Context c, List<String> order) {
+        sp(c).edit().putString("exam_type_order", gson.toJson(order)).apply();
+    }
+    /** 类目排序：保存 type_name → ordered_category_names 的映射 */
+    public static void setCategoryOrder(Context c, String typeName, List<String> order) {
+        String key = "category_order_" + typeName;
+        sp(c).edit().putString(key, gson.toJson(order)).apply();
+    }
+    public static List<String> getCategoryOrder(Context c, String typeName) {
+        String json = sp(c).getString("category_order_" + typeName, null);
+        if (json == null) return new ArrayList<>();
+        Type type = new TypeToken<List<String>>(){}.getType();
+        return gson.fromJson(json, type);
+    }
+
     public static Set<String> getWrongIds(Context c) {
         return new HashSet<>(sp(c).getStringSet("wrong_ids", new HashSet<>()));
     }

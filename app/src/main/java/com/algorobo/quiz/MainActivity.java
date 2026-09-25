@@ -45,6 +45,10 @@ public class MainActivity extends AppCompatActivity {
         llCategories = findViewById(R.id.llCategories);
         llGreenContainer = findViewById(R.id.llGreenContainer);
 
+        // 自定义排序：点击设置图标打开拖拽排序对话框（仅当前考试类型的类目）
+        findViewById(R.id.btnExamTypeSettings).setOnClickListener(v ->
+            new ExamOrderDialog(this, currentTypeIndex, this::renderCategories).show());
+
         // 考试类型下拉选择
         findViewById(R.id.rowExamType).setOnClickListener(v -> showExamTypePopup());
 
